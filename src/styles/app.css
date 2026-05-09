@@ -159,6 +159,47 @@ a {
   min-height: 220px;
 }
 
+.dashboard-metric-card {
+  min-height: 150px;
+}
+
+.dashboard-metric-card .ant-card-body {
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dashboard-metric-card h2.ant-typography {
+  margin: 0;
+  font-size: 24px;
+  line-height: 32px;
+}
+
+.metric-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dashboard-journal-list {
+  width: 100%;
+}
+
+.dashboard-journal-item {
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.dashboard-journal-meta {
+  justify-content: space-between;
+}
+
 .ant-result {
   padding: 20px 12px;
 }

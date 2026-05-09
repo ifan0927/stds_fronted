@@ -42,6 +42,21 @@ const pageContent = {
     description: '租客資料、租約與搬遷流程的入口 placeholder。',
     tag: '日常作業',
   },
+  tenantDetail: {
+    title: '租客詳情',
+    description: '租客 detail/edit 將由後續 issue 實作；此頁先保留導覽入口與路由位置。',
+    tag: '租客與租約',
+  },
+  leaseDetail: {
+    title: '租約詳情',
+    description: '租約 detail/edit 與租金調整將由後續 issue 實作；此頁先保留導覽入口與路由位置。',
+    tag: '租客與租約',
+  },
+  checkout: {
+    title: '退租處理',
+    description: '退租、checkout preview/finalize 與相關結算流程將由後續 issue 實作。',
+    tag: '租客與租約',
+  },
   billing: {
     title: '抄表與帳單',
     description: '抄表、帳單、收款與收據流程的入口 placeholder。',

@@ -224,6 +224,10 @@ a {
   width: 120px;
 }
 
+.tenant-include-vacant-filter {
+  width: 150px;
+}
+
 .row-action-stack {
   min-width: 0;
 }

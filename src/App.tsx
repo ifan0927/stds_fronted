@@ -7,6 +7,7 @@ import PropertyListPage from './app/PropertyListPage';
 import RoomCreatePage from './app/RoomCreatePage';
 import RoomDetailPage from './app/RoomDetailPage';
 import RoomInventoryPage from './app/RoomInventoryPage';
+import TenantLeaseRosterPage from './app/TenantLeaseRosterPage';
 import { ForbiddenPage, LoginPage, NotFoundPage, PlaceholderPage } from './app/pages';
 import { ProtectedRoute } from './auth';
 
@@ -24,7 +25,10 @@ export default function App() {
           <Route path="properties/:propertyId/rooms" element={<RoomInventoryPage />} />
           <Route path="properties/:propertyId/rooms/new" element={<RoomCreatePage />} />
           <Route path="properties/:propertyId/rooms/:roomId" element={<RoomDetailPage />} />
-          <Route path="properties/:propertyId/tenants" element={<PlaceholderPage pageKey="tenants" />} />
+          <Route path="properties/:propertyId/tenants" element={<TenantLeaseRosterPage />} />
+          <Route path="properties/:propertyId/tenants/:tenantId" element={<PlaceholderPage pageKey="tenantDetail" />} />
+          <Route path="properties/:propertyId/leases/:leaseId" element={<PlaceholderPage pageKey="leaseDetail" />} />
+          <Route path="properties/:propertyId/checkout" element={<PlaceholderPage pageKey="checkout" />} />
           <Route path="properties/:propertyId/billing" element={<PlaceholderPage pageKey="billing" />} />
           <Route path="properties/:propertyId/journal" element={<PlaceholderPage pageKey="journal" />} />
           <Route path="properties/:propertyId/reports" element={<PlaceholderPage pageKey="reports" />} />

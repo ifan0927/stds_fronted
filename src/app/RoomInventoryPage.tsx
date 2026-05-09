@@ -10,7 +10,6 @@ import {
   Button,
   Card,
   Empty,
-  Result,
   Select,
   Space,
   Table,
@@ -19,7 +18,7 @@ import {
 } from 'antd';
 import type { TableColumnsType, TablePaginationConfig } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   classifyApiErrorForUi,
   listPropertyRooms,
@@ -29,6 +28,7 @@ import {
 } from '../api';
 import { useAuth } from '../auth';
 import { formatTwd, getRoomStatusLabel } from './format';
+import { abortRequest } from './requestAbort';
 import {
   ForbiddenState,
   LoadingState,
@@ -159,7 +159,7 @@ export default function RoomInventoryPage() {
       return;
     }
 
-    activeRequestRef.current?.controller.abort();
+    abortRequest(activeRequestRef.current?.controller);
     const controller = new AbortController();
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
@@ -213,7 +213,7 @@ export default function RoomInventoryPage() {
   useEffect(() => {
     loadRooms();
 
-    return () => activeRequestRef.current?.controller.abort();
+    return () => abortRequest(activeRequestRef.current?.controller);
   }, [loadRooms]);
 
   const columns = useMemo<TableColumnsType<Room>>(() => [
@@ -277,27 +277,41 @@ export default function RoomInventoryPage() {
 
         return (
           <Space size={8} wrap className="row-action-stack">
-            <Button size="small" icon={<EyeOutlined />}>
-              <Link to={buildRoomActionPath(propertyId, `/rooms/${roomId}`)}>查看</Link>
+            <Button
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => navigate(buildRoomActionPath(propertyId, `/rooms/${roomId}`))}
+            >
+              查看
             </Button>
             {record.status === 'vacant' && (
-              <Button size="small" icon={<TeamOutlined />}>
-                <Link to={buildRoomActionPath(propertyId, '/tenants', { roomId, mode: 'move-in' })}>
-                  搬入
-                </Link>
+              <Button
+                size="small"
+                icon={<TeamOutlined />}
+                onClick={() => navigate(buildRoomActionPath(propertyId, '/tenants', { roomId, mode: 'move-in' }))}
+              >
+                搬入
               </Button>
             )}
-            <Button size="small" icon={<AuditOutlined />}>
-              <Link to={buildRoomActionPath(propertyId, '/billing', { roomId })}>帳單</Link>
+            <Button
+              size="small"
+              icon={<AuditOutlined />}
+              onClick={() => navigate(buildRoomActionPath(propertyId, '/billing', { roomId }))}
+            >
+              帳單
             </Button>
-            <Button size="small" icon={<ToolOutlined />}>
-              <Link to={buildRoomActionPath(propertyId, '/journal', { roomId })}>日誌維修</Link>
+            <Button
+              size="small"
+              icon={<ToolOutlined />}
+              onClick={() => navigate(buildRoomActionPath(propertyId, '/journal', { roomId }))}
+            >
+              日誌維修
             </Button>
           </Space>
         );
       },
     },
-  ], [propertyId]);
+  ], [navigate, propertyId]);
 
   if (loadState.status === 'loading') {
     return <LoadingState />;
@@ -336,15 +350,19 @@ export default function RoomInventoryPage() {
           </Typography.Paragraph>
         </div>
         <Space wrap>
-          <Button>
-            <Link to={propertyId ? `/properties/${propertyId}` : '/properties'}>回物業工作台</Link>
+          <Button onClick={() => navigate(propertyId ? `/properties/${propertyId}` : '/properties')}>
+            回物業工作台
           </Button>
           <Button icon={<ReloadOutlined />} onClick={() => loadRooms()}>
             重新整理
           </Button>
           {propertyId && (
-            <Button type="primary" icon={<PlusOutlined />}>
-              <Link to={`/properties/${propertyId}/rooms/new`}>新增房間</Link>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => navigate(`/properties/${propertyId}/rooms/new`)}
+            >
+              新增房間
             </Button>
           )}
         </Space>
@@ -414,39 +432,5 @@ export default function RoomInventoryPage() {
         </Space>
       </Card>
     </Space>
-  );
-}
-
-export function RoomDetailPendingPage() {
-  const { propertyId } = useParams();
-
-  return (
-    <Result
-      status="info"
-      title="房間詳情尚未開放"
-      subTitle="房間詳情、主檔維護與附件管理會在後續房間維護工作中實作。"
-      extra={
-        <Button type="primary">
-          <Link to={propertyId ? `/properties/${propertyId}/rooms` : '/properties'}>回房間清冊</Link>
-        </Button>
-      }
-    />
-  );
-}
-
-export function RoomCreatePendingPage() {
-  const { propertyId } = useParams();
-
-  return (
-    <Result
-      status="info"
-      title="新增房間尚未開放"
-      subTitle="新增、編輯與刪除房間會在後續房間維護工作中實作。"
-      extra={
-        <Button type="primary">
-          <Link to={propertyId ? `/properties/${propertyId}/rooms` : '/properties'}>回房間清冊</Link>
-        </Button>
-      }
-    />
   );
 }

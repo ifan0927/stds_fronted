@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { classifyApiErrorForUi, getDashboard, type HomeDashboard } from '../api';
 import { useAuth } from '../auth';
+import { abortRequest } from './requestAbort';
 import {
   EmptyState,
   ForbiddenState,
@@ -51,7 +52,7 @@ export default function HomeDashboardPage() {
   });
 
   const loadDashboard = useCallback(() => {
-    activeRequestRef.current?.controller.abort();
+    abortRequest(activeRequestRef.current?.controller);
     const controller = new AbortController();
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
@@ -95,7 +96,7 @@ export default function HomeDashboardPage() {
   useEffect(() => {
     loadDashboard();
 
-    return () => activeRequestRef.current?.controller.abort();
+    return () => abortRequest(activeRequestRef.current?.controller);
   }, [loadDashboard]);
 
   if (loadState.status === 'loading') {

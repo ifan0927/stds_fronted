@@ -238,6 +238,31 @@ a {
   overflow-wrap: anywhere;
 }
 
+.form-alert {
+  margin-bottom: 16px;
+}
+
+.room-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+
+.wide-form-item {
+  grid-column: 1 / -1;
+}
+
+.full-width-control {
+  width: 100%;
+}
+
+.form-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 .property-facilities {
   margin-top: 16px;
   display: grid;
@@ -260,6 +285,16 @@ a {
 
 .property-link-row:hover {
   border-color: #1677ff;
+}
+
+.disabled-link-row {
+  color: rgba(0, 0, 0, 0.65);
+  cursor: not-allowed;
+  background: #fafafa;
+}
+
+.disabled-link-row:hover {
+  border-color: #d9d9d9;
 }
 
 .property-link-row .ant-typography {
@@ -338,6 +373,10 @@ a {
   .filter-toolbar {
     align-items: stretch;
     display: grid;
+  }
+
+  .room-form-grid {
+    grid-template-columns: 1fr;
   }
 
   .page-header > .ant-space {

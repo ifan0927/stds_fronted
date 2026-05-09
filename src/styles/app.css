@@ -200,6 +200,50 @@ a {
   justify-content: space-between;
 }
 
+.property-facilities {
+  margin-top: 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.property-link-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.property-link-row {
+  display: block;
+  min-width: 0;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 12px;
+  background: #ffffff;
+}
+
+.property-link-row:hover {
+  border-color: #1677ff;
+}
+
+.property-link-row .ant-typography {
+  display: block;
+}
+
+.property-link-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: #e6f4ff;
+  color: #0958d9;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.property-selector {
+  width: 100%;
+}
+
 .ant-result {
   padding: 20px 12px;
 }

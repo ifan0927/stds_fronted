@@ -185,6 +185,7 @@ Visible UI text should be written for operators, not engineers.
 
 - Use Traditional Chinese labels for roles and statuses in navigation, tables, filters, forms, tags, alerts, and buttons.
 - Do not expose API paths, HTTP methods, backend error codes, schema names, token names, third-party auth provider names, or internal implementation terms in user-facing UI text.
+- Do not show UUIDs or database identifiers as normal user-facing content. Use readable names, labels, room numbers, addresses, dates, or status text instead; if a backend only provides an ID, hide it by default and surface a product follow-up rather than filling the UI with technical noise.
 - Keep technical identifiers in code comments, API mapping notes, tests, or developer documentation only.
 - Long emails, IDs shown as secondary metadata, names, addresses, and notes must wrap or truncate without escaping their card, table cell, tag, or button.
 

@@ -1,0 +1,1716 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>STDS 租客與租約管理</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      color-scheme: light;
+      --brand: #1677ff;
+      --canvas: #f5f7fa;
+      --surface: #ffffff;
+      --surface-subtle: #fafafa;
+      --border: #d9d9d9;
+      --text: rgba(0, 0, 0, 0.88);
+      --text-secondary: rgba(0, 0, 0, 0.65);
+      --text-tertiary: rgba(0, 0, 0, 0.45);
+      --success: #52c41a;
+      --warning: #faad14;
+      --danger: #ff4d4f;
+      --info-bg: #e6f4ff;
+      --warning-bg: #fffbe6;
+      --danger-bg: #fff1f0;
+      --success-bg: #f6ffed;
+      --radius: 8px;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+      font-size: 14px;
+      line-height: 1.5715;
+      letter-spacing: 0;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    .template {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 248px minmax(0, 1fr);
+    }
+
+    .sider {
+      background: #001529;
+      color: rgba(255, 255, 255, 0.88);
+      min-height: 100vh;
+      position: sticky;
+      top: 0;
+      align-self: start;
+    }
+
+    .brand {
+      min-height: 64px;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 24px;
+    }
+
+    .brand-subtitle,
+    .property-option-meta {
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 12px;
+    }
+
+    .nav {
+      padding: 12px 8px 20px;
+    }
+
+    .nav-group {
+      margin-top: 14px;
+    }
+
+    .nav-group:first-child {
+      margin-top: 0;
+    }
+
+    .nav-label {
+      color: rgba(255, 255, 255, 0.45);
+      font-size: 12px;
+      padding: 0 12px 6px;
+    }
+
+    .nav-item {
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: rgba(255, 255, 255, 0.78);
+    }
+
+    .nav-item.active {
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .nav-item.disabled {
+      color: rgba(255, 255, 255, 0.34);
+      cursor: not-allowed;
+    }
+
+    .nav-icon {
+      width: 18px;
+      text-align: center;
+      flex: 0 0 auto;
+    }
+
+    .nav-context {
+      margin: 0 8px 8px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .nav-context-label {
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 12px;
+      line-height: 20px;
+    }
+
+    .nav-context-trigger {
+      width: 100%;
+      margin-top: 8px;
+      min-height: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.88);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 4px 8px;
+      cursor: default;
+    }
+
+    .property-menu {
+      margin: 10px 8px 0;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 6px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.16);
+    }
+
+    .property-option {
+      display: grid;
+      gap: 2px;
+      padding: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .property-option:last-child {
+      border-bottom: 0;
+    }
+
+    .property-option.active {
+      background: rgba(22, 119, 255, 0.28);
+    }
+
+    .property-option.disabled {
+      color: rgba(255, 255, 255, 0.34);
+    }
+
+    .main {
+      min-width: 0;
+    }
+
+    .topbar {
+      min-height: 64px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    .context-strip,
+    .user-area,
+    .actions,
+    .row-actions,
+    .tabs,
+    .check-row,
+    .inline-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .menu-button {
+      display: none;
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--brand);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 600;
+    }
+
+    .content {
+      padding: 24px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 20px;
+      line-height: 28px;
+      font-weight: 600;
+    }
+
+    .page-desc,
+    .panel-subtitle,
+    .small,
+    .cell-sub,
+    .state-desc,
+    .api-note,
+    .metric-label {
+      color: var(--text-secondary);
+    }
+
+    .page-desc {
+      margin: 4px 0 0;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      min-height: 64px;
+      padding: 16px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 16px;
+      line-height: 24px;
+      font-weight: 600;
+    }
+
+    .panel-body {
+      padding: 16px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .filter-band {
+      padding: 16px;
+      background: var(--surface-subtle);
+      border-bottom: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(4, minmax(160px, 1fr)) auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    label {
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+
+    .input,
+    .select,
+    .textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--text);
+      padding: 7px 11px;
+      min-height: 38px;
+    }
+
+    .textarea {
+      min-height: 82px;
+      resize: vertical;
+    }
+
+    .input.error,
+    .select.error {
+      border-color: var(--danger);
+    }
+
+    .wide {
+      grid-column: 1 / -1;
+    }
+
+    .btn {
+      min-height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--text);
+      padding: 4px 12px;
+      cursor: default;
+      white-space: nowrap;
+    }
+
+    .btn.primary {
+      background: var(--brand);
+      border-color: var(--brand);
+      color: #fff;
+    }
+
+    .btn.danger {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .btn.disabled,
+    .btn:disabled {
+      color: var(--text-tertiary);
+      background: #f5f5f5;
+      border-color: var(--border);
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      border-radius: 4px;
+      padding: 0 8px;
+      font-size: 12px;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+
+    .tag.blue {
+      color: #0958d9;
+      background: var(--info-bg);
+      border-color: #91caff;
+    }
+
+    .tag.green {
+      color: #237804;
+      background: var(--success-bg);
+      border-color: #b7eb8f;
+    }
+
+    .tag.gold {
+      color: #ad6800;
+      background: var(--warning-bg);
+      border-color: #ffe58f;
+    }
+
+    .tag.red {
+      color: #cf1322;
+      background: var(--danger-bg);
+      border-color: #ffa39e;
+    }
+
+    .tag.gray {
+      color: var(--text-secondary);
+      background: #f5f5f5;
+      border-color: var(--border);
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      min-width: 1040px;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--surface-subtle);
+      color: var(--text-secondary);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .cell-main,
+    .state-title {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .cell-sub,
+    .small,
+    .state-desc,
+    .api-note,
+    .metric-label {
+      font-size: 12px;
+      line-height: 20px;
+    }
+
+    .pagination {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--text-secondary);
+    }
+
+    .template-tabs {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 12px 16px;
+      position: sticky;
+      top: 80px;
+      z-index: 4;
+    }
+
+    .tabs {
+      padding: 12px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab {
+      min-height: 30px;
+      padding: 4px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text-secondary);
+    }
+
+    .tab.active {
+      color: #0958d9;
+      border-color: #91caff;
+      background: var(--info-bg);
+    }
+
+    .summary-grid,
+    .state-grid,
+    .workflow-grid,
+    .attachment-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .two-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    .metric-card,
+    .state-card,
+    .step-card,
+    .attachment-card,
+    .drawer-preview,
+    .modal-preview,
+    .receipt-preview {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+
+    .metric-card,
+    .state-card,
+    .step-card,
+    .attachment-card {
+      padding: 12px;
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .state-card.info {
+      background: var(--info-bg);
+      border-color: #91caff;
+    }
+
+    .state-card.success {
+      background: var(--success-bg);
+      border-color: #b7eb8f;
+    }
+
+    .state-card.warning {
+      background: var(--warning-bg);
+      border-color: #ffe58f;
+    }
+
+    .state-card.error {
+      background: var(--danger-bg);
+      border-color: #ffa39e;
+    }
+
+    .metric-value {
+      font-size: 24px;
+      line-height: 32px;
+      font-weight: 600;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .drawer-preview,
+    .modal-preview,
+    .receipt-preview {
+      overflow: hidden;
+    }
+
+    .drawer-top,
+    .modal-top,
+    .receipt-top {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      background: var(--surface-subtle);
+    }
+
+    .drawer-body,
+    .modal-body,
+    .receipt-body {
+      padding: 16px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .form-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      background: var(--surface-subtle);
+    }
+
+    .alert {
+      display: flex;
+      gap: 10px;
+      padding: 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface-subtle);
+    }
+
+    .alert.info {
+      background: var(--info-bg);
+      border-color: #91caff;
+    }
+
+    .alert.success {
+      background: var(--success-bg);
+      border-color: #b7eb8f;
+    }
+
+    .alert.warning {
+      background: var(--warning-bg);
+      border-color: #ffe58f;
+    }
+
+    .alert.error {
+      background: var(--danger-bg);
+      border-color: #ffa39e;
+    }
+
+    .api-note {
+      padding: 10px 12px;
+      border-radius: 6px;
+      background: #f5f5f5;
+      border: 1px dashed var(--border);
+    }
+
+    .toast-stack {
+      position: fixed;
+      top: 76px;
+      right: 24px;
+      z-index: 20;
+      display: grid;
+      gap: 8px;
+      width: min(360px, calc(100vw - 32px));
+    }
+
+    .toast {
+      min-height: 56px;
+      display: grid;
+      grid-template-columns: 20px minmax(0, 1fr) 20px;
+      gap: 10px;
+      align-items: start;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    .toast.success {
+      border-color: #b7eb8f;
+    }
+
+    .toast.error {
+      border-color: #ffa39e;
+    }
+
+    .toast-icon {
+      color: var(--success);
+      font-weight: 600;
+    }
+
+    .toast.error .toast-icon {
+      color: var(--danger);
+    }
+
+    .toast-close {
+      color: var(--text-tertiary);
+      text-align: right;
+    }
+
+    .receipt-paper {
+      min-height: 180px;
+      border: 1px solid var(--border);
+      background: #fff;
+      padding: 18px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .receipt-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      border-bottom: 1px dashed var(--border);
+      padding-bottom: 6px;
+    }
+
+    @media (max-width: 1180px) {
+      .template {
+        grid-template-columns: 1fr;
+      }
+
+      .sider {
+        display: none;
+      }
+
+      .menu-button {
+        display: inline-grid;
+        place-items: center;
+      }
+
+      .topbar {
+        padding: 0 16px;
+      }
+
+      .content {
+        padding: 16px;
+      }
+
+      .filter-band {
+        grid-template-columns: repeat(2, minmax(160px, 1fr));
+      }
+
+      .summary-grid,
+      .state-grid,
+      .workflow-grid,
+      .attachment-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .two-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .content {
+        padding: 12px;
+      }
+
+      .topbar,
+      .page-header,
+      .panel-header,
+      .pagination {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .user-area {
+        display: none;
+      }
+
+      .filter-band,
+      .summary-grid,
+      .state-grid,
+      .workflow-grid,
+      .attachment-grid,
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .template-tabs {
+        top: 76px;
+      }
+
+      .tabs {
+        top: 0;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+      }
+
+      .toast-stack {
+        top: 12px;
+        right: 12px;
+        left: 12px;
+        width: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="toast-stack" aria-label="通知範例">
+    <div class="toast success">
+      <span class="toast-icon">✓</span>
+      <div>
+        <div class="state-title">收款已登錄</div>
+        <div class="state-desc">租金帳單與租約 hub 將重新整理。</div>
+      </div>
+      <span class="toast-close">×</span>
+    </div>
+    <div class="toast error">
+      <span class="toast-icon">!</span>
+      <div>
+        <div class="state-title">收據開啟失敗</div>
+        <div class="state-desc">短暫結果以通知顯示；可回帳單列重試。</div>
+      </div>
+      <span class="toast-close">×</span>
+    </div>
+  </div>
+
+  <div class="template">
+    <aside class="sider" aria-label="主選單">
+      <div class="brand">
+        <div class="brand-title">STDS 管理後台</div>
+        <div class="brand-subtitle">內部營運工具</div>
+      </div>
+      <nav class="nav">
+        <div class="nav-group">
+          <div class="nav-label">總覽</div>
+          <a class="nav-item" href="#"><span class="nav-icon">⌂</span><span>工作台</span></a>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label">日常作業</div>
+          <div class="nav-context">
+            <div class="nav-context-label">目前物業</div>
+            <button class="nav-context-trigger" aria-label="切換目前物業">
+              <span>台北大安物業</span>
+              <span aria-hidden="true">⌄</span>
+            </button>
+          </div>
+          <div class="property-menu" aria-label="物業切換選單展開範例">
+            <div class="property-option active">
+              <strong>台北大安物業</strong>
+              <span class="property-option-meta">目前 tenant/lease workflow route context</span>
+            </div>
+            <div class="property-option">
+              <strong>新竹東區物業</strong>
+              <span class="property-option-meta">切換後導向同 workflow 的 property route</span>
+            </div>
+            <div class="property-option disabled">
+              <strong>台中北區物業</strong>
+              <span class="property-option-meta">目前角色沒有此物業權限</span>
+            </div>
+          </div>
+          <a class="nav-item" href="#"><span class="nav-icon">□</span><span>房間管理</span></a>
+          <a class="nav-item active" href="#"><span class="nav-icon">◉</span><span>租客與租約</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">▣</span><span>抄表與帳單</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">✎</span><span>日誌與維修</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">▤</span><span>財務報表</span></a>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label">管理</div>
+          <a class="nav-item" href="#"><span class="nav-icon">▦</span><span>物業管理</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">⚙</span><span>成員與權限</span></a>
+          <a class="nav-item disabled" href="#" aria-disabled="true"><span class="nav-icon">⊘</span><span>業主不可編輯</span></a>
+        </div>
+      </nav>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div class="context-strip">
+          <button class="menu-button" aria-label="開啟主選單">☰</button>
+          <span class="tag blue">目前物業</span>
+          <div>
+            <div class="state-title">台北大安物業</div>
+            <div class="small">propertyId 來自 route / URL；切換物業導向同 workflow 的另一個 property route。</div>
+          </div>
+        </div>
+        <div class="user-area">
+          <span class="tag green">營運管理</span>
+          <div class="avatar" aria-hidden="true">陳</div>
+          <div>
+            <div class="cell-main">陳營運</div>
+            <div class="small">chen.ops@example.com</div>
+          </div>
+        </div>
+      </header>
+
+      <main class="content">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">租客與租約管理 Template</h1>
+            <p class="page-desc">Property-scoped tenant/lease roster、入住、出租中 hub、租金收款、收據與附件入口；此 HTML 只展示切板與狀態，不呼叫 backend API。</p>
+          </div>
+          <div class="actions">
+            <button class="btn">重新整理</button>
+            <button class="btn">匯出名冊</button>
+            <button class="btn primary">辦理入住</button>
+          </div>
+        </div>
+
+        <nav class="template-tabs tabs" aria-label="本頁 review anchors">
+          <button class="tab active">名冊</button>
+          <button class="tab">入住</button>
+          <button class="tab">出租中 Hub</button>
+          <button class="tab">租客 / 租約</button>
+          <button class="tab">收款與收據</button>
+          <button class="tab">附件 / 狀態</button>
+        </nav>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">租客與租約作業概覽</h2>
+              <div class="panel-subtitle">目前物業的出租、待收款、逾期與空房入住入口。</div>
+            </div>
+            <span class="tag gray">property context</span>
+          </div>
+          <div class="panel-body">
+            <div class="summary-grid">
+              <div class="metric-card">
+                <div class="metric-label">出租中房間</div>
+                <div class="metric-value">28</div>
+                <div class="small">由 roster read model 顯示，不由前端自行計算。</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">本月待收租金</div>
+                <div class="metric-value">NT$ 186,000</div>
+                <div class="small">入口提示；帳單明細仍查 bills。</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">逾期待處理</div>
+                <div class="metric-value">3</div>
+                <div class="small">可連到租金帳單列。</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">空房可入住</div>
+                <div class="metric-value">6</div>
+                <div class="small">include_vacant=true 時作為入住入口。</div>
+              </div>
+            </div>
+            <div class="alert info">
+              <strong>i</strong>
+              <div>
+                <div class="state-title">角色可見性只在 template 表示</div>
+                <div class="state-desc">admin / organizer / staff 可建立租客與租約；owner 以查看名冊、租約、收據與附件為主。後端仍是授權來源。</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">目前物業租客 / 租約名冊</h2>
+              <div class="panel-subtitle">Interactive roster 使用 tenant-lease-roster；HTML 租客名冊匯出不是這張表的資料來源。</div>
+            </div>
+            <div class="actions">
+              <span class="tag gray">GET /properties/{id}/tenant-lease-roster</span>
+              <button class="btn primary">空房入住</button>
+            </div>
+          </div>
+          <!-- API boundary: GET /properties/{id}/tenant-lease-roster?include_vacant=&page=&limit=. -->
+          <div class="filter-band" aria-label="租客租約名冊篩選">
+            <div class="field">
+              <label for="roster-status">顯示</label>
+              <select id="roster-status" class="select">
+                <option>出租中與即將到期</option>
+                <option>包含空房</option>
+                <option>只看逾期租金</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="roster-keyword">房號 / 租客</label>
+              <input id="roster-keyword" class="input" value="101">
+            </div>
+            <div class="field">
+              <label for="roster-rent">下期租金狀態</label>
+              <select id="roster-rent" class="select">
+                <option>全部</option>
+                <option>待收款</option>
+                <option>逾期</option>
+                <option>已收款</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="roster-limit">每頁筆數</label>
+              <select id="roster-limit" class="select">
+                <option>20</option>
+                <option>50</option>
+                <option>100</option>
+              </select>
+            </div>
+            <div class="actions">
+              <button class="btn">重設</button>
+              <button class="btn primary">查詢</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 140px;">房間</th>
+                  <th style="width: 180px;">租客</th>
+                  <th style="width: 210px;">租約期間</th>
+                  <th style="width: 150px;">租金週期</th>
+                  <th style="width: 170px;">押金</th>
+                  <th style="width: 190px;">下期租金</th>
+                  <th style="width: 220px;">備註</th>
+                  <th style="width: 300px;">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <div class="cell-main">101 室</div>
+                    <span class="tag green">出租中</span>
+                  </td>
+                  <td>
+                    <div class="cell-main">林家妤</div>
+                    <div class="cell-sub">0912-345-678</div>
+                  </td>
+                  <td>
+                    <div>2026-02-01 至 2027-01-31</div>
+                    <div class="cell-sub">active lease</div>
+                  </td>
+                  <td>每月 NT$ 18,000</td>
+                  <td><span class="tag green">已收 NT$ 36,000</span></td>
+                  <td>
+                    <span class="tag gold">待收款</span>
+                    <div class="cell-sub">2026-05-01 到期</div>
+                  </td>
+                  <td>租約備註：可使用機車位。</td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="btn primary">進入 Hub</button>
+                      <button class="btn">收款</button>
+                      <button class="btn">附件</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="cell-main">302 室</div>
+                    <span class="tag blue">空房</span>
+                  </td>
+                  <td><span class="cell-sub">尚無租客</span></td>
+                  <td>-</td>
+                  <td>預設 NT$ 12,000</td>
+                  <td>-</td>
+                  <td>-</td>
+                  <td>可安排帶看。</td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="btn primary">辦理入住</button>
+                      <button class="btn">查看房間</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="cell-main">203 室</div>
+                    <span class="tag green">出租中</span>
+                  </td>
+                  <td>
+                    <div class="cell-main">張明哲</div>
+                    <div class="cell-sub">0922-111-888</div>
+                  </td>
+                  <td>
+                    <div>2025-08-15 至 2026-08-14</div>
+                    <div class="cell-sub">active lease</div>
+                  </td>
+                  <td>每季 NT$ 54,000</td>
+                  <td><span class="tag green">已收 NT$ 36,000</span></td>
+                  <td>
+                    <span class="tag red">逾期</span>
+                    <div class="cell-sub">2026-05-15 到期</div>
+                  </td>
+                  <td>租約備註：季度收款。</td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="btn primary">進入 Hub</button>
+                      <button class="btn">收款</button>
+                      <button class="btn">收據</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination">
+            <span>第 1 頁，共 5 頁，總計 86 筆；使用 backend pagination.total_pages。</span>
+            <div class="actions">
+              <button class="btn disabled" disabled>上一頁</button>
+              <button class="btn primary">1</button>
+              <button class="btn">2</button>
+              <button class="btn">下一頁</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="two-grid">
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">空房入住 / 建立租客與租約</h2>
+                <div class="panel-subtitle">畫面可做 guided workflow，但 backend submit 仍分成 Tenant 與 Lease 兩段。</div>
+              </div>
+              <span class="tag gray">POST /tenants + POST /leases</span>
+            </div>
+            <div class="panel-body">
+              <div class="drawer-preview">
+                <div class="drawer-top">
+                  <div>
+                    <div class="state-title">302 室辦理入住</div>
+                    <div class="small">房間 context 鎖定，ROOM_NOT_VACANT 時 refetch roster。</div>
+                  </div>
+                  <span class="tag blue">空房</span>
+                </div>
+                <div class="drawer-body">
+                  <div class="workflow-grid">
+                    <div class="step-card">
+                      <span class="tag blue">Step 1</span>
+                      <div class="state-title">選擇或新增租客</div>
+                      <div class="state-desc">可搜尋既有 tenant；新增時只送 Tenant 欄位。</div>
+                    </div>
+                    <div class="step-card">
+                      <span class="tag blue">Step 2</span>
+                      <div class="state-title">填寫租約條件</div>
+                      <div class="state-desc">租金、租期、押金、租金週期、電費週期與起始電表度數。</div>
+                    </div>
+                    <div class="step-card">
+                      <span class="tag blue">Step 3</span>
+                      <div class="state-title">送出租約</div>
+                      <div class="state-desc">POST /leases 後重新讀 roster 與房間狀態。</div>
+                    </div>
+                    <div class="step-card">
+                      <span class="tag gray">後續</span>
+                      <div class="state-title">附件另行處理</div>
+                      <div class="state-desc">身份文件與合約掃描不塞進首次 create submit。</div>
+                    </div>
+                  </div>
+                  <div class="form-grid">
+                    <div class="field">
+                      <label for="tenant-name">租客姓名</label>
+                      <input id="tenant-name" class="input" value="黃詠晴">
+                    </div>
+                    <div class="field">
+                      <label for="tenant-phone">手機</label>
+                      <input id="tenant-phone" class="input" value="0933-456-789">
+                    </div>
+                    <div class="field">
+                      <label for="tenant-email">Email</label>
+                      <input id="tenant-email" class="input" value="tenant@example.com">
+                    </div>
+                    <div class="field">
+                      <label for="tenant-job">職業</label>
+                      <input id="tenant-job" class="input" value="設計師">
+                    </div>
+                    <div class="field">
+                      <label for="lease-start">租約開始</label>
+                      <input id="lease-start" class="input" value="2026-06-01">
+                    </div>
+                    <div class="field">
+                      <label for="lease-end">租約結束</label>
+                      <input id="lease-end" class="input" value="2027-05-31">
+                    </div>
+                    <div class="field">
+                      <label for="lease-rent">每期租金</label>
+                      <input id="lease-rent" class="input" value="12000">
+                    </div>
+                    <div class="field">
+                      <label for="rent-cadence">租金週期</label>
+                      <select id="rent-cadence" class="select">
+                        <option>每月</option>
+                        <option>每季</option>
+                        <option>每半年</option>
+                        <option>每年</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="electric-cadence">電費週期</label>
+                      <select id="electric-cadence" class="select">
+                        <option>每月</option>
+                        <option>每兩月</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="meter-start">起始電表度數</label>
+                      <input id="meter-start" class="input" value="0">
+                      <div class="small">0 是有效值，需明確送出。</div>
+                    </div>
+                    <div class="field wide">
+                      <label for="lease-notes">租約備註</label>
+                      <textarea id="lease-notes" class="textarea">租客可使用 B1 機車位；網路費另由租客自付。</textarea>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-footer">
+                  <button class="btn">取消</button>
+                  <button class="btn">儲存租客</button>
+                  <button class="btn primary">建立租約</button>
+                </div>
+              </div>
+              <div class="alert error">
+                <strong>!</strong>
+                <div>
+                  <div class="state-title">房間狀態已變更，無法辦理入住</div>
+                  <div class="state-desc">對應 ROOM_NOT_VACANT；保留使用者輸入，並提供重新載入房間狀態。</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">出租中房間 Hub</h2>
+                <div class="panel-subtitle">以 active lease 為中心串租客、租金帳單、附件與跨模組入口。</div>
+              </div>
+              <span class="tag gray">GET /leases + /tenants + /bills</span>
+            </div>
+            <div class="panel-body">
+              <div class="summary-grid">
+                <div class="metric-card">
+                  <div class="metric-label">房間</div>
+                  <div class="state-title">101 室</div>
+                  <div class="small">台北大安物業</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">租客</div>
+                  <div class="state-title">林家妤</div>
+                  <div class="small">0912-345-678</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">租約</div>
+                  <div class="state-title">2026-02-01</div>
+                  <div class="small">至 2027-01-31</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">下期租金</div>
+                  <div class="state-title">NT$ 18,000</div>
+                  <div class="small">2026-05-01 待收款</div>
+                </div>
+              </div>
+              <div class="workflow-grid">
+                <div class="step-card">
+                  <div class="state-title">租客資料</div>
+                  <div class="state-desc">查看與編輯 tenant profile。</div>
+                  <button class="btn">編輯租客</button>
+                </div>
+                <div class="step-card">
+                  <div class="state-title">租約條件</div>
+                  <div class="state-desc">租金調整、replacement、退租入口。</div>
+                  <button class="btn">查看租約</button>
+                </div>
+                <div class="step-card">
+                  <div class="state-title">租金帳單</div>
+                  <div class="state-desc">待收、逾期、已收與收據入口。</div>
+                  <button class="btn primary">處理收款</button>
+                </div>
+                <div class="step-card">
+                  <div class="state-title">附件</div>
+                  <div class="state-desc">租客文件與租約掃描分開管理。</div>
+                  <button class="btn">管理附件</button>
+                </div>
+              </div>
+              <div class="alert warning">
+                <strong>!</strong>
+                <div>
+                  <div class="state-title">房間為出租中，但查無 active lease</div>
+                  <div class="state-desc">顯示資料一致性警示與重試，不把房間當成空房。</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="two-grid">
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">租客 Detail / Edit</h2>
+                <div class="panel-subtitle">只編輯租客資料合約支援欄位；不提供租客層級備註欄位。</div>
+              </div>
+              <span class="tag gray">GET/PATCH /tenants/{id}</span>
+            </div>
+            <div class="panel-body">
+              <div class="drawer-preview">
+                <div class="drawer-top">
+                  <div>
+                    <div class="state-title">林家妤</div>
+                    <div class="small">租客狀態由 backend 派生，畫面唯讀。</div>
+                  </div>
+                  <span class="tag green">租住中</span>
+                </div>
+                <div class="drawer-body">
+                  <div class="form-grid">
+                    <div class="field">
+                      <label for="edit-tenant-name">姓名</label>
+                      <input id="edit-tenant-name" class="input" value="林家妤">
+                    </div>
+                    <div class="field">
+                      <label for="edit-tenant-phone">手機</label>
+                      <input id="edit-tenant-phone" class="input" value="0912-345-678">
+                    </div>
+                    <div class="field">
+                      <label for="edit-tenant-email">Email</label>
+                      <input id="edit-tenant-email" class="input" value="lin@example.com">
+                    </div>
+                    <div class="field">
+                      <label for="edit-tenant-id">身分證字號</label>
+                      <input id="edit-tenant-id" class="input" value="A123456789">
+                    </div>
+                    <div class="field">
+                      <label for="edit-tenant-birth">生日</label>
+                      <input id="edit-tenant-birth" class="input" value="1994-09-16">
+                    </div>
+                    <div class="field">
+                      <label for="edit-tenant-job">職業</label>
+                      <input id="edit-tenant-job" class="input" value="行銷企劃">
+                    </div>
+                    <div class="field wide">
+                      <label for="edit-tenant-address">戶籍地址</label>
+                      <input id="edit-tenant-address" class="input" value="台北市中山區民權東路二段100號">
+                    </div>
+                  </div>
+                </div>
+                <div class="form-footer">
+                  <button class="btn">取消</button>
+                  <button class="btn primary">儲存租客</button>
+                </div>
+              </div>
+              <div class="api-note">Tenant attachment 與 lease history 可在同 drawer 下方做 tabs；本版 template 不提供租客層級備註欄位。</div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">租約 Detail / 租金調整</h2>
+                <div class="panel-subtitle">一般 PATCH 只支援租金與結束日；cadence 改動走 replacement。</div>
+              </div>
+              <span class="tag gray">GET/PATCH /leases/{id}</span>
+            </div>
+            <div class="panel-body">
+              <div class="drawer-preview">
+                <div class="drawer-top">
+                  <div>
+                    <div class="state-title">101 室租約</div>
+                    <div class="small">租金調整從下一個 rent billing period 生效。</div>
+                  </div>
+                  <span class="tag green">active</span>
+                </div>
+                <div class="drawer-body">
+                  <div class="summary-grid">
+                    <div class="metric-card">
+                      <div class="metric-label">租金週期</div>
+                      <div class="state-title">每月</div>
+                      <div class="small">不可在一般編輯修改。</div>
+                    </div>
+                    <div class="metric-card">
+                      <div class="metric-label">電費週期</div>
+                      <div class="state-title">每兩月</div>
+                      <div class="small">改動走 replacement。</div>
+                    </div>
+                    <div class="metric-card">
+                      <div class="metric-label">押金</div>
+                      <div class="state-title">NT$ 36,000</div>
+                      <div class="small">已收。</div>
+                    </div>
+                    <div class="metric-card">
+                      <div class="metric-label">起始度數</div>
+                      <div class="state-title">1280</div>
+                      <div class="small">starting_meter_reading</div>
+                    </div>
+                  </div>
+                  <div class="form-grid">
+                    <div class="field">
+                      <label for="rent-adjust">調整後每期租金</label>
+                      <input id="rent-adjust" class="input" value="19000">
+                    </div>
+                    <div class="field">
+                      <label for="end-adjust">租約結束日</label>
+                      <input id="end-adjust" class="input" value="2027-01-31">
+                    </div>
+                    <div class="field wide">
+                      <label for="adjust-reason">內部說明</label>
+                      <textarea id="adjust-reason" class="textarea">續住前先調整未來租金；當期帳單不回頭修改。</textarea>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-footer">
+                  <button class="btn">取消</button>
+                  <button class="btn primary">送出租金調整</button>
+                </div>
+              </div>
+              <div class="alert info">
+                <strong>i</strong>
+                <div>
+                  <div class="state-title">租金調整成功後 refetch</div>
+                  <div class="state-desc">重新讀 lease detail 與租金 bills，避免前端推算 void / regenerate 結果。</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">Lease Replacement Workflow</h2>
+              <div class="panel-subtitle">cadence change、續約重簽或特殊條件重建使用 workflow，不放在小 modal。</div>
+            </div>
+            <span class="tag gray">POST /leases/{id}/replace</span>
+          </div>
+          <div class="panel-body">
+            <div class="workflow-grid">
+              <div class="step-card">
+                <span class="tag blue">Step 1</span>
+                <div class="state-title">確認 replacement 原因</div>
+                <div class="state-desc">續約重簽、租金週期改變、電費週期改變或其他特殊條件重建。</div>
+              </div>
+              <div class="step-card">
+                <span class="tag blue">Step 2</span>
+                <div class="state-title">確認邊界日與未結帳單</div>
+                <div class="state-desc">完整 rent/electricity period boundary；boundary 前帳單需結清。</div>
+              </div>
+              <div class="step-card">
+                <span class="tag blue">Step 3</span>
+                <div class="state-title">填寫新租約條件</div>
+                <div class="state-desc">同 tenant、同 room、同 property；deposit 第一版只 carry over。</div>
+              </div>
+              <div class="step-card">
+                <span class="tag blue">Step 4</span>
+                <div class="state-title">送出並重新載入</div>
+                <div class="state-desc">舊租約 replacement terminate、新租約建立與帳單預產由 backend 處理。</div>
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="field">
+                <label for="replace-reason">Replacement 原因</label>
+                <select id="replace-reason" class="select">
+                  <option>續約重簽</option>
+                  <option>租金週期改變</option>
+                  <option>電費週期改變</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="replace-date">生效日期</label>
+                <input id="replace-date" class="input" value="2026-08-15">
+              </div>
+              <div class="field">
+                <label for="replace-rent">新每期租金</label>
+                <input id="replace-rent" class="input" value="56000">
+              </div>
+              <div class="field">
+                <label for="replace-rent-cadence">新租金週期</label>
+                <select id="replace-rent-cadence" class="select">
+                  <option>每季</option>
+                  <option>每月</option>
+                  <option>每半年</option>
+                  <option>每年</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="replace-electric-cadence">新電費週期</label>
+                <select id="replace-electric-cadence" class="select">
+                  <option>每月</option>
+                  <option>每兩月</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="replace-deposit">押金處理</label>
+                <input id="replace-deposit" class="input" value="沿用原押金" disabled>
+              </div>
+            </div>
+            <div class="alert warning">
+              <strong>!</strong>
+              <div>
+                <div class="state-title">Replacement 前仍有未結清帳單</div>
+                <div class="state-desc">對應 LEASE_HAS_UNPAID_BILLS / boundary 類 rejection；提示使用者先處理租金或電費帳單，不在前端自行結算。</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="two-grid">
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">租金收款</h2>
+                <div class="panel-subtitle">只支援完整收款；金額鎖定為 backend bill amount。</div>
+              </div>
+              <span class="tag gray">POST /bills/{id}/payment</span>
+            </div>
+            <div class="panel-body">
+              <div class="modal-preview">
+                <div class="modal-top">
+                  <div>
+                    <div class="state-title">登錄 101 室 2026-05 租金</div>
+                    <div class="small">狀態 pending_payment / overdue 才可收款。</div>
+                  </div>
+                  <span class="tag gold">待收款</span>
+                </div>
+                <div class="modal-body">
+                  <div class="summary-grid">
+                    <div class="metric-card">
+                      <div class="metric-label">應收金額</div>
+                      <div class="state-title">NT$ 18,000</div>
+                      <div class="small">paid_amount 固定同 bill amount。</div>
+                    </div>
+                    <div class="metric-card">
+                      <div class="metric-label">租客</div>
+                      <div class="state-title">林家妤</div>
+                      <div class="small">101 室</div>
+                    </div>
+                    <div class="metric-card">
+                      <div class="metric-label">期間</div>
+                      <div class="state-title">2026-05</div>
+                      <div class="small">period_label</div>
+                    </div>
+                    <div class="metric-card">
+                      <div class="metric-label">狀態</div>
+                      <div class="state-title">待收款</div>
+                      <div class="small">pending_payment</div>
+                    </div>
+                  </div>
+                  <div class="form-grid">
+                    <div class="field">
+                      <label for="payment-method">收款方式</label>
+                      <select id="payment-method" class="select">
+                        <option>銀行轉帳</option>
+                        <option>現金</option>
+                        <option>其他</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="paid-at">實際收款時間</label>
+                      <input id="paid-at" class="input" value="">
+                      <div class="small">若未填，依系統時間。</div>
+                    </div>
+                    <div class="field wide">
+                      <label for="payment-note">收款備註</label>
+                      <textarea id="payment-note" class="textarea">租客匯款後提供末五碼 77889。</textarea>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-footer">
+                  <button class="btn">取消</button>
+                  <button class="btn primary">確認收款</button>
+                </div>
+              </div>
+              <div class="alert error">
+                <strong>!</strong>
+                <div>
+                  <div class="state-title">帳單已收款或金額不符</div>
+                  <div class="state-desc">對應 BILL_ALREADY_PAID / BILL_PAID_AMOUNT_MISMATCH；按鈕 disabled 並重新讀取帳單。</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">租金收據預覽 / 開啟</h2>
+                <div class="panel-subtitle">收據內容由 backend runtime HTML 產生；前端只負責 action、loading 與錯誤狀態。</div>
+              </div>
+              <span class="tag gray">GET /bills/{id}/receipt?format=html</span>
+            </div>
+            <div class="panel-body">
+              <div class="receipt-preview">
+                <div class="receipt-top">
+                  <div>
+                    <div class="state-title">已收款租金帳單</div>
+                    <div class="small">點擊後以新分頁開啟 backend HTML。</div>
+                  </div>
+                  <button class="btn primary">開啟收據</button>
+                </div>
+                <div class="receipt-body">
+                  <div class="receipt-paper" aria-label="收據預覽 placeholder">
+                    <div class="state-title">收據 HTML Placeholder</div>
+                    <div class="receipt-line"><span>租客</span><strong>林家妤</strong></div>
+                    <div class="receipt-line"><span>房間</span><strong>101 室</strong></div>
+                    <div class="receipt-line"><span>金額</span><strong>由 backend HTML 呈現</strong></div>
+                    <div class="receipt-line"><span>期間</span><strong>由 backend HTML 呈現</strong></div>
+                    <div class="small">Template 不重刻收據 body、不承諾 PDF、不建立附件、不持久化 generated file bytes。</div>
+                  </div>
+                  <div class="alert warning">
+                    <strong>!</strong>
+                    <div>
+                      <div class="state-title">未付款帳單不可開收據</div>
+                      <div class="state-desc">對應 BILL_RECEIPT_NOT_EXPORTABLE；row action disabled 或顯示 backend rejection。</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="two-grid">
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">租客與租約附件</h2>
+                <div class="panel-subtitle">附件管理是建立後的後續動作；不暴露 signed URL、nonce、bucket 或 object path。</div>
+              </div>
+              <span class="tag gray">attachments shared flow</span>
+            </div>
+            <div class="panel-body">
+              <div class="attachment-grid">
+                <div class="attachment-card">
+                  <div class="state-title">租客身份文件</div>
+                  <div class="state-desc">tenant attachments，依租客關聯物業授權。</div>
+                  <button class="btn">上傳文件</button>
+                </div>
+                <div class="attachment-card">
+                  <div class="state-title">租約掃描檔</div>
+                  <div class="state-desc">lease attachments，與租約 detail 放在同一工作區。</div>
+                  <button class="btn">上傳合約</button>
+                </div>
+                <div class="attachment-card">
+                  <div class="state-title">刪除確認</div>
+                  <div class="state-desc">刪除附件需確認；後端仍再次驗證權限。</div>
+                  <button class="btn danger">刪除</button>
+                </div>
+                <div class="attachment-card">
+                  <div class="state-title">上傳結果</div>
+                  <div class="state-desc">成功用 toast；registration 失敗時提供重試。</div>
+                  <button class="btn disabled" disabled>登錄失敗</button>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width: 260px;">檔案</th>
+                      <th style="width: 160px;">類型</th>
+                      <th style="width: 160px;">上傳者</th>
+                      <th style="width: 180px;">建立時間</th>
+                      <th style="width: 220px;">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>
+                        <div class="cell-main">tenant-id-front.jpg</div>
+                        <div class="cell-sub">租客身份證正面</div>
+                      </td>
+                      <td>租客附件</td>
+                      <td>陳營運</td>
+                      <td>2026-05-09 10:12</td>
+                      <td>
+                        <div class="row-actions">
+                          <button class="btn">開啟</button>
+                          <button class="btn danger">刪除</button>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div class="cell-main">lease-101-2026.pdf</div>
+                        <div class="cell-sub">簽約掃描檔</div>
+                      </td>
+                      <td>租約附件</td>
+                      <td>陳營運</td>
+                      <td>2026-05-09 10:20</td>
+                      <td>
+                        <div class="row-actions">
+                          <button class="btn">開啟</button>
+                          <button class="btn danger">刪除</button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">Page-level / Empty / Forbidden States</h2>
+                <div class="panel-subtitle">整頁不可用才用 page state；表單 validation 與 durable workflow warning 留在區塊內。</div>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="state-grid">
+                <div class="state-card info">
+                  <div class="state-title">載入租約資料中</div>
+                  <div class="state-desc">保留 shell、頁首與表格骨架。</div>
+                </div>
+                <div class="state-card">
+                  <div class="state-title">目前沒有租客</div>
+                  <div class="state-desc">包含空房時可顯示辦理入住入口。</div>
+                </div>
+                <div class="state-card error">
+                  <div class="state-title">頁面載入失敗</div>
+                  <div class="state-desc">retryable error，提供重試與回工作台。</div>
+                </div>
+                <div class="state-card warning">
+                  <div class="state-title">沒有權限</div>
+                  <div class="state-desc">403 route-level forbidden；owner 只能查看允許資料。</div>
+                </div>
+              </div>
+              <div class="alert warning">
+                <strong>!</strong>
+                <div>
+                  <div class="state-title">工作室成員不可調整租金</div>
+                  <div class="state-desc">staff 可看租約與收款入口，租金調整 / replacement 顯示 disabled reason；backend 仍是唯一授權來源。</div>
+                </div>
+              </div>
+              <div class="api-note">
+                Backend paths represented: GET /properties/{id}/tenant-lease-roster, GET/POST/PATCH /tenants, GET /tenants/{id}/leases, GET/POST/PATCH /leases, POST /leases/{id}/replace, GET /bills, GET /bills/{id}, POST /bills/{id}/payment, GET /bills/{id}/receipt?format=html, tenant/lease attachment endpoints, POST /attachments/upload-url, DELETE /attachments/{id}.
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

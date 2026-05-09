@@ -28,9 +28,9 @@
       "slug": "tenant-lease-management",
       "issue": "#14",
       "title": "Tenant / Lease Management",
-      "status": "planned",
+      "status": "ready",
       "description": "Roster, move-in, occupied hub, rent payment, and receipt templates.",
-      "file": ""
+      "file": "tenant-lease-management.html"
     },
     {
       "slug": "meter-electric-billing",

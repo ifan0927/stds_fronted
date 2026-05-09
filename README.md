@@ -10,11 +10,34 @@ This repository does not maintain its own OpenAPI contract. Frontend API work sh
 
 ## Current Status
 
-The repository is currently at Codex/bootstrap stage. Application scaffold, framework choice, package scripts, API client generation, and test setup have not been established in this repo yet.
+The repository now has the initial React + Vite + TypeScript + Ant Design app scaffold and canonical app shell.
 
-Expected frontend direction is React + Vite + TypeScript + Ant Design with static deployment on GCP, but the scaffold has not been created yet. See `docs/codex/frontend-principles.md` for the current architecture principles and package-manager tradeoffs.
+The current scaffold intentionally stops at shell, routing, and placeholder route states. API client generation, Firebase auth bootstrap, shared error mapping, production deployment config, and full E2E setup belong to later foundation issues. See `docs/codex/frontend-principles.md` for the current architecture principles and package-manager tradeoffs.
 
 Do not assume implementation details from backend tooling. The backend is Go/Gin/PostgreSQL/Firebase; frontend choices should be verified in this repo when implementation begins.
+
+## Local Development
+
+Install dependencies and run the Vite dev server:
+
+```text
+npm install
+npm run dev
+```
+
+Useful local checks:
+
+```text
+npm run typecheck
+npm run lint
+npm run build
+```
+
+The app uses `BrowserRouter`. Static hosting must provide an SPA fallback to `index.html` before production deployment, but deployment config is intentionally not part of the first scaffold.
+
+`docker-compose.yml` is still reserved for the standalone UI template preview server. The Vite app is not run through Docker Compose at this stage.
+
+`.env.example` includes `VITE_API_BASE_URL` as a placeholder for the later API foundation. The current app shell does not call backend APIs.
 
 ## Backend Reference
 

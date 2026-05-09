@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Button, Empty, Result, Space, Spin, Typography } from 'antd';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 type RouteStateProps = {
   title: string;
@@ -24,7 +24,7 @@ export function LoadingState() {
 
 export function EmptyState({ title, description, action }: RouteStateProps) {
   return (
-    <div className="route-state-panel">
+    <div className="route-state route-state-panel">
       <Empty description={title}>
         <Typography.Paragraph type="secondary">{description}</Typography.Paragraph>
         {action}
@@ -34,6 +34,8 @@ export function EmptyState({ title, description, action }: RouteStateProps) {
 }
 
 export function RetryableErrorState({ onRetry }: RetryableErrorStateProps) {
+  const navigate = useNavigate();
+
   return (
     <Result
       status="error"
@@ -41,8 +43,8 @@ export function RetryableErrorState({ onRetry }: RetryableErrorStateProps) {
       subTitle="資料暫時無法讀取，請稍後重試。"
       extra={
         <Space wrap>
-          <Button>
-            <Link to="/">回工作台</Link>
+          <Button onClick={() => navigate('/')}>
+            回工作台
           </Button>
           {onRetry && (
             <Button type="primary" onClick={onRetry}>
@@ -56,14 +58,16 @@ export function RetryableErrorState({ onRetry }: RetryableErrorStateProps) {
 }
 
 export function ForbiddenState() {
+  const navigate = useNavigate();
+
   return (
     <Result
       status="403"
       title="沒有權限查看此頁"
       subTitle="此頁面不在目前角色或物業授權範圍內。"
       extra={
-        <Button type="primary">
-          <Link to="/">回工作台</Link>
+        <Button type="primary" onClick={() => navigate('/')}>
+          回工作台
         </Button>
       }
     />
@@ -71,14 +75,16 @@ export function ForbiddenState() {
 }
 
 export function NotFoundState() {
+  const navigate = useNavigate();
+
   return (
     <Result
       status="404"
       title="找不到頁面或資料"
       subTitle="請確認連結是否正確，或回到工作台重新選擇。"
       extra={
-        <Button type="primary">
-          <Link to="/">回工作台</Link>
+        <Button type="primary" onClick={() => navigate('/')}>
+          回工作台
         </Button>
       }
     />

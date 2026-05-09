@@ -1,5 +1,5 @@
 import { Button, Card, Col, Row, Space, Tag, Typography } from 'antd';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   EmptyState,
   ForbiddenState,
@@ -108,6 +108,8 @@ export function PlaceholderPage({ pageKey }: PlaceholderPageProps) {
 }
 
 export function LoginPlaceholder() {
+  const navigate = useNavigate();
+
   return (
     <main className="public-page">
       <Card className="public-panel">
@@ -115,8 +117,8 @@ export function LoginPlaceholder() {
         <Typography.Paragraph type="secondary">
           登入流程會在 auth foundation 接上。此頁先保留 public route 與版面位置。
         </Typography.Paragraph>
-        <Button type="primary">
-          <Link to="/">進入工作台預覽</Link>
+        <Button type="primary" onClick={() => navigate('/')}>
+          進入工作台預覽
         </Button>
       </Card>
     </main>

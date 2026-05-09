@@ -200,6 +200,16 @@ a {
   justify-content: space-between;
 }
 
+.table-cell-stack {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.table-cell-stack .ant-typography {
+  overflow-wrap: anywhere;
+}
+
 .property-facilities {
   margin-top: 16px;
   display: grid;

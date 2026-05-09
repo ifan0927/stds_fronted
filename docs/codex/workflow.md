@@ -11,8 +11,12 @@ Expected issue contents:
 - Goal
 - Out of scope
 - Implementation scope
+- Backend OpenAPI paths/docs involved, or `No specific endpoint`
+- UI/design reference, or `Not applicable`
+- Other reference docs, when relevant
 - Definition of done
-- Reference docs
+- Suggested local verification
+- Known test gaps or deferred follow-up
 - Notes for AI agent when relevant
 
 Before implementation, read the issue and summarize:
@@ -20,7 +24,10 @@ Before implementation, read the issue and summarize:
 - what is in scope
 - what is explicitly out of scope
 - which backend OpenAPI paths/docs are involved
+- which UI/design docs or templates apply
 - what must be true for DoD
+- which local checks should prove the change
+- whether any tests are intentionally deferred
 - unclear points or risky assumptions
 
 Do not widen scope just because adjacent UI or infrastructure looks incomplete.
@@ -101,9 +108,12 @@ Every PR should state:
 - what changed
 - what was intentionally left out
 - which backend OpenAPI paths/docs were referenced
+- which UI/design reference or template was used, when applicable
 - what local checks were run
 - whether tests were added, deferred, or judged unnecessary for this issue
 - whether `ai-review` was requested, suggested, or intentionally not added
+
+Use `.github/pull_request_template.md` as the PR body baseline. Keep the body compact; link to the issue, backend contract, design doc, or template instead of copying long guidance from `AGENTS.md`, `README.md`, or codex docs.
 
 ## Basic PR CI Gate
 

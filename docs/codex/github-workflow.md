@@ -12,7 +12,7 @@ This repository uses GitHub issues and pull requests as the durable workflow rec
 
 ## Label Pool
 
-Use a small label set. Do not invent labels casually.
+Use a small label set. Do not invent labels casually. Prefer the repository-specific workflow labels below for normal issue and PR work. Default GitHub labels such as `documentation`, `enhancement`, `question`, `help wanted`, and `wontfix` are available for triage only when they describe the record more precisely than the workflow labels.
 
 Approved labels:
 
@@ -137,6 +137,8 @@ Branch tags should use the same tag pool as commit tags, without brackets:
 Prefer creating an issue before implementation when the work is non-trivial.
 
 ## PR Body Checklist
+
+Use `.github/pull_request_template.md` as the default PR body. Keep each section short and link to the source document instead of copying long guidance.
 
 Every PR should include:
 

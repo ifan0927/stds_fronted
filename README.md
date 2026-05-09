@@ -205,4 +205,4 @@ For legacy refresh areas, first survey the old page, map it to backend OpenAPI b
 
 `DESIGN.md` is the baseline admin design contract. It should be refined from accepted UI templates rather than replaced by external brand-style design systems.
 
-GitHub work uses a small label pool, `[tag] content` commit messages, and `tag/issue-xx-content` branch names. Add `ai-review` to PRs only when the user asks for AI/CodeRabbit review, or suggest it for risky PRs and wait for confirmation.
+GitHub work uses a small label pool, `[tag] content` commit messages, `tag/issue-xx-content` branch names, and `.github/pull_request_template.md` for PR bodies. Add `ai-review` to PRs only when the user asks for AI/CodeRabbit review, or suggest it for risky PRs and wait for confirmation.

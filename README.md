@@ -12,7 +12,7 @@ This repository does not maintain its own OpenAPI contract. Frontend API work sh
 
 The repository now has the initial React + Vite + TypeScript + Ant Design app scaffold and canonical app shell.
 
-The current scaffold intentionally stops at shell, routing, and placeholder route states. API client generation, Firebase auth bootstrap, shared error mapping, production deployment config, and full E2E setup belong to later foundation issues. See `docs/codex/frontend-principles.md` for the current architecture principles and package-manager tradeoffs.
+The current scaffold includes shell, routing, placeholder route states, and the shared API boundary. Firebase auth bootstrap, route-level error UX wiring, production deployment config, and full E2E setup belong to later foundation issues. See `docs/codex/frontend-principles.md` for the current architecture principles and package-manager tradeoffs.
 
 Do not assume implementation details from backend tooling. The backend is Go/Gin/PostgreSQL/Firebase; frontend choices should be verified in this repo when implementation begins.
 
@@ -30,6 +30,7 @@ Useful local checks:
 ```text
 npm run typecheck
 npm run lint
+npm run test
 npm run build
 ```
 
@@ -37,7 +38,42 @@ The app uses `BrowserRouter`. Static hosting must provide an SPA fallback to `in
 
 `docker-compose.yml` is still reserved for the standalone UI template preview server. The Vite app is not run through Docker Compose at this stage.
 
-`.env.example` includes `VITE_API_BASE_URL` as a placeholder for the later API foundation. The current app shell does not call backend APIs.
+`.env.example` includes `VITE_API_BASE_URL`. The API wrapper falls back to `/api/v1` when this variable is not set.
+
+## API Boundary And OpenAPI Types
+
+The frontend uses the backend OpenAPI file directly and generates TypeScript types into:
+
+```text
+src/api/generated/schema.ts
+```
+
+Regenerate the type-only schema after backend OpenAPI changes:
+
+```text
+npm run openapi:generate
+```
+
+Check whether the generated schema is current:
+
+```text
+npm run openapi:check
+```
+
+Do not edit generated schema types manually, and do not copy `openapi.yaml` into this repository.
+
+Feature pages should call backend APIs through `src/api/client.ts` instead of using raw `fetch`. The wrapper owns:
+
+- base URL handling from `VITE_API_BASE_URL`
+- Firebase Bearer token injection through a token provider interface
+- JSON request/response parsing
+- backend `ErrorResponse` mapping into `ApiError`
+- `AbortSignal` pass-through
+- runtime HTML document responses for report/export flows
+
+The API wrapper does not own Firebase SDK behavior, route redirects, Ant Design messages, global error UI, client cache, optimistic updates, or page-level refetch policy.
+
+Runtime HTML exports return an `HtmlDocumentResponse` with the HTML body, content type, content disposition, and parsed filename. First launch treats backend HTML as the source document. A later frontend-owned HTML-to-PDF issue can consume this same response shape without changing the API boundary.
 
 ## Backend Reference
 

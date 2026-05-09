@@ -38,7 +38,22 @@ The app uses `BrowserRouter`. Static hosting must provide an SPA fallback to `in
 
 `docker-compose.yml` is still reserved for the standalone UI template preview server. The Vite app is not run through Docker Compose at this stage.
 
-`.env.example` includes `VITE_API_BASE_URL`. The API wrapper falls back to `/api/v1` when this variable is not set.
+`.env.example` includes `VITE_API_BASE_URL` and Firebase client settings. The API wrapper falls back to `/api/v1` when `VITE_API_BASE_URL` is not set.
+
+For local auth development, start the same Firebase Auth Emulator used by the backend:
+
+```text
+firebase emulators:start --only auth --project demo-stds-backend
+```
+
+Then set the frontend emulator variables:
+
+```text
+VITE_FIREBASE_USE_EMULATOR=true
+VITE_FIREBASE_AUTH_EMULATOR_URL=http://127.0.0.1:9099
+```
+
+The frontend does not own a long-running Docker Compose auth emulator. Backend local and E2E flows already use the Auth Emulator on `127.0.0.1:9099`, and frontend auth should connect to that same emulator when local verification needs real Firebase tokens.
 
 ## API Boundary And OpenAPI Types
 
@@ -101,6 +116,7 @@ Avoid treating `docs/spec/tasks.md` as current planning truth unless historical 
 - Frontend obtains a Firebase ID token and sends backend requests with `Authorization: Bearer <token>`.
 - `/auth/sync` is called after Firebase login/token updates to sync the Firebase user into the backend DB.
 - Backend roles and property access are enforced server-side. UI checks are only presentation and workflow guidance.
+- Production frontend observability relies on Firebase Hosting request logs and backend GCP logs. The static React app should show user-visible error states, but it should not send tokens, raw request bodies, or sensitive tenant/property data to client-side log ingestion unless a later monitoring issue explicitly adds that system.
 - Internal scheduler endpoints use `X-Scheduler-Key` and are not normal frontend user flows.
 - The current OpenAPI title is `STDS API`, version `1.0.1`.
 

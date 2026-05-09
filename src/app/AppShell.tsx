@@ -5,6 +5,7 @@ import {
   DashboardOutlined,
   FileTextOutlined,
   HomeOutlined,
+  LogoutOutlined,
   MenuFoldOutlined,
   ReadOutlined,
   TeamOutlined,
@@ -14,27 +15,18 @@ import { Avatar, Button, Drawer, Grid, Layout, Menu, Space, Tag, Typography } fr
 import type { ItemType } from 'antd/es/menu/interface';
 import { useMemo, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
+import { getRoleLabel, useAuth } from '../auth';
 
 const { Header, Content, Sider } = Layout;
 const { useBreakpoint } = Grid;
 
-const activeProperty = {
-  id: 'demo-property',
-  name: '台北大安物業',
-  roleLabel: '營運管理',
-};
-
-function getRoutePropertyId(pathname: string) {
+function getRoutePropertyId(pathname: string, fallbackPropertyId: string | undefined) {
   const match = pathname.match(/^\/properties\/([^/]+)/);
-  return match?.[1] ?? activeProperty.id;
+  return match?.[1] ?? fallbackPropertyId ?? 'current-property';
 }
 
 function getPropertyName(propertyId: string) {
-  if (propertyId === activeProperty.id) {
-    return activeProperty.name;
-  }
-
-  return `物業 ${propertyId}`;
+  return propertyId === 'current-property' ? '尚未選擇物業' : `物業 ${propertyId}`;
 }
 
 function createMenuItems(propertyId: string): ItemType[] {
@@ -112,12 +104,16 @@ function getSelectedKey(pathname: string) {
 export default function AppShell() {
   const location = useLocation();
   const screens = useBreakpoint();
+  const { currentUser, logout } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const propertyId = getRoutePropertyId(location.pathname);
+  const propertyId = getRoutePropertyId(location.pathname, currentUser?.assigned_property_ids?.[0]);
   const propertyName = getPropertyName(propertyId);
   const menuItems = useMemo(() => createMenuItems(propertyId), [propertyId]);
   const selectedKeys = [getSelectedKey(location.pathname)];
   const isMobile = !screens.md;
+  const roleLabel = getRoleLabel(currentUser?.role);
+  const displayName = currentUser?.name ?? currentUser?.email ?? '使用者';
+  const displayEmail = currentUser?.email ?? '';
 
   const menu = (
     <div className="shell-menu">
@@ -129,7 +125,7 @@ export default function AppShell() {
         <Typography.Text className="property-context-label">目前物業</Typography.Text>
         <Typography.Text className="property-context-title">{propertyName}</Typography.Text>
         <Typography.Text className="property-context-note">
-          由 route 決定 context，切換器會在後續資料接上。
+          由 route 與後端授權共同決定可見內容。
         </Typography.Text>
       </div>
       <Menu
@@ -169,16 +165,21 @@ export default function AppShell() {
             </div>
           </Space>
           <Space size={12} className="header-user">
-            <Tag color="green">{activeProperty.roleLabel}</Tag>
-            <Avatar>陳</Avatar>
+            <Tag color="green">{roleLabel}</Tag>
+            <Avatar>{displayName.slice(0, 1)}</Avatar>
             {!isMobile && (
               <div>
-                <Typography.Text strong>陳營運</Typography.Text>
+                <Typography.Text strong>{displayName}</Typography.Text>
                 <Typography.Text type="secondary" className="header-email">
-                  chen.ops@example.com
+                  {displayEmail}
                 </Typography.Text>
               </div>
             )}
+            <Button
+              aria-label="登出"
+              icon={<LogoutOutlined />}
+              onClick={() => void logout()}
+            />
           </Space>
         </Header>
         <Content className="app-content">

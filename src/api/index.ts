@@ -1,9 +1,11 @@
 export { apiRequest, buildApiUrl } from './client';
 export type { AccessTokenProvider, ApiRequestOptions, QueryValue } from './client';
-export { syncAuth } from './auth';
-export type { CurrentUser } from './auth';
+export { getCurrentUser, syncAuth, updateCurrentUser } from './auth';
+export type { CurrentUser, UpdateCurrentUserRequest } from './auth';
 export { getDashboard } from './dashboard';
 export type { HomeDashboard } from './dashboard';
+export { getProperty, getPropertyDashboard, listProperties } from './properties';
+export type { Property, PropertyDashboard, PropertyList } from './properties';
 export { ApiError } from './errors';
 export { classifyApiErrorForUi, getFormErrorState } from './errors';
 export type { ErrorResponse, FormErrorState, UiErrorKind, UiErrorState } from './errors';

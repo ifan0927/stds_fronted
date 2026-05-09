@@ -1580,41 +1580,42 @@ export type components = {
             property_ids: string[];
         };
         OccupancySummary: {
-            total_rooms?: number;
-            occupied_rooms?: number;
-            vacant_rooms?: number;
-            maintenance_rooms?: number;
+            total_rooms: number;
+            occupied_rooms: number;
+            vacant_rooms: number;
+            maintenance_rooms: number;
             /** Format: double */
-            occupancy_rate?: number;
+            occupancy_rate: number;
         };
         HomeDashboardBillingSummary: {
-            expected_rent?: number;
-            collected_rent?: number;
-            overdue_bill_count?: number;
+            expected_rent: number;
+            collected_rent: number;
+            overdue_bill_count: number;
         };
         HomeDashboardPropertySummary: {
             /** Format: uuid */
-            property_id?: string;
-            property_name?: string;
-            occupancy_summary?: components["schemas"]["OccupancySummary"];
-            monthly_billing_summary?: components["schemas"]["HomeDashboardBillingSummary"];
+            property_id: string;
+            property_name: string;
+            occupancy_summary: components["schemas"]["OccupancySummary"];
+            monthly_billing_summary: components["schemas"]["HomeDashboardBillingSummary"];
         };
         HomeDashboardRecentJournalItem: {
             /** Format: uuid */
-            id?: string;
+            id: string;
             /** Format: uuid */
-            property_id?: string;
-            property_name?: string;
-            type?: string;
-            content?: string;
+            property_id: string;
+            property_name: string;
+            /** @enum {string} */
+            type: "journal_log" | "repair_request";
+            content: string;
             /** Format: date-time */
-            created_at?: string;
+            created_at: string;
         };
         HomeDashboardResponse: {
-            portfolio_summary?: components["schemas"]["OccupancySummary"];
-            monthly_billing_summary?: components["schemas"]["HomeDashboardBillingSummary"];
-            property_summaries?: components["schemas"]["HomeDashboardPropertySummary"][];
-            recent_journals?: components["schemas"]["HomeDashboardRecentJournalItem"][];
+            portfolio_summary: components["schemas"]["OccupancySummary"];
+            monthly_billing_summary: components["schemas"]["HomeDashboardBillingSummary"];
+            property_summaries: components["schemas"]["HomeDashboardPropertySummary"][];
+            recent_journals: components["schemas"]["HomeDashboardRecentJournalItem"][];
         };
         PropertyResponse: {
             /** Format: uuid */

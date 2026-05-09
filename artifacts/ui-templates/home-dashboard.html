@@ -1,0 +1,723 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>STDS 工作台 Dashboard</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      color-scheme: light;
+      --brand: #1677ff;
+      --canvas: #f5f7fa;
+      --surface: #ffffff;
+      --surface-subtle: #fafafa;
+      --border: #d9d9d9;
+      --text: rgba(0, 0, 0, 0.88);
+      --text-secondary: rgba(0, 0, 0, 0.65);
+      --text-tertiary: rgba(0, 0, 0, 0.45);
+      --success: #52c41a;
+      --warning: #faad14;
+      --danger: #ff4d4f;
+      --info-bg: #e6f4ff;
+      --warning-bg: #fffbe6;
+      --danger-bg: #fff1f0;
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+      font-size: 14px;
+      line-height: 1.5715;
+      letter-spacing: 0;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .template {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 248px minmax(0, 1fr);
+    }
+
+    .sider {
+      background: #001529;
+      color: rgba(255, 255, 255, 0.88);
+      min-height: 100vh;
+      position: sticky;
+      top: 0;
+      align-self: start;
+    }
+
+    .brand {
+      min-height: 64px;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 24px;
+    }
+
+    .brand-subtitle {
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 12px;
+    }
+
+    .nav {
+      padding: 12px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .nav-label {
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 12px;
+      padding: 6px 8px;
+    }
+
+    .nav-item {
+      min-height: 40px;
+      border-radius: 6px;
+      padding: 9px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: rgba(255, 255, 255, 0.78);
+    }
+
+    .nav-item.active {
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .nav-item.disabled {
+      color: rgba(255, 255, 255, 0.32);
+    }
+
+    .nav-icon {
+      width: 18px;
+      text-align: center;
+    }
+
+    .main {
+      min-width: 0;
+    }
+
+    .topbar {
+      min-height: 64px;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .context-strip,
+    .user-area,
+    .actions,
+    .inline-actions {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .content {
+      padding: 24px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .page-title {
+      margin: 8px 0 4px;
+      font-size: 20px;
+      line-height: 28px;
+      font-weight: 600;
+    }
+
+    .page-desc,
+    .muted,
+    .small {
+      margin: 0;
+      color: var(--text-secondary);
+    }
+
+    .small {
+      color: var(--text-tertiary);
+      font-size: 12px;
+      line-height: 20px;
+    }
+
+    .tag {
+      min-height: 22px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0 8px;
+      background: var(--surface-subtle);
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 20px;
+      display: inline-flex;
+      align-items: center;
+      white-space: nowrap;
+    }
+
+    .tag.blue {
+      border-color: #91caff;
+      background: #e6f4ff;
+      color: #0958d9;
+    }
+
+    .tag.green {
+      border-color: #b7eb8f;
+      background: #f6ffed;
+      color: #237804;
+    }
+
+    .tag.red {
+      border-color: #ffa39e;
+      background: #fff1f0;
+      color: #a8071a;
+    }
+
+    .btn {
+      min-height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 15px;
+      background: #fff;
+      color: var(--text);
+      cursor: default;
+      white-space: nowrap;
+    }
+
+    .btn.primary {
+      border-color: var(--brand);
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .btn.disabled {
+      color: var(--text-tertiary);
+      background: var(--surface-subtle);
+    }
+
+    .grid-metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .panel,
+    .metric-card,
+    .state-panel {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+
+    .metric-card {
+      min-height: 116px;
+      padding: 16px;
+      display: grid;
+      align-content: space-between;
+      gap: 10px;
+    }
+
+    .metric-label {
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .metric-value {
+      font-size: 24px;
+      line-height: 32px;
+      font-weight: 600;
+    }
+
+    .metric-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .progress {
+      height: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #f0f0f0;
+    }
+
+    .progress > span {
+      height: 100%;
+      width: 72%;
+      display: block;
+      background: var(--brand);
+    }
+
+    .split-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .panel-header {
+      min-height: 56px;
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 16px;
+      line-height: 24px;
+      font-weight: 600;
+    }
+
+    .panel-body {
+      padding: 16px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      min-width: 820px;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--border);
+      padding: 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--surface-subtle);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .cell-main {
+      font-weight: 500;
+      word-break: break-word;
+    }
+
+    .money {
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .journal-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .journal-item {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .journal-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .state-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .state-panel {
+      min-height: 160px;
+      padding: 16px;
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .state-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--info-bg);
+      color: #0958d9;
+      display: grid;
+      place-items: center;
+      font-weight: 600;
+    }
+
+    .state-title {
+      font-weight: 600;
+    }
+
+    .alert {
+      border: 1px solid #91caff;
+      border-radius: 6px;
+      padding: 12px;
+      background: var(--info-bg);
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .alert.warning {
+      border-color: #ffe58f;
+      background: var(--warning-bg);
+    }
+
+    .alert.error {
+      border-color: #ffa39e;
+      background: var(--danger-bg);
+    }
+
+    .mobile-menu {
+      display: none;
+    }
+
+    @media (max-width: 1199px) {
+      .grid-metrics,
+      .state-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .split-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 767px) {
+      .template {
+        display: block;
+      }
+
+      .sider {
+        display: none;
+      }
+
+      .topbar {
+        min-height: auto;
+        padding: 12px;
+      }
+
+      .mobile-menu {
+        display: inline-flex;
+      }
+
+      .user-area .desktop-only,
+      .topbar .tag.green {
+        display: none;
+      }
+
+      .content {
+        padding: 12px;
+      }
+
+      .page-header,
+      .panel-header {
+        flex-direction: column;
+      }
+
+      .actions,
+      .actions .btn {
+        width: 100%;
+      }
+
+      .grid-metrics,
+      .state-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="template">
+    <aside class="sider" aria-label="主選單">
+      <div class="brand">
+        <div class="brand-title">STDS 管理後台</div>
+        <div class="brand-subtitle">內部營運工具</div>
+      </div>
+      <nav class="nav">
+        <div>
+          <div class="nav-label">總覽</div>
+          <a class="nav-item active" href="#"><span class="nav-icon">⌂</span><span>工作台</span></a>
+        </div>
+        <div>
+          <div class="nav-label">日常作業</div>
+          <a class="nav-item disabled" href="#"><span class="nav-icon">⌂</span><span>物業工作台</span></a>
+          <a class="nav-item disabled" href="#"><span class="nav-icon">□</span><span>房間管理</span></a>
+          <a class="nav-item disabled" href="#"><span class="nav-icon">◉</span><span>租客與租約</span></a>
+          <a class="nav-item disabled" href="#"><span class="nav-icon">▣</span><span>抄表與帳單</span></a>
+          <a class="nav-item disabled" href="#"><span class="nav-icon">✎</span><span>日誌與維修</span></a>
+          <a class="nav-item disabled" href="#"><span class="nav-icon">▤</span><span>財務報表</span></a>
+        </div>
+        <div>
+          <div class="nav-label">管理</div>
+          <a class="nav-item" href="#"><span class="nav-icon">▦</span><span>物業管理</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">⚙</span><span>成員與權限</span></a>
+        </div>
+      </nav>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div class="context-strip">
+          <button class="btn mobile-menu" aria-label="開啟主選單">☰</button>
+          <span class="tag blue">工作台</span>
+          <div>
+            <div class="cell-main">全部授權物業</div>
+            <div class="small">後端依角色與物業授權回傳可見摘要</div>
+          </div>
+        </div>
+        <div class="user-area">
+          <span class="tag green">營運管理</span>
+          <div class="cell-main">陳營運</div>
+          <div class="small desktop-only">chen.ops@example.com</div>
+        </div>
+      </header>
+
+      <main class="content">
+        <div class="page-header">
+          <div>
+            <span class="tag blue">總覽</span>
+            <h1 class="page-title">工作台</h1>
+            <p class="page-desc">查看授權範圍內的出租狀態、本月帳務摘要、物業概況與近期日誌。</p>
+          </div>
+          <div class="actions">
+            <button class="btn">重新整理</button>
+            <button class="btn primary">前往物業管理</button>
+          </div>
+        </div>
+
+        <!-- API boundary: GET /dashboard. Frontend does not aggregate rooms, bills, or journals from child endpoints. -->
+        <section class="grid-metrics" aria-label="Portfolio and billing summary">
+          <div class="metric-card">
+            <div>
+              <div class="metric-label">房間總數</div>
+              <div class="metric-value">24</div>
+            </div>
+            <div class="small">portfolio_summary.total_rooms</div>
+          </div>
+          <div class="metric-card">
+            <div>
+              <div class="metric-row">
+                <div class="metric-label">出租率</div>
+                <span class="tag green">穩定</span>
+              </div>
+              <div class="metric-value">72%</div>
+            </div>
+            <div class="progress" aria-label="出租率 72%"><span></span></div>
+          </div>
+          <div class="metric-card">
+            <div>
+              <div class="metric-label">本月預期租金</div>
+              <div class="metric-value">NT$268,000</div>
+            </div>
+            <div class="small">monthly_billing_summary.expected_rent</div>
+          </div>
+          <div class="metric-card">
+            <div>
+              <div class="metric-row">
+                <div class="metric-label">逾期帳單</div>
+                <span class="tag red">需追蹤</span>
+              </div>
+              <div class="metric-value">5</div>
+            </div>
+            <div class="small">monthly_billing_summary.overdue_bill_count</div>
+          </div>
+        </section>
+
+        <section class="split-grid">
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">物業摘要</h2>
+                <p class="small">表格使用 property_summaries[]，適合多物業掃描比較。</p>
+              </div>
+              <span class="tag">3 筆物業</span>
+            </div>
+            <div class="panel-body">
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width: 24%;">物業</th>
+                      <th style="width: 12%;">出租率</th>
+                      <th style="width: 20%;">房間狀態</th>
+                      <th style="width: 16%;">預期租金</th>
+                      <th style="width: 16%;">已收租金</th>
+                      <th style="width: 12%;">逾期</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>
+                        <div class="cell-main">台北大安物業</div>
+                      </td>
+                      <td><span class="tag green">70%</span></td>
+                      <td>7 出租中 / 2 空房 / 1 維修</td>
+                      <td class="money">NT$120,000</td>
+                      <td class="money">NT$90,000</td>
+                      <td><span class="tag red">3 筆</span></td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div class="cell-main">新竹東區物業</div>
+                      </td>
+                      <td><span class="tag green">88%</span></td>
+                      <td>8 出租中 / 1 空房 / 0 維修</td>
+                      <td class="money">NT$98,000</td>
+                      <td class="money">NT$98,000</td>
+                      <td><span class="tag">0 筆</span></td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div class="cell-main">台中北區物業</div>
+                      </td>
+                      <td><span class="tag">50%</span></td>
+                      <td>2 出租中 / 2 空房 / 1 維修</td>
+                      <td class="money">NT$50,000</td>
+                      <td class="money">NT$36,000</td>
+                      <td><span class="tag red">2 筆</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <aside class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">近期日誌</h2>
+                <p class="small">使用 recent_journals[]；journal_log 顯示一般日誌，repair_request 顯示維修紀錄。</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="journal-list">
+                <div class="journal-item">
+                  <div class="journal-meta">
+                    <span class="tag blue">一般日誌</span>
+                    <span class="small">2026/04/10 17:00</span>
+                  </div>
+                  <div class="cell-main">更換大廳燈泡</div>
+                  <div class="small">台北大安物業</div>
+                </div>
+                <div class="journal-item">
+                  <div class="journal-meta">
+                    <span class="tag">維修紀錄</span>
+                    <span class="small">2026/04/09 11:20</span>
+                  </div>
+                  <div class="cell-main">302 房冷氣排水檢查完成</div>
+                  <div class="small">新竹東區物業</div>
+                </div>
+                <div class="journal-item">
+                  <div class="journal-meta">
+                    <span class="tag">維修紀錄</span>
+                    <span class="small">2026/04/07 09:45</span>
+                  </div>
+                  <div class="cell-main">302 房冷氣排水檢查完成</div>
+                  <div class="small">台中北區物業</div>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">Route 狀態與空資料文案</h2>
+              <p class="small">工作台應保留清楚狀態，不讓頁面在讀取或失敗時呈現空白。</p>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="state-grid">
+              <div class="state-panel">
+                <div class="state-icon">…</div>
+                <div class="state-title">載入中</div>
+                <p class="small">正在讀取工作台資料，請稍候。</p>
+              </div>
+              <div class="state-panel">
+                <div class="state-icon">0</div>
+                <div class="state-title">目前沒有可顯示的營運資料</div>
+                <p class="small">授權範圍內尚無物業、房間、帳務或日誌摘要。</p>
+              </div>
+              <div class="state-panel">
+                <div class="state-icon">!</div>
+                <div class="state-title">頁面載入失敗</div>
+                <p class="small">保留重試入口，不顯示技術細節。</p>
+                <button class="btn primary">重試</button>
+              </div>
+              <div class="state-panel">
+                <div class="state-icon">403</div>
+                <div class="state-title">沒有權限查看此頁</div>
+                <p class="small">後端授權仍是唯一來源；UI 只呈現狀態。</p>
+              </div>
+            </div>
+            <div class="alert warning">
+              <strong>i</strong>
+              <div>
+                <div class="state-title">契約邊界</div>
+                <div class="small">工作台摘要由系統提供；沒有資料時顯示空狀態，不在畫面上自行推估。</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

@@ -17,6 +17,14 @@
       "file": "auth-access.html"
     },
     {
+      "slug": "home-dashboard",
+      "issue": "#35",
+      "title": "Home Dashboard",
+      "status": "ready",
+      "description": "Read-only API-backed home dashboard using the backend-owned summary read model.",
+      "file": "home-dashboard.html"
+    },
+    {
       "slug": "property-room-management",
       "issue": "#13",
       "title": "Property + Room Management",

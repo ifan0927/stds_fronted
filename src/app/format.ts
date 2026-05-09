@@ -1,15 +1,14 @@
 import type { HomeDashboard } from '../api/dashboard';
-import type { PropertyDashboard } from '../api/properties';
+import type { RoomStatus } from '../api/properties';
 
 type RecentJournalType = HomeDashboard['recent_journals'][number]['type'];
-type PropertyDashboardRoomStatus = NonNullable<PropertyDashboard['rooms']>[number]['status'];
 
 const journalTypeLabels: Record<RecentJournalType, string> = {
   journal_log: '一般日誌',
   repair_request: '維修紀錄',
 };
 
-const roomStatusLabels: Record<NonNullable<PropertyDashboardRoomStatus>, string> = {
+const roomStatusLabels: Record<RoomStatus, string> = {
   vacant: '空房',
   occupied: '出租中',
   maintenance: '維修中',
@@ -57,6 +56,6 @@ export function getReadableJournalTypeLabel(type: string | undefined) {
   return '日誌';
 }
 
-export function getRoomStatusLabel(status: PropertyDashboardRoomStatus) {
+export function getRoomStatusLabel(status: RoomStatus | undefined) {
   return status ? roomStatusLabels[status] : '未提供';
 }

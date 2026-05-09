@@ -4,8 +4,16 @@ export { getCurrentUser, syncAuth, updateCurrentUser } from './auth';
 export type { CurrentUser, UpdateCurrentUserRequest } from './auth';
 export { getDashboard } from './dashboard';
 export type { HomeDashboard } from './dashboard';
-export { getProperty, getPropertyDashboard, listProperties } from './properties';
-export type { Property, PropertyDashboard, PropertyList } from './properties';
+export { getProperty, getPropertyDashboard, listProperties, listPropertyRooms } from './properties';
+export type {
+  ListPropertyRoomsQuery,
+  Property,
+  PropertyDashboard,
+  PropertyList,
+  Room,
+  RoomList,
+  RoomStatus,
+} from './properties';
 export { ApiError } from './errors';
 export { classifyApiErrorForUi, getFormErrorState } from './errors';
 export type { ErrorResponse, FormErrorState, UiErrorKind, UiErrorState } from './errors';

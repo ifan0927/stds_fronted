@@ -4,6 +4,7 @@ import {
   formatPercent,
   formatTwd,
   getJournalTypeLabel,
+  getRoomStatusLabel,
 } from './format';
 
 describe('dashboard format helpers', () => {
@@ -19,5 +20,12 @@ describe('dashboard format helpers', () => {
   it('maps backend journal types to stable Traditional Chinese labels', () => {
     expect(getJournalTypeLabel('journal_log')).toBe('一般日誌');
     expect(getJournalTypeLabel('repair_request')).toBe('維修紀錄');
+  });
+
+  it('maps backend room statuses to stable Traditional Chinese labels', () => {
+    expect(getRoomStatusLabel('vacant')).toBe('空房');
+    expect(getRoomStatusLabel('occupied')).toBe('出租中');
+    expect(getRoomStatusLabel('maintenance')).toBe('維修中');
+    expect(getRoomStatusLabel(undefined)).toBe('未提供');
   });
 });

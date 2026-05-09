@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError } from './errors';
-import { getProperty, getPropertyDashboard, listProperties } from './properties';
+import { getProperty, getPropertyDashboard, listProperties, listPropertyRooms } from './properties';
 
 function jsonResponse(body: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(body), {
@@ -94,6 +94,44 @@ describe('property API helpers', () => {
     expect(init?.method).toBe('GET');
     expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer firebase-id-token');
     expect(result.monthly_summary?.overdue_bill_count).toBe(3);
+  });
+
+  it('lists property rooms with backend-supported query params', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        data: [
+          {
+            id: 'room-1',
+            property_id: 'property/with/slash',
+            name: '101 室',
+            status: 'vacant',
+            floor: '1F',
+            default_rent_amount: 18000,
+          },
+        ],
+        pagination: {
+          page: 2,
+          limit: 50,
+          total: 80,
+          total_pages: 2,
+          has_next: false,
+        },
+      }),
+    );
+
+    const result = await listPropertyRooms(
+      'property/with/slash',
+      () => 'firebase-id-token',
+      { status: 'vacant', page: 2, limit: 50 },
+      { fetcher },
+    );
+
+    const [url, init] = fetcher.mock.calls[0];
+    expect(url).toBe('/api/v1/properties/property%2Fwith%2Fslash/rooms?status=vacant&page=2&limit=50');
+    expect(init?.method).toBe('GET');
+    expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer firebase-id-token');
+    expect(result.data?.[0]?.name).toBe('101 室');
+    expect(result.pagination?.total).toBe(80);
   });
 
   it('propagates backend errors from property helpers', async () => {

@@ -200,6 +200,34 @@ a {
   justify-content: space-between;
 }
 
+.filter-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #fafafa;
+}
+
+.filter-field {
+  display: grid;
+  gap: 6px;
+}
+
+.room-status-filter {
+  width: 160px;
+}
+
+.room-limit-filter {
+  width: 120px;
+}
+
+.row-action-stack {
+  min-width: 0;
+}
+
 .table-cell-stack {
   min-width: 0;
   display: grid;
@@ -305,6 +333,11 @@ a {
 
   .page-header {
     flex-direction: column;
+  }
+
+  .filter-toolbar {
+    align-items: stretch;
+    display: grid;
   }
 
   .page-header > .ant-space {

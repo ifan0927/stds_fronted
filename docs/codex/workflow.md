@@ -67,7 +67,9 @@ Do not add tests for trivial presentational markup unless the markup carries beh
 Expected first choices once the scaffold exists:
 
 - Unit/component tests: Vitest, because it integrates with Vite and supports TypeScript/JSX and browser/component testing.
+- Component tests: use Vitest with `@testing-library/react`, `@testing-library/user-event`, and the `happy-dom` environment.
 - Component behavior style: prefer user-facing queries and interactions over component internals.
+- Page tests that need backend state should mock the narrow API helper or API module boundary used by the page. When the test target is app wiring, query params, route states, or links, keep heavy UI libraries such as Ant Design Table/Select behind lightweight semantic mocks instead of rendering the full component tree. Do not add a second DOM runner, snapshot-heavy renderer, or ad hoc DOM harness for one issue.
 - Network mocking for component/API tests: MSW or a minimal local mock only when it prevents real backend coupling.
 - E2E tests: Playwright, because it is built for modern web app E2E testing and supports Chromium/WebKit/Firefox, isolation, tracing, and CI/headless runs.
 

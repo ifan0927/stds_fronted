@@ -4,6 +4,15 @@ import type { components } from './generated/schema';
 export type Property = components['schemas']['PropertyResponse'];
 export type PropertyList = components['schemas']['PropertyListResponse'];
 export type PropertyDashboard = components['schemas']['DashboardResponse'];
+export type Room = components['schemas']['RoomResponse'];
+export type RoomList = components['schemas']['RoomListResponse'];
+export type RoomStatus = NonNullable<Room['status']>;
+
+export type ListPropertyRoomsQuery = {
+  status?: RoomStatus;
+  page?: number;
+  limit?: number;
+};
 
 type ApiHelperOptions = {
   signal?: AbortSignal;
@@ -46,6 +55,21 @@ export function getPropertyDashboard(
 ) {
   return apiRequest<PropertyDashboard>({
     path: propertyPath(propertyId, '/dashboard'),
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function listPropertyRooms(
+  propertyId: string,
+  tokenProvider: AccessTokenProvider,
+  query: ListPropertyRoomsQuery = {},
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<RoomList>({
+    path: propertyPath(propertyId, '/rooms'),
+    query,
     tokenProvider,
     signal: options.signal,
     fetcher: options.fetcher,

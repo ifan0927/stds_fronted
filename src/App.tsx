@@ -4,6 +4,7 @@ import CurrentUserProfilePage from './app/CurrentUserProfilePage';
 import HomeDashboardPage from './app/HomeDashboardPage';
 import PropertyDashboardPage from './app/PropertyDashboardPage';
 import PropertyListPage from './app/PropertyListPage';
+import RoomInventoryPage, { RoomCreatePendingPage, RoomDetailPendingPage } from './app/RoomInventoryPage';
 import { ForbiddenPage, LoginPage, NotFoundPage, PlaceholderPage } from './app/pages';
 import { ProtectedRoute } from './auth';
 
@@ -18,7 +19,9 @@ export default function App() {
           <Route path="account" element={<CurrentUserProfilePage />} />
           <Route path="properties" element={<PropertyListPage />} />
           <Route path="properties/:propertyId" element={<PropertyDashboardPage />} />
-          <Route path="properties/:propertyId/rooms" element={<PlaceholderPage pageKey="rooms" />} />
+          <Route path="properties/:propertyId/rooms" element={<RoomInventoryPage />} />
+          <Route path="properties/:propertyId/rooms/new" element={<RoomCreatePendingPage />} />
+          <Route path="properties/:propertyId/rooms/:roomId" element={<RoomDetailPendingPage />} />
           <Route path="properties/:propertyId/tenants" element={<PlaceholderPage pageKey="tenants" />} />
           <Route path="properties/:propertyId/billing" element={<PlaceholderPage pageKey="billing" />} />
           <Route path="properties/:propertyId/journal" element={<PlaceholderPage pageKey="journal" />} />

@@ -1,0 +1,12 @@
+services:
+  template-preview:
+    build:
+      context: .
+      dockerfile: tools/template-preview/Dockerfile
+    container_name: stds-frontend-template-preview
+    ports:
+      - "9999:9999"
+    volumes:
+      - ./artifacts/ui-templates:/app/artifacts/ui-templates:ro
+      - ./tools/template-preview:/app/tools/template-preview:ro
+    restart: unless-stopped

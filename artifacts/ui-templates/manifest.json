@@ -1,0 +1,60 @@
+{
+  "templates": [
+    {
+      "slug": "foundation-app-shell",
+      "issue": "#11",
+      "title": "Foundation / App Shell",
+      "status": "planned",
+      "description": "Shared shell, navigation, route states, table/form/export patterns.",
+      "file": ""
+    },
+    {
+      "slug": "auth-access",
+      "issue": "#12",
+      "title": "Auth / Access",
+      "status": "planned",
+      "description": "Login, auth sync, user management, and property assignment templates.",
+      "file": ""
+    },
+    {
+      "slug": "property-room-management",
+      "issue": "#13",
+      "title": "Property + Room Management",
+      "status": "planned",
+      "description": "Property list/detail and room inventory templates.",
+      "file": ""
+    },
+    {
+      "slug": "tenant-lease-management",
+      "issue": "#14",
+      "title": "Tenant / Lease Management",
+      "status": "planned",
+      "description": "Roster, move-in, occupied hub, rent payment, and receipt templates.",
+      "file": ""
+    },
+    {
+      "slug": "meter-electric-billing",
+      "issue": "#15",
+      "title": "Meter Reading / Electric Billing",
+      "status": "planned",
+      "description": "Pending meter, bill detail, history, payment, and receipt templates.",
+      "file": ""
+    },
+    {
+      "slug": "checkout-settlement",
+      "issue": "#16",
+      "title": "Checkout Settlement",
+      "status": "planned",
+      "description": "Checkout preview/finalize/export, review list, and force termination templates.",
+      "file": ""
+    },
+    {
+      "slug": "journal-repair-accounting-reports",
+      "issue": "#17",
+      "title": "Journal / Repair + Accounting Reports",
+      "status": "planned",
+      "description": "Journal, repair, report detail, export, and send-action templates.",
+      "file": ""
+    }
+  ]
+}

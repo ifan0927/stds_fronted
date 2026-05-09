@@ -1,0 +1,4 @@
+.env
+.idea/
+.playwright-mcp/
+__pycache__/

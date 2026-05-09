@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import AppShell from './app/AppShell';
 import HomeDashboardPage from './app/HomeDashboardPage';
 import PropertyDashboardPage from './app/PropertyDashboardPage';
+import PropertyListPage from './app/PropertyListPage';
 import { ForbiddenPage, LoginPage, NotFoundPage, PlaceholderPage } from './app/pages';
 import { ProtectedRoute } from './auth';
 
@@ -13,7 +14,7 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
           <Route index element={<HomeDashboardPage />} />
-          <Route path="properties" element={<PlaceholderPage pageKey="properties" />} />
+          <Route path="properties" element={<PropertyListPage />} />
           <Route path="properties/:propertyId" element={<PropertyDashboardPage />} />
           <Route path="properties/:propertyId/rooms" element={<PlaceholderPage pageKey="rooms" />} />
           <Route path="properties/:propertyId/tenants" element={<PlaceholderPage pageKey="tenants" />} />

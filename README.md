@@ -10,9 +10,9 @@ This repository does not maintain its own OpenAPI contract. Frontend API work sh
 
 ## Current Status
 
-The repository now has the initial React + Vite + TypeScript + Ant Design app scaffold and canonical app shell.
+The repository now has the initial React + Vite + TypeScript + Ant Design app scaffold, canonical app shell, API boundary, Firebase auth bootstrap, route-state primitives, operation/error helpers, runtime HTML preview helper, and local logging policy.
 
-The current scaffold includes shell, routing, placeholder route states, and the shared API boundary. Firebase auth bootstrap, route-level error UX wiring, production deployment config, and full E2E setup belong to later foundation issues. See `docs/codex/frontend-principles.md` for the current architecture principles and package-manager tradeoffs.
+Feature-page implementation should start from `docs/codex/frontend-implementation-reference.md`. Production deployment config and full E2E setup belong to later issues. See `docs/codex/frontend-principles.md` for the current architecture principles and package-manager tradeoffs.
 
 Do not assume implementation details from backend tooling. The backend is Go/Gin/PostgreSQL/Firebase; frontend choices should be verified in this repo when implementation begins.
 
@@ -90,6 +90,17 @@ The API wrapper does not own Firebase SDK behavior, route redirects, Ant Design 
 
 Runtime HTML exports return an `HtmlDocumentResponse` with the HTML body, content type, content disposition, and parsed filename. First launch treats backend HTML as the source document. A later frontend-owned HTML-to-PDF issue can consume this same response shape without changing the API boundary.
 
+## Feature Page Implementation Reference
+
+Use `docs/codex/frontend-implementation-reference.md` before implementing feature pages. It is the bootstrap handoff for established tools and primitives:
+
+- API client and OpenAPI type usage
+- error and route-state mapping
+- form validation and mutation feedback policy
+- runtime HTML export preview behavior
+- local logging and production safety rules
+- test and verification expectations
+
 ## Backend Reference
 
 Use the backend repo as the source of truth for API behavior and domain rules:
@@ -134,15 +145,16 @@ Major API areas in the current contract:
 Before frontend API work:
 
 1. Read `AGENTS.md` in this repo.
-2. Read `docs/codex/frontend-principles.md` for frontend scope and architecture constraints.
-3. Read `docs/codex/workflow.md` for the issue-driven workflow and frontend testing strategy.
-4. Read `docs/codex/github-workflow.md` before issue, branch, commit, PR, label, or review-label work.
-5. Read `docs/codex/ui-design-workflow.md` when replacing or redesigning legacy UI.
-6. Read `DESIGN.md` for baseline UI layout, spacing, and Ant Design rules.
-7. Inspect the relevant backend OpenAPI paths and schemas.
-8. Check backend domain docs when the UI flow depends on business rules.
-9. State assumptions and success criteria before coding.
-10. Keep changes surgical and verify with the repo's established scripts once they exist.
+2. Read `docs/codex/frontend-implementation-reference.md` for established tools and primitives.
+3. Read `docs/codex/frontend-principles.md` for frontend scope and architecture constraints.
+4. Read `docs/codex/workflow.md` for the issue-driven workflow and frontend testing strategy.
+5. Read `docs/codex/github-workflow.md` before issue, branch, commit, PR, label, or review-label work.
+6. Read `docs/codex/ui-design-workflow.md` when replacing or redesigning legacy UI.
+7. Read `DESIGN.md` for baseline UI layout, spacing, and Ant Design rules.
+8. Inspect the relevant backend OpenAPI paths and schemas.
+9. Check backend domain docs when the UI flow depends on business rules.
+10. State assumptions and success criteria before coding.
+11. Keep changes surgical and verify with the repo's established scripts once they exist.
 
 ## Workflow Summary
 

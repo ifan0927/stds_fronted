@@ -32,12 +32,13 @@ For label, branch, commit, PR body, follow-up issue, and `ai-review` rules, foll
 Default flow:
 
 1. Start from a GitHub issue.
-2. Inspect backend OpenAPI and reference docs for the affected flow.
-3. Implement the narrowest frontend change that satisfies the issue.
-4. Do not add CI wiring during active feature development unless the issue asks for it.
-5. Run local verification after implementation.
-6. Open a PR for review.
-7. Use PR code review plus same-issue test follow-up to close quality gaps.
+2. Read `docs/codex/frontend-implementation-reference.md` for the established tools and primitives.
+3. Inspect backend OpenAPI and reference docs for the affected flow.
+4. Implement the narrowest frontend change that satisfies the issue.
+5. Do not add CI wiring during active feature development unless the issue asks for it.
+6. Run local verification after implementation.
+7. Open a PR for review.
+8. Use PR code review plus same-issue test follow-up to close quality gaps.
 
 This intentionally separates fast development from final quality hardening. The quality bar still exists, but it is enforced at PR review and post-implementation verification instead of slowing every early iteration with CI expansion.
 

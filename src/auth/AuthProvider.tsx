@@ -12,7 +12,7 @@ import {
   signOut,
   type User,
 } from 'firebase/auth';
-import { syncAuth, type CurrentUser } from '../api/auth';
+import { getCurrentUser, syncAuth, type CurrentUser } from '../api/auth';
 import { AuthContext, type AuthContextValue, type AuthStatus } from './AuthContext';
 import { classifyAuthSyncFailure, getStatusAfterFirebaseSignInFailure } from './session';
 import { getFirebaseAuth } from './firebase';
@@ -111,6 +111,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
     await runSync(auth.currentUser);
   }, [auth, runSync]);
 
+  const refreshCurrentUser = useCallback(async () => {
+    if (!auth?.currentUser) {
+      setCurrentUser(null);
+      setStatus('unauthenticated');
+      return null;
+    }
+
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const user = await getCurrentUser(() => token);
+      setCurrentUser(user);
+      setStatus('authenticated');
+      return user;
+    } catch (error) {
+      const failure = classifyAuthSyncFailure(error);
+
+      if (failure === 'invalid-session' || failure === 'account-not-found') {
+        setCurrentUser(null);
+        setStatus(failure);
+      }
+
+      if (failure === 'invalid-session') {
+        await signOut(auth);
+      }
+
+      throw error;
+    }
+  }, [auth]);
+
   const getAccessToken = useCallback(async () => {
     if (!auth?.currentUser) {
       return null;
@@ -126,8 +155,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     login,
     logout,
     retrySync,
+    refreshCurrentUser,
     getAccessToken,
-  }), [authConfig, currentUser, getAccessToken, login, logout, retrySync, status]);
+  }), [authConfig, currentUser, getAccessToken, login, logout, refreshCurrentUser, retrySync, status]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

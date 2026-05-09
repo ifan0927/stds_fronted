@@ -275,6 +275,10 @@ a {
   width: 100%;
 }
 
+.account-form-stack {
+  width: 100%;
+}
+
 .mobile-nav-drawer .ant-drawer-body {
   padding: 0;
   background: #001529;

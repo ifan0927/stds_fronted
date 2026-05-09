@@ -10,6 +10,7 @@ import {
   ReadOutlined,
   TeamOutlined,
   ToolOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import { Avatar, Button, Drawer, Grid, Layout, Menu, Select, Space, Tag, Typography } from 'antd';
 import type { ItemType } from 'antd/es/menu/interface';
@@ -110,6 +111,11 @@ function createMenuItems(propertyId: string | undefined): ItemType[] {
       label: '管理',
       type: 'group',
       children: [
+        {
+          key: '/account',
+          icon: <UserOutlined />,
+          label: <Link to="/account">我的帳號</Link>,
+        },
         {
           key: '/properties',
           icon: <AppstoreOutlined />,
@@ -282,6 +288,11 @@ export default function AppShell() {
                 </Typography.Text>
               </div>
             )}
+            <Button
+              aria-label="我的帳號"
+              icon={<UserOutlined />}
+              onClick={() => navigate('/account')}
+            />
             <Button
               aria-label="登出"
               icon={<LogoutOutlined />}

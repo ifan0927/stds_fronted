@@ -38,22 +38,43 @@ The app uses `BrowserRouter`. Static hosting must provide an SPA fallback to `in
 
 `docker-compose.yml` is still reserved for the standalone UI template preview server. The Vite app is not run through Docker Compose at this stage.
 
-`.env.example` includes `VITE_API_BASE_URL` and Firebase client settings. The API wrapper falls back to `/api/v1` when `VITE_API_BASE_URL` is not set.
+`.env.example` includes `VITE_API_BASE_URL` and Firebase client settings. The API wrapper falls back to `/api/v1` when `VITE_API_BASE_URL` is not set. Local Vite development should use `/api/v1` so requests go through the Vite proxy to the backend and avoid browser CORS drift.
 
 For local auth development, start the same Firebase Auth Emulator used by the backend:
 
 ```text
-firebase emulators:start --only auth --project demo-stds-backend
+firebase emulators:start --only auth
 ```
 
-Then set the frontend emulator variables:
+In the backend repo, make sure `DATABASE_URL` points to an existing local database with backend migrations applied, then create or update the local emulator users and matching backend DB users:
 
 ```text
+cd /Users/cheni-fan/stds_backend
+scripts/dev_auth_users.sh
+```
+
+That backend script creates or updates these local accounts:
+
+| Email | Password | Role |
+| --- | --- | --- |
+| `local-admin@example.com` | `Test123!` | `admin` |
+| `local-organizer@example.com` | `Test123!` | `organizer` |
+| `local-staff@example.com` | `Test123!` | `staff` |
+| `local-owner@example.com` | `Test123!` | `owner` |
+
+Then set the frontend local env to use the same emulator:
+
+```text
+VITE_API_BASE_URL=/api/v1
+VITE_FIREBASE_API_KEY=fake-api-key
+VITE_FIREBASE_AUTH_DOMAIN=demo-stds-backend.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=demo-stds-backend
+VITE_FIREBASE_APP_ID=demo-stds-frontend
 VITE_FIREBASE_USE_EMULATOR=true
 VITE_FIREBASE_AUTH_EMULATOR_URL=http://127.0.0.1:9099
 ```
 
-The frontend does not own a long-running Docker Compose auth emulator. Backend local and E2E flows already use the Auth Emulator on `127.0.0.1:9099`, and frontend auth should connect to that same emulator when local verification needs real Firebase tokens.
+The frontend does not own a long-running Docker Compose auth emulator. Backend local and E2E flows already use the Auth Emulator on `127.0.0.1:9099`, and frontend auth should connect to that same emulator when local verification needs real Firebase tokens. Frontend login uses the Firebase client SDK against the emulator, then sends the returned ID token as `Authorization: Bearer <token>` for `POST /auth/sync` and protected backend APIs.
 
 ## API Boundary And OpenAPI Types
 

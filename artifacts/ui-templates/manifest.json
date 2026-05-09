@@ -4,9 +4,9 @@
       "slug": "foundation-app-shell",
       "issue": "#11",
       "title": "Foundation / App Shell",
-      "status": "planned",
+      "status": "ready",
       "description": "Shared shell, navigation, route states, table/form/export patterns.",
-      "file": ""
+      "file": "foundation-app-shell.html"
     },
     {
       "slug": "auth-access",

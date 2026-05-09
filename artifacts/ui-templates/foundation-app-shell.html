@@ -1,0 +1,1418 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>STDS Foundation App Shell</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --brand: #1677ff;
+      --brand-hover: #0958d9;
+      --canvas: #f5f7fa;
+      --surface: #ffffff;
+      --surface-subtle: #fafafa;
+      --border: #d9d9d9;
+      --text: rgba(0, 0, 0, 0.88);
+      --text-secondary: rgba(0, 0, 0, 0.65);
+      --text-tertiary: rgba(0, 0, 0, 0.45);
+      --success: #52c41a;
+      --warning: #faad14;
+      --danger: #ff4d4f;
+      --info-bg: #e6f4ff;
+      --warning-bg: #fffbe6;
+      --danger-bg: #fff1f0;
+      --radius: 8px;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+      font-size: 14px;
+      line-height: 1.5715;
+      letter-spacing: 0;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 248px minmax(0, 1fr);
+    }
+
+    .sider {
+      background: #001529;
+      color: rgba(255, 255, 255, 0.88);
+      min-height: 100vh;
+      position: sticky;
+      top: 0;
+      align-self: start;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand {
+      min-height: 64px;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 24px;
+    }
+
+    .brand-subtitle {
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .nav {
+      padding: 12px 8px 20px;
+      overflow: auto;
+    }
+
+    .nav-group {
+      margin-top: 14px;
+    }
+
+    .nav-group:first-child {
+      margin-top: 0;
+    }
+
+    .nav-label {
+      color: rgba(255, 255, 255, 0.45);
+      font-size: 12px;
+      padding: 0 12px 6px;
+    }
+
+    .nav-context {
+      margin: 0 8px 8px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.88);
+    }
+
+    .nav-context-trigger {
+      width: 100%;
+      margin-top: 8px;
+      min-height: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.88);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 4px 8px;
+      cursor: default;
+    }
+
+    .nav-context-label {
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 12px;
+      line-height: 20px;
+    }
+
+    .nav-context-title {
+      margin-top: 2px;
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .nav-context-action {
+      margin-top: 8px;
+      color: #69b1ff;
+      font-size: 12px;
+    }
+
+    .property-menu {
+      margin: 10px 8px 0;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 6px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.16);
+    }
+
+    .property-option {
+      display: grid;
+      gap: 2px;
+      padding: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .property-option:last-child {
+      border-bottom: 0;
+    }
+
+    .property-option.active {
+      background: rgba(22, 119, 255, 0.26);
+    }
+
+    .property-option.disabled {
+      color: rgba(255, 255, 255, 0.34);
+    }
+
+    .property-option-meta {
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 12px;
+    }
+
+    .nav-item {
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: rgba(255, 255, 255, 0.78);
+    }
+
+    .nav-item.active {
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .nav-item.disabled {
+      color: rgba(255, 255, 255, 0.34);
+      cursor: not-allowed;
+    }
+
+    .nav-icon {
+      width: 18px;
+      text-align: center;
+      color: currentColor;
+      font-size: 15px;
+      flex: 0 0 auto;
+    }
+
+    .main {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      min-height: 64px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    .context-strip {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .menu-button {
+      display: none;
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .context-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .context-meta {
+      color: var(--text-secondary);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .context-title {
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 360px;
+    }
+
+    .user-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #f0f5ff;
+      border: 1px solid #adc6ff;
+      color: #1d39c4;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      flex: 0 0 auto;
+    }
+
+    .content {
+      padding: 24px;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 28px;
+      letter-spacing: 0;
+    }
+
+    .page-desc {
+      margin: 4px 0 0;
+      color: var(--text-secondary);
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .section-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    .split-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.9fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 24px;
+    }
+
+    .panel-subtitle {
+      color: var(--text-secondary);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .panel-body {
+      padding: 16px;
+    }
+
+    .filter-band {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(160px, 1fr)) auto;
+      gap: 12px;
+      padding: 16px;
+      background: var(--surface-subtle);
+      border-bottom: 1px solid var(--border);
+      align-items: end;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .field label {
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+
+    .input,
+    .select,
+    .textarea {
+      width: 100%;
+      min-height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      padding: 4px 11px;
+    }
+
+    .textarea {
+      min-height: 82px;
+      resize: vertical;
+    }
+
+    .btn {
+      min-height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      padding: 4px 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .btn.primary {
+      border-color: var(--brand);
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .btn.primary:hover {
+      background: var(--brand-hover);
+    }
+
+    .btn.danger {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .btn.disabled,
+    .btn:disabled {
+      color: var(--text-tertiary);
+      background: #f5f5f5;
+      cursor: not-allowed;
+    }
+
+    .btn.icon-only {
+      width: 32px;
+      padding: 0;
+    }
+
+    .role-row {
+      display: grid;
+      grid-template-columns: 120px minmax(0, 1fr) 150px;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .role-row:last-child {
+      border-bottom: 0;
+    }
+
+    .role-name {
+      font-weight: 600;
+    }
+
+    .role-note {
+      color: var(--text-secondary);
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 22px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0 7px;
+      font-size: 12px;
+      line-height: 20px;
+      background: var(--surface);
+      white-space: nowrap;
+    }
+
+    .tag.blue {
+      border-color: #91caff;
+      background: #e6f4ff;
+      color: #0958d9;
+    }
+
+    .tag.green {
+      border-color: #b7eb8f;
+      background: #f6ffed;
+      color: #389e0d;
+    }
+
+    .tag.gold {
+      border-color: #ffe58f;
+      background: #fffbe6;
+      color: #d48806;
+    }
+
+    .tag.red {
+      border-color: #ffa39e;
+      background: #fff1f0;
+      color: #cf1322;
+    }
+
+    .tag.gray {
+      background: #f5f5f5;
+      color: var(--text-secondary);
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 920px;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid #f0f0f0;
+      padding: 12px;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    th {
+      background: var(--surface-subtle);
+      color: var(--text-secondary);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    td {
+      background: var(--surface);
+    }
+
+    .cell-main {
+      font-weight: 500;
+    }
+
+    .cell-sub {
+      color: var(--text-secondary);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .row-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: nowrap;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      color: var(--text-secondary);
+      border-top: 1px solid #f0f0f0;
+    }
+
+    .pagination-controls {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .state-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .state-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      min-height: 154px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      justify-content: space-between;
+    }
+
+    .state-card.warning {
+      background: var(--warning-bg);
+      border-color: #ffe58f;
+    }
+
+    .state-card.danger {
+      background: var(--danger-bg);
+      border-color: #ffa39e;
+    }
+
+    .state-card.info {
+      background: var(--info-bg);
+      border-color: #91caff;
+    }
+
+    .page-state-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .page-state {
+      min-height: 220px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .page-state.error {
+      background: var(--danger-bg);
+      border-color: #ffa39e;
+    }
+
+    .page-state.warning {
+      background: var(--warning-bg);
+      border-color: #ffe58f;
+    }
+
+    .page-state-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #f0f5ff;
+      color: #1d39c4;
+      font-weight: 700;
+      font-size: 20px;
+    }
+
+    .state-title {
+      font-weight: 600;
+    }
+
+    .state-desc {
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid #d6e4ff;
+      border-top-color: var(--brand);
+      border-radius: 50%;
+    }
+
+    .drawer-preview {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      overflow: hidden;
+    }
+
+    .drawer-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px 16px;
+      padding: 16px;
+    }
+
+    .form-grid .wide {
+      grid-column: 1 / -1;
+    }
+
+    .form-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      background: var(--surface-subtle);
+    }
+
+    .alert {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .alert.info {
+      background: var(--info-bg);
+      border-color: #91caff;
+    }
+
+    .alert.warning {
+      background: var(--warning-bg);
+      border-color: #ffe58f;
+    }
+
+    .alert.error {
+      background: var(--danger-bg);
+      border-color: #ffa39e;
+    }
+
+    .pattern-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .pattern-row {
+      display: grid;
+      grid-template-columns: 150px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid #f0f0f0;
+      border-radius: var(--radius);
+    }
+
+    .file-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .file-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 12px;
+      border: 1px solid #f0f0f0;
+      border-radius: 6px;
+      background: var(--surface-subtle);
+    }
+
+    .muted {
+      color: var(--text-secondary);
+    }
+
+    .small {
+      font-size: 12px;
+    }
+
+    .api-note {
+      margin-top: 8px;
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+
+    .toast-stack {
+      position: fixed;
+      right: 24px;
+      top: 80px;
+      z-index: 20;
+      width: min(360px, calc(100vw - 48px));
+      display: grid;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .toast {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      padding: 12px;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .toast.success {
+      border-color: #b7eb8f;
+    }
+
+    .toast.error {
+      border-color: #ffa39e;
+    }
+
+    .toast.warning {
+      border-color: #ffe58f;
+    }
+
+    .toast-icon {
+      font-weight: 700;
+    }
+
+    .toast.success .toast-icon {
+      color: var(--success);
+    }
+
+    .toast.error .toast-icon {
+      color: var(--danger);
+    }
+
+    .toast.warning .toast-icon {
+      color: var(--warning);
+    }
+
+    .toast-close {
+      color: var(--text-tertiary);
+    }
+
+    .sr-label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
+
+    @media (max-width: 1180px) {
+      .filter-band {
+        grid-template-columns: repeat(2, minmax(180px, 1fr));
+      }
+
+      .split-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .state-grid {
+        grid-template-columns: repeat(2, minmax(180px, 1fr));
+      }
+    }
+
+    @media (max-width: 760px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .sider {
+        display: none;
+      }
+
+      .topbar {
+        padding: 0 12px;
+      }
+
+      .menu-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .context-title {
+        max-width: 170px;
+      }
+
+      .user-area .context-meta {
+        display: none;
+      }
+
+      .content {
+        padding: 12px;
+      }
+
+      .page-header {
+        flex-direction: column;
+      }
+
+      .actions {
+        justify-content: flex-start;
+        width: 100%;
+      }
+
+      .filter-band,
+      .form-grid,
+      .state-grid,
+      .page-state-grid,
+      .pattern-row,
+      .role-row {
+        grid-template-columns: 1fr;
+      }
+
+      .pagination {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .btn {
+        min-height: 40px;
+      }
+
+      .panel-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .toast-stack {
+        left: 12px;
+        right: 12px;
+        top: 72px;
+        width: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="toast-stack" aria-label="通知範例">
+    <div class="toast success">
+      <span class="toast-icon">✓</span>
+      <div>
+        <div class="state-title">已儲存變更</div>
+        <div class="state-desc">列表將重新整理最新資料。</div>
+      </div>
+      <span class="toast-close">×</span>
+    </div>
+    <div class="toast error">
+      <span class="toast-icon">!</span>
+      <div>
+        <div class="state-title">匯出失敗</div>
+        <div class="state-desc">請稍後重試，或回到頁面 alert 查看詳細原因。</div>
+      </div>
+      <span class="toast-close">×</span>
+    </div>
+  </div>
+  <div class="app">
+    <aside class="sider" aria-label="主選單">
+      <div class="brand">
+        <div class="brand-title">STDS 管理後台</div>
+        <div class="brand-subtitle">內部營運工具</div>
+      </div>
+      <nav class="nav">
+        <div class="nav-group">
+          <div class="nav-label">總覽</div>
+          <a class="nav-item active" href="#"><span class="nav-icon">⌂</span><span>工作台</span></a>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label">日常作業</div>
+          <div class="nav-context">
+            <div class="nav-context-label">目前物業</div>
+            <button class="nav-context-trigger" aria-label="切換目前物業">
+              <span class="nav-context-title">台北大安物業</span>
+              <span aria-hidden="true">⌄</span>
+            </button>
+          </div>
+          <div class="property-menu" aria-label="物業切換選單展開範例">
+            <div class="property-option active">
+              <strong>台北大安物業</strong>
+              <span class="property-option-meta">目前 context</span>
+            </div>
+            <div class="property-option">
+              <strong>新竹東區物業</strong>
+              <span class="property-option-meta">切換後導向同 workflow 的 property route</span>
+            </div>
+            <div class="property-option disabled">
+              <strong>台中北區物業</strong>
+              <span class="property-option-meta">無此角色操作權限</span>
+            </div>
+          </div>
+          <a class="nav-item" href="#"><span class="nav-icon">□</span><span>房間管理</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">◉</span><span>租客與租約</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">▣</span><span>抄表與帳單</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">✎</span><span>日誌與維修</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">▤</span><span>財務報表</span></a>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label">管理</div>
+          <a class="nav-item" href="#"><span class="nav-icon">▦</span><span>物業管理</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">⚙</span><span>成員與權限</span></a>
+          <a class="nav-item disabled" href="#" aria-disabled="true"><span class="nav-icon">⊘</span><span>業主不可編輯</span></a>
+        </div>
+      </nav>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div class="context-strip">
+          <button class="menu-button" aria-label="開啟主選單">☰</button>
+          <div class="context-card">
+            <span class="tag blue">目前物業</span>
+            <div>
+              <div class="context-title">台北大安物業</div>
+              <div class="context-meta">由後端授權範圍決定可見物業；此處只顯示 context 位置</div>
+            </div>
+          </div>
+        </div>
+        <div class="user-area">
+          <span class="tag green">organizer</span>
+          <div class="avatar" aria-hidden="true">陳</div>
+          <div>
+            <div class="cell-main">陳營運</div>
+            <div class="context-meta">chen.ops@example.com</div>
+          </div>
+        </div>
+      </header>
+
+      <main class="content">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Foundation / App Shell Template</h1>
+            <p class="page-desc">共用 layout、導航、route 狀態、表格、表單、附件與 runtime HTML export pattern。</p>
+          </div>
+          <div class="actions">
+            <button class="btn">重新整理</button>
+            <button class="btn primary">主要動作</button>
+          </div>
+        </div>
+
+        <section class="section-grid">
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">角色入口與可視性</h2>
+                <div class="panel-subtitle">Template 只表達 UI intent；實際授權仍由 backend response 和 route policy 決定。</div>
+              </div>
+              <span class="tag gray">Authorization display only</span>
+            </div>
+            <div class="panel-body">
+              <!-- API boundary: current user bootstrap expects POST /auth/sync and protected API responses. -->
+              <div class="alert info" style="margin-bottom: 12px;">
+                <strong>i</strong>
+                <div>
+                  <div class="state-title">日常作業以目前物業為 context</div>
+                  <div class="state-desc">後續 property-scoped templates 應從 route / URL 取得 propertyId；左側 selector 平時是收合控制，展開選單只作為互動狀態範例，不作為唯一狀態來源。</div>
+                </div>
+              </div>
+              <div class="role-row">
+                <div class="role-name">admin</div>
+                <div class="role-note">可進入所有管理功能，包含成員、物業、帳務與報表。</div>
+                <span class="tag blue">完整入口</span>
+              </div>
+              <div class="role-row">
+                <div class="role-name">organizer</div>
+                <div class="role-note">可操作指派物業與主要營運流程；部分系統設定不可用。</div>
+                <span class="tag green">營運入口</span>
+              </div>
+              <div class="role-row">
+                <div class="role-name">staff</div>
+                <div class="role-note">以指派物業的日常作業為主，敏感報表與權限操作顯示 disabled 或 forbidden。</div>
+                <span class="tag gold">受限入口</span>
+              </div>
+              <div class="role-row">
+                <div class="role-name">owner</div>
+                <div class="role-note">以自己名下物業的唯讀報表、名冊與文件查看為主。</div>
+                <span class="tag gray">唯讀入口</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">Route 與 API 狀態</h2>
+                <div class="panel-subtitle">Loading、empty、retryable error、forbidden、not found 必須都有明確畫面。</div>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="state-grid">
+                <div class="state-card info">
+                  <div>
+                    <div class="spinner" aria-hidden="true"></div>
+                    <div class="state-title" style="margin-top: 12px;">載入中</div>
+                  </div>
+                  <div class="state-desc">保留頁面骨架，避免空白畫面。</div>
+                </div>
+                <div class="state-card">
+                  <div>
+                    <div class="state-title">目前沒有資料</div>
+                    <div class="state-desc">說明篩選條件或下一步可用動作。</div>
+                  </div>
+                  <button class="btn">清除篩選</button>
+                </div>
+                <div class="state-card warning">
+                  <div>
+                    <div class="state-title">資料暫時讀取失敗</div>
+                    <div class="state-desc">保留 retry，避免使用者誤以為沒有資料。</div>
+                  </div>
+                  <button class="btn">重試</button>
+                </div>
+                <div class="state-card danger">
+                  <div>
+                    <div class="state-title">沒有權限</div>
+                    <div class="state-desc">此頁面或動作不在目前角色與物業授權範圍內。</div>
+                  </div>
+                  <button class="btn disabled" disabled>動作不可用</button>
+                </div>
+                <div class="state-card">
+                  <div>
+                    <div class="state-title">找不到頁面或資料</div>
+                    <div class="state-desc">區分 404 與 forbidden，不用假裝成空清單。</div>
+                  </div>
+                  <button class="btn">返回列表</button>
+                </div>
+              </div>
+              <div class="page-state-grid">
+                <div class="page-state warning">
+                  <div class="page-state-icon">403</div>
+                  <div>
+                    <div class="state-title">沒有權限查看此頁</div>
+                    <div class="state-desc">適用於整個 route 被禁止時，例如目前角色無法進入成員管理。</div>
+                  </div>
+                  <button class="btn">回工作台</button>
+                </div>
+                <div class="page-state">
+                  <div class="page-state-icon">∅</div>
+                  <div>
+                    <div class="state-title">找不到資料</div>
+                    <div class="state-desc">適用於 detail route 的 404，不應混成空列表。</div>
+                  </div>
+                  <button class="btn">回上一頁</button>
+                </div>
+                <div class="page-state error">
+                  <div class="page-state-icon">!</div>
+                  <div>
+                    <div class="state-title">頁面載入失敗</div>
+                    <div class="state-desc">適用於 route-level retryable error，保留重試與回工作台入口。</div>
+                  </div>
+                  <div class="actions">
+                    <button class="btn">回工作台</button>
+                    <button class="btn primary">重試</button>
+                  </div>
+                </div>
+              </div>
+              <div class="api-note">Page-level state 用於整頁不可用；toast 用於儲存、刪除、匯出、上傳等短暫結果；表單 validation 仍顯示在欄位或 drawer 內。</div>
+            </div>
+          </div>
+
+          <div class="split-grid">
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">共用表格、篩選與分頁</h2>
+                  <div class="panel-subtitle">篩選值應對應 backend query params；server pagination 不做前端假排序。</div>
+                </div>
+                <button class="btn primary">新增資料</button>
+              </div>
+              <!-- API boundary: list endpoints should use backend pagination when provided. -->
+              <div class="filter-band" aria-label="篩選條件">
+                <div class="field">
+                  <label for="property-filter">物業</label>
+                  <select id="property-filter" class="select">
+                    <option>台北大安物業</option>
+                    <option>新竹東區物業</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="status-filter">狀態</label>
+                  <select id="status-filter" class="select">
+                    <option>全部狀態</option>
+                    <option>待處理</option>
+                    <option>已完成</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="keyword-filter">關鍵字</label>
+                  <input id="keyword-filter" class="input" value="A 棟">
+                </div>
+                <div class="field">
+                  <label for="month-filter">月份</label>
+                  <input id="month-filter" class="input" value="2026-05">
+                </div>
+                <div class="actions">
+                  <button class="btn">重設</button>
+                  <button class="btn primary">查詢</button>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width: 220px;">項目</th>
+                      <th style="width: 150px;">物業</th>
+                      <th style="width: 120px;">狀態</th>
+                      <th style="width: 140px;">金額 / 數值</th>
+                      <th style="width: 160px;">更新時間</th>
+                      <th style="width: 190px;">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>
+                        <div class="cell-main">A 棟 3F-2 租金帳單</div>
+                        <div class="cell-sub">ID 作為輔助資訊，不當主標題</div>
+                      </td>
+                      <td>台北大安物業</td>
+                      <td><span class="tag gold">待收款</span></td>
+                      <td>NT$ 18,000</td>
+                      <td>2026-05-09 10:24</td>
+                      <td>
+                        <div class="row-actions">
+                          <button class="btn">查看</button>
+                          <button class="btn">編輯</button>
+                          <button class="btn danger">刪除</button>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div class="cell-main">B 棟 5F-1 維修單</div>
+                        <div class="cell-sub">冷氣漏水，等待師傅回報</div>
+                      </td>
+                      <td>新竹東區物業</td>
+                      <td><span class="tag blue">進行中</span></td>
+                      <td>預估 NT$ 2,400</td>
+                      <td>2026-05-08 16:02</td>
+                      <td>
+                        <div class="row-actions">
+                          <button class="btn">查看</button>
+                          <button class="btn disabled" disabled>無權編輯</button>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <div class="cell-main">5 月營運報告</div>
+                        <div class="cell-sub">runtime HTML export，由後端產生文件內容</div>
+                      </td>
+                      <td>台北大安物業</td>
+                      <td><span class="tag green">可匯出</span></td>
+                      <td>2026-05</td>
+                      <td>2026-05-09 09:12</td>
+                      <td>
+                        <div class="row-actions">
+                          <button class="btn">預覽</button>
+                          <button class="btn">開啟 HTML</button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="pagination">
+                <span>第 1 頁，共 8 頁，總計 76 筆</span>
+                <div class="pagination-controls">
+                  <button class="btn disabled" disabled>上一頁</button>
+                  <button class="btn primary">1</button>
+                  <button class="btn">2</button>
+                  <button class="btn">下一頁</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-grid">
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <h2 class="panel-title">表單 Drawer / Modal Pattern</h2>
+                    <div class="panel-subtitle">提交時 loading，錯誤盡量回到欄位或頁面 alert。</div>
+                  </div>
+                </div>
+                <div class="panel-body">
+                  <div class="drawer-preview">
+                    <div class="drawer-top">
+                      <div>
+                        <div class="state-title">新增營運記錄</div>
+                        <div class="small muted">Drawer 寬度基準 720px；窄版改全寬。</div>
+                      </div>
+                      <button class="btn icon-only" aria-label="關閉">×</button>
+                    </div>
+                    <div class="form-grid">
+                      <div class="field">
+                        <label for="form-type">類型</label>
+                        <select id="form-type" class="select">
+                          <option>維修</option>
+                          <option>帳務</option>
+                        </select>
+                      </div>
+                      <div class="field">
+                        <label for="form-status">狀態</label>
+                        <select id="form-status" class="select">
+                          <option>待處理</option>
+                          <option>已完成</option>
+                        </select>
+                      </div>
+                      <div class="field wide">
+                        <label for="form-title">標題</label>
+                        <input id="form-title" class="input" value="A 棟 3F-2 冷氣維修">
+                      </div>
+                      <div class="field wide">
+                        <label for="form-note">備註</label>
+                        <textarea id="form-note" class="textarea">後端 validation error 應盡量映射到對應欄位。</textarea>
+                      </div>
+                    </div>
+                    <div class="form-footer">
+                      <button class="btn">取消</button>
+                      <button class="btn primary">儲存中...</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <h2 class="panel-title">禁止與破壞性動作</h2>
+                    <div class="panel-subtitle">不要只靠隱藏按鈕；必要時顯示原因。</div>
+                  </div>
+                </div>
+                <div class="panel-body">
+                  <div class="alert error">
+                    <strong>!</strong>
+                    <div>
+                      <div class="state-title">此帳號無法刪除附件</div>
+                      <div class="state-desc">目前角色沒有此物業的操作權限。後端仍會再次驗證。</div>
+                    </div>
+                  </div>
+                  <div class="api-note">破壞性操作需確認；401/403/404 要用不同狀態呈現。</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="split-grid">
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">Runtime HTML Export Pattern</h2>
+                  <div class="panel-subtitle">前端負責參數、動作、狀態與開啟方式；文件內容與 totals 由後端擁有。</div>
+                </div>
+                <span class="tag blue">HTML only</span>
+              </div>
+              <div class="panel-body">
+                <!-- API boundary: runtime HTML export endpoints return text/html and are not stored as attachments. -->
+                <div class="pattern-list">
+                  <div class="pattern-row">
+                    <div class="state-title">月營運報告</div>
+                    <div>
+                      <div>2026-05，台北大安物業</div>
+                      <div class="small muted">點擊後以新視窗開啟 backend-owned HTML。</div>
+                    </div>
+                    <button class="btn primary">開啟 HTML</button>
+                  </div>
+                  <div class="pattern-row">
+                    <div class="state-title">租客名冊</div>
+                    <div>
+                      <div>目前產生中，保留原按鈕位置避免跳動。</div>
+                      <div class="small muted">使用者可稍後重試，不建立前端檔案紀錄。</div>
+                    </div>
+                    <button class="btn disabled" disabled>產生中...</button>
+                  </div>
+                  <div class="pattern-row">
+                    <div class="state-title">帳單收據</div>
+                    <div>
+                      <div>只有可匯出的已付款帳單顯示主要動作。</div>
+                      <div class="small muted">不可匯出時顯示原因，不假裝成空白文件。</div>
+                    </div>
+                    <button class="btn">查看限制</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">Attachment Pattern</h2>
+                  <div class="panel-subtitle">不顯示 signed URL、bucket、object path 或 nonce 等儲存細節。</div>
+                </div>
+                <button class="btn primary">上傳附件</button>
+              </div>
+              <div class="panel-body">
+                <!-- API boundary: POST /attachments/upload-url, resource attachment register/list endpoints, DELETE /attachments/{id}. -->
+                <div class="file-list">
+                  <div class="file-item">
+                    <div>
+                      <div class="cell-main">room-a3-meter-photo.jpg</div>
+                      <div class="cell-sub">電表照片，2026-05-09 上傳</div>
+                    </div>
+                    <div class="row-actions">
+                      <button class="btn">檢視</button>
+                      <button class="btn danger">刪除</button>
+                    </div>
+                  </div>
+                  <div class="file-item">
+                    <div>
+                      <div class="cell-main">repair-before.png</div>
+                      <div class="cell-sub">上傳中，請勿關閉視窗</div>
+                    </div>
+                    <span class="tag gold">上傳中</span>
+                  </div>
+                  <div class="alert warning">
+                    <strong>!</strong>
+                    <div>
+                      <div class="state-title">附件登錄失敗</div>
+                      <div class="state-desc">檔案可能已上傳，但後端登錄失敗；提供重試與清楚狀態。</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

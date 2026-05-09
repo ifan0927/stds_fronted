@@ -1,7 +1,7 @@
 import { ReloadOutlined } from '@ant-design/icons';
 import { Button, Card, Col, Progress, Row, Space, Table, Tag, Typography } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import { useCallback, useEffect, useState } from 'react';
+import type { TableColumnsType } from 'antd';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { classifyApiErrorForUi, getDashboard, type HomeDashboard } from '../api';
 import { useAuth } from '../auth';
@@ -40,19 +40,38 @@ function getCollectionCountLabel(count: number, label: string) {
 export default function HomeDashboardPage() {
   const navigate = useNavigate();
   const { getAccessToken } = useAuth();
+  const activeRequestRef = useRef<{
+    id: number;
+    controller: AbortController;
+  } | null>(null);
+  const requestIdRef = useRef(0);
   const [loadState, setLoadState] = useState<DashboardLoadState>({
     status: 'loading',
     data: null,
   });
 
-  const loadDashboard = useCallback((signal?: AbortSignal) => {
+  const loadDashboard = useCallback(() => {
+    activeRequestRef.current?.controller.abort();
+    const controller = new AbortController();
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    activeRequestRef.current = { id: requestId, controller };
+
     setLoadState({ status: 'loading', data: null });
 
-    void getDashboard(getAccessToken, { signal })
+    void getDashboard(getAccessToken, { signal: controller.signal })
       .then((data) => {
+        if (activeRequestRef.current?.id !== requestId) {
+          return;
+        }
+
         setLoadState({ status: 'ready', data });
       })
       .catch((error: unknown) => {
+        if (activeRequestRef.current?.id !== requestId) {
+          return;
+        }
+
         const errorState = classifyApiErrorForUi(error);
 
         if (errorState.kind === 'cancelled') {
@@ -74,10 +93,9 @@ export default function HomeDashboardPage() {
   }, [getAccessToken, navigate]);
 
   useEffect(() => {
-    const controller = new AbortController();
-    loadDashboard(controller.signal);
+    loadDashboard();
 
-    return () => controller.abort();
+    return () => activeRequestRef.current?.controller.abort();
   }, [loadDashboard]);
 
   if (loadState.status === 'loading') {
@@ -104,7 +122,7 @@ export default function HomeDashboardPage() {
     );
   }
 
-  const propertyColumns: ColumnsType<HomeDashboard['property_summaries'][number]> = [
+  const propertyColumns: TableColumnsType<HomeDashboard['property_summaries'][number]> = [
     {
       title: '物業',
       dataIndex: 'property_name',

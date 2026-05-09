@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>STDS 工作台 Dashboard</title>
+  <title>STDS 工作台</title>
   <link rel="icon" href="data:,">
   <style>
     :root {
@@ -518,7 +518,7 @@
           <span class="tag blue">工作台</span>
           <div>
             <div class="cell-main">全部授權物業</div>
-            <div class="small">後端依角色與物業授權回傳可見摘要</div>
+            <div class="small">系統依角色與物業授權顯示可見摘要</div>
           </div>
         </div>
         <div class="user-area">
@@ -542,13 +542,13 @@
         </div>
 
         <!-- API boundary: GET /dashboard. Frontend does not aggregate rooms, bills, or journals from child endpoints. -->
-        <section class="grid-metrics" aria-label="Portfolio and billing summary">
+        <section class="grid-metrics" aria-label="總覽與帳務摘要">
           <div class="metric-card">
             <div>
               <div class="metric-label">房間總數</div>
               <div class="metric-value">24</div>
             </div>
-            <div class="small">portfolio_summary.total_rooms</div>
+            <div class="small">授權物業範圍內</div>
           </div>
           <div class="metric-card">
             <div>
@@ -565,7 +565,7 @@
               <div class="metric-label">本月預期租金</div>
               <div class="metric-value">NT$268,000</div>
             </div>
-            <div class="small">monthly_billing_summary.expected_rent</div>
+            <div class="small">本月已出帳租金總額</div>
           </div>
           <div class="metric-card">
             <div>
@@ -575,7 +575,7 @@
               </div>
               <div class="metric-value">5</div>
             </div>
-            <div class="small">monthly_billing_summary.overdue_bill_count</div>
+            <div class="small">本月帳務摘要</div>
           </div>
         </section>
 
@@ -584,7 +584,7 @@
             <div class="panel-header">
               <div>
                 <h2 class="panel-title">物業摘要</h2>
-                <p class="small">表格使用 property_summaries[]，適合多物業掃描比較。</p>
+                <p class="small">適合多物業掃描比較。</p>
               </div>
               <span class="tag">3 筆物業</span>
             </div>
@@ -642,7 +642,7 @@
             <div class="panel-header">
               <div>
                 <h2 class="panel-title">近期日誌</h2>
-                <p class="small">使用 recent_journals[]；journal_log 顯示一般日誌，repair_request 顯示維修紀錄。</p>
+                <p class="small">顯示近期一般日誌與維修紀錄。</p>
               </div>
             </div>
             <div class="panel-body">
@@ -679,7 +679,7 @@
         <section class="panel">
           <div class="panel-header">
             <div>
-              <h2 class="panel-title">Route 狀態與空資料文案</h2>
+              <h2 class="panel-title">頁面狀態與空資料文案</h2>
               <p class="small">工作台應保留清楚狀態，不讓頁面在讀取或失敗時呈現空白。</p>
             </div>
           </div>
@@ -704,7 +704,7 @@
               <div class="state-panel">
                 <div class="state-icon">403</div>
                 <div class="state-title">沒有權限查看此頁</div>
-                <p class="small">後端授權仍是唯一來源；UI 只呈現狀態。</p>
+                <p class="small">系統授權仍是唯一來源；畫面只呈現狀態。</p>
               </div>
             </div>
             <div class="alert warning">

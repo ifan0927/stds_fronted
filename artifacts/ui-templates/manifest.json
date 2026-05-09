@@ -36,9 +36,9 @@
       "slug": "meter-electric-billing",
       "issue": "#15",
       "title": "Meter Reading / Electric Billing",
-      "status": "planned",
+      "status": "ready",
       "description": "Pending meter, bill detail, history, payment, and receipt templates.",
-      "file": ""
+      "file": "meter-electric-billing.html"
     },
     {
       "slug": "checkout-settlement",

@@ -1,0 +1,1365 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>STDS 抄表與電費帳單</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      color-scheme: light;
+      --brand: #1677ff;
+      --canvas: #f5f7fa;
+      --surface: #ffffff;
+      --surface-subtle: #fafafa;
+      --border: #d9d9d9;
+      --text: rgba(0, 0, 0, 0.88);
+      --text-secondary: rgba(0, 0, 0, 0.65);
+      --text-tertiary: rgba(0, 0, 0, 0.45);
+      --success: #52c41a;
+      --warning: #faad14;
+      --danger: #ff4d4f;
+      --info-bg: #e6f4ff;
+      --warning-bg: #fffbe6;
+      --danger-bg: #fff1f0;
+      --success-bg: #f6ffed;
+      --radius: 8px;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+      font-size: 14px;
+      line-height: 1.5715;
+      letter-spacing: 0;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .template {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 248px minmax(0, 1fr);
+    }
+
+    .sider {
+      background: #001529;
+      color: rgba(255, 255, 255, 0.88);
+      min-height: 100vh;
+      position: sticky;
+      top: 0;
+      align-self: start;
+    }
+
+    .brand {
+      min-height: 64px;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 24px;
+    }
+
+    .brand-subtitle,
+    .property-option-meta {
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 12px;
+    }
+
+    .nav {
+      padding: 12px 8px 20px;
+    }
+
+    .nav-group {
+      margin-top: 14px;
+    }
+
+    .nav-label {
+      color: rgba(255, 255, 255, 0.45);
+      font-size: 12px;
+      padding: 0 12px 6px;
+    }
+
+    .nav-item {
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: rgba(255, 255, 255, 0.78);
+    }
+
+    .nav-item.active {
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .nav-item.disabled,
+    .property-option.disabled {
+      color: rgba(255, 255, 255, 0.34);
+      cursor: not-allowed;
+    }
+
+    .nav-icon {
+      width: 18px;
+      text-align: center;
+      flex: 0 0 auto;
+    }
+
+    .nav-context {
+      margin: 0 8px 8px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .nav-context-label {
+      color: rgba(255, 255, 255, 0.52);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .nav-context-trigger {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: #fff;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .property-menu {
+      margin: 0 8px 8px;
+      padding: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.16);
+    }
+
+    .property-option {
+      display: grid;
+      gap: 2px;
+      padding: 8px;
+      border-radius: 6px;
+      color: rgba(255, 255, 255, 0.82);
+    }
+
+    .property-option.active {
+      background: rgba(22, 119, 255, 0.24);
+      color: #fff;
+    }
+
+    .main {
+      min-width: 0;
+    }
+
+    .topbar {
+      min-height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    .context-strip,
+    .user-area,
+    .actions,
+    .inline-actions,
+    .metric-row,
+    .status-line {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .menu-button {
+      width: 34px;
+      height: 34px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      display: none;
+    }
+
+    .avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: #e6f4ff;
+      color: var(--brand);
+      font-weight: 700;
+    }
+
+    .content {
+      padding: 24px;
+      max-width: 1500px;
+      margin: 0 auto;
+    }
+
+    .page-header,
+    .panel-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .page-header {
+      margin-bottom: 16px;
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 24px;
+      line-height: 32px;
+      letter-spacing: 0;
+    }
+
+    .page-desc,
+    .panel-subtitle,
+    .small,
+    .state-desc,
+    .meta {
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .template-tabs {
+      position: sticky;
+      top: 65px;
+      z-index: 4;
+      display: flex;
+      gap: 8px;
+      padding: 10px 0 14px;
+      background: var(--canvas);
+      overflow-x: auto;
+    }
+
+    .tab {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--text-secondary);
+      padding: 7px 12px;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .tab.active {
+      background: var(--brand);
+      border-color: var(--brand);
+      color: #fff;
+    }
+
+    .section-stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 16px;
+      line-height: 24px;
+      letter-spacing: 0;
+    }
+
+    .panel-body {
+      padding: 16px;
+    }
+
+    .split-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(340px, 0.9fr);
+      gap: 16px;
+    }
+
+    .two-grid,
+    .summary-grid,
+    .state-grid,
+    .entry-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .two-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .summary-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      margin-bottom: 14px;
+    }
+
+    .state-grid,
+    .entry-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .metric-card,
+    .state-card,
+    .entry-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      background: var(--surface);
+      min-width: 0;
+    }
+
+    .metric-value {
+      margin-top: 4px;
+      font-size: 24px;
+      line-height: 30px;
+      font-weight: 700;
+    }
+
+    .filter-band {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+      gap: 12px;
+      padding: 12px;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 14px;
+      align-items: end;
+    }
+
+    .field {
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    label {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .input,
+    .select {
+      width: 100%;
+      min-height: 34px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--text);
+      padding: 6px 10px;
+    }
+
+    .input.error {
+      border-color: var(--danger);
+      background: #fffafa;
+    }
+
+    .input[readonly] {
+      background: var(--surface-subtle);
+      color: var(--text-secondary);
+    }
+
+    .btn {
+      min-height: 34px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      padding: 6px 12px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .btn.primary {
+      border-color: var(--brand);
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .btn.danger {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .btn.disabled,
+    .btn:disabled {
+      background: #f5f5f5;
+      color: var(--text-tertiary);
+      cursor: not-allowed;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 22px;
+      border-radius: 999px;
+      padding: 2px 9px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .tag.blue {
+      background: #e6f4ff;
+      color: #0958d9;
+    }
+
+    .tag.green {
+      background: var(--success-bg);
+      color: #389e0d;
+    }
+
+    .tag.gold {
+      background: var(--warning-bg);
+      color: #ad6800;
+    }
+
+    .tag.red {
+      background: var(--danger-bg);
+      color: #cf1322;
+    }
+
+    .tag.gray {
+      background: #f0f0f0;
+      color: var(--text-secondary);
+    }
+
+    .alert {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+    }
+
+    .alert.info {
+      background: var(--info-bg);
+      border-color: #91caff;
+    }
+
+    .alert.warning {
+      background: var(--warning-bg);
+      border-color: #ffe58f;
+    }
+
+    .alert.danger {
+      background: var(--danger-bg);
+      border-color: #ffccc7;
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    table {
+      width: 100%;
+      min-width: 940px;
+      border-collapse: collapse;
+      background: #fff;
+    }
+
+    th,
+    td {
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--surface-subtle);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .cell-main {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .number {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .meter-input {
+      display: grid;
+      grid-template-columns: 104px auto;
+      gap: 8px;
+      align-items: start;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .drawer {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      overflow: hidden;
+    }
+
+    .drawer-header,
+    .drawer-footer {
+      padding: 14px;
+      background: var(--surface-subtle);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .drawer-footer {
+      border-top: 1px solid var(--border);
+      border-bottom: 0;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .drawer-body {
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .description-list {
+      display: grid;
+      grid-template-columns: 136px minmax(0, 1fr);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .description-list dt,
+    .description-list dd {
+      margin: 0;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .description-list dt {
+      background: var(--surface-subtle);
+      color: var(--text-secondary);
+    }
+
+    .description-list dd:nth-last-child(-n + 2),
+    .description-list dt:nth-last-child(-n + 2) {
+      border-bottom: 0;
+    }
+
+    .page-state {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px;
+      background: var(--surface-subtle);
+      display: grid;
+      gap: 12px;
+      place-items: center;
+      text-align: center;
+      min-height: 150px;
+    }
+
+    .page-state.danger {
+      background: var(--danger-bg);
+      border-color: #ffccc7;
+    }
+
+    .page-state.warning {
+      background: var(--warning-bg);
+      border-color: #ffe58f;
+    }
+
+    .toast-stack {
+      position: fixed;
+      top: 78px;
+      right: 18px;
+      z-index: 20;
+      display: grid;
+      gap: 10px;
+      width: min(360px, calc(100vw - 24px));
+    }
+
+    .toast {
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: start;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    }
+
+    .toast.success {
+      border-color: #b7eb8f;
+    }
+
+    .toast.error {
+      border-color: #ffccc7;
+    }
+
+    .toast-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--success-bg);
+      color: #389e0d;
+      font-weight: 700;
+    }
+
+    .toast.error .toast-icon {
+      background: var(--danger-bg);
+      color: #cf1322;
+    }
+
+    .toast-close {
+      color: var(--text-tertiary);
+    }
+
+    @media (max-width: 1180px) {
+      .template {
+        grid-template-columns: 1fr;
+      }
+
+      .sider {
+        display: none;
+      }
+
+      .menu-button {
+        display: inline-grid;
+        place-items: center;
+      }
+
+      .split-grid,
+      .two-grid,
+      .summary-grid,
+      .state-grid,
+      .entry-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .content {
+        padding: 12px;
+      }
+
+      .topbar,
+      .page-header,
+      .panel-header,
+      .actions,
+      .filter-band {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .user-area {
+        display: none;
+      }
+
+      .filter-band,
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .template-tabs {
+        top: 65px;
+      }
+
+      .toast-stack {
+        top: 12px;
+        right: 12px;
+        left: 12px;
+      }
+
+      .meter-input {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="toast-stack" aria-label="通知範例">
+    <div class="toast success">
+      <span class="toast-icon">✓</span>
+      <div>
+        <div class="cell-main">抄表已完成</div>
+        <div class="state-desc">帳單已更新為待收款，清單會重新整理。</div>
+      </div>
+      <span class="toast-close">×</span>
+    </div>
+    <div class="toast error">
+      <span class="toast-icon">!</span>
+      <div>
+        <div class="cell-main">收據開啟失敗</div>
+        <div class="state-desc">短暫結果用通知顯示；帳單內仍保留重試動作。</div>
+      </div>
+      <span class="toast-close">×</span>
+    </div>
+  </div>
+
+  <div class="template">
+    <aside class="sider" aria-label="主選單">
+      <div class="brand">
+        <div class="brand-title">STDS 管理後台</div>
+        <div class="brand-subtitle">內部營運工具</div>
+      </div>
+      <nav class="nav">
+        <div class="nav-group">
+          <div class="nav-label">總覽</div>
+          <a class="nav-item" href="#"><span class="nav-icon">⌂</span><span>工作台</span></a>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label">日常作業</div>
+          <div class="nav-context">
+            <div class="nav-context-label">目前物業</div>
+            <button class="nav-context-trigger" aria-label="切換目前物業">
+              <span>台北大安物業</span>
+              <span aria-hidden="true">⌄</span>
+            </button>
+          </div>
+          <div class="property-menu" aria-label="物業切換選單展開範例">
+            <div class="property-option active">
+              <strong>台北大安物業</strong>
+              <span class="property-option-meta">目前 electric workflow route context</span>
+            </div>
+            <div class="property-option">
+              <strong>新竹東區物業</strong>
+              <span class="property-option-meta">切換後導向同 workflow 的 property route</span>
+            </div>
+            <div class="property-option disabled">
+              <strong>台中北區物業</strong>
+              <span class="property-option-meta">目前角色沒有此物業權限</span>
+            </div>
+          </div>
+          <a class="nav-item" href="#"><span class="nav-icon">□</span><span>房間管理</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">◉</span><span>租客與租約</span></a>
+          <a class="nav-item active" href="#"><span class="nav-icon">▣</span><span>抄表與帳單</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">✎</span><span>日誌與維修</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">▤</span><span>財務報表</span></a>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label">管理</div>
+          <a class="nav-item" href="#"><span class="nav-icon">▦</span><span>物業管理</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">⚙</span><span>成員與權限</span></a>
+          <a class="nav-item disabled" href="#" aria-disabled="true"><span class="nav-icon">⊘</span><span>業主唯讀</span></a>
+        </div>
+      </nav>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div class="context-strip">
+          <button class="menu-button" aria-label="開啟主選單">☰</button>
+          <span class="tag blue">目前物業</span>
+          <div>
+            <div class="cell-main">台北大安物業</div>
+            <div class="small">propertyId 來自 route / URL；切換物業導向同 workflow 的另一個 property route。</div>
+          </div>
+        </div>
+        <div class="user-area">
+          <span class="tag green">organizer</span>
+          <div class="avatar" aria-hidden="true">陳</div>
+          <div>
+            <div class="cell-main">陳營運</div>
+            <div class="small">chen.ops@example.com</div>
+          </div>
+        </div>
+      </header>
+
+      <main class="content">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">抄表與電費帳單 Template</h1>
+            <p class="page-desc">Property-scoped pending meter、單筆抄表、電費帳單詳情、電表歷史、收款與 runtime HTML 收據動作；此 HTML 只展示切板與狀態，不呼叫 backend API。</p>
+          </div>
+          <div class="actions">
+            <button class="btn">重新整理</button>
+            <button class="btn">查看歷史</button>
+            <button class="btn primary">開始抄表</button>
+          </div>
+        </div>
+
+        <nav class="template-tabs" aria-label="本頁 review anchors">
+          <button class="tab active">待抄表</button>
+          <button class="tab">帳單詳情</button>
+          <button class="tab">電表歷史</button>
+          <button class="tab">收款</button>
+          <button class="tab">收據</button>
+          <button class="tab">入口 / 狀態</button>
+        </nav>
+
+        <div class="section-stack">
+          <section class="panel" aria-labelledby="pending-meter-title">
+            <div class="panel-header">
+              <div>
+                <h2 id="pending-meter-title" class="panel-title">物業待抄表</h2>
+                <div class="panel-subtitle">保留 legacy property-level scanning efficiency，但每列送出都是單筆 bill command，不暗示整批 atomic submit。</div>
+              </div>
+              <span class="tag gold">GET /properties/{id}/pending-meter</span>
+            </div>
+            <div class="panel-body">
+              <!-- API boundary: GET /properties/{id}/pending-meter, row action POST /bills/{id}/meter. -->
+              <div class="summary-grid">
+                <div class="metric-card">
+                  <div class="small">待抄表帳單</div>
+                  <div class="metric-value">18</div>
+                  <div class="small">依 bill period 顯示</div>
+                </div>
+                <div class="metric-card">
+                  <div class="small">已輸入未送出</div>
+                  <div class="metric-value">6</div>
+                  <div class="small">暫存於本頁表單狀態</div>
+                </div>
+                <div class="metric-card">
+                  <div class="small">本期最早到期</div>
+                  <div class="metric-value">05/01</div>
+                  <div class="small">due_date from backend</div>
+                </div>
+                <div class="metric-card">
+                  <div class="small">目前角色</div>
+                  <div class="metric-value">可抄表</div>
+                  <div class="small">admin / organizer / staff</div>
+                </div>
+              </div>
+
+              <div class="filter-band" aria-label="待抄表篩選條件">
+                <div class="field">
+                  <label for="pending-building">棟別 / 區域</label>
+                  <select id="pending-building" class="select">
+                    <option>全部區域</option>
+                    <option>A 棟</option>
+                    <option>B 棟</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="pending-keyword">房號 / 租客</label>
+                  <input id="pending-keyword" class="input" value="A">
+                </div>
+                <div class="field">
+                  <label for="pending-period">帳單週期</label>
+                  <select id="pending-period" class="select">
+                    <option>2026-05-01..2026-06-30</option>
+                    <option>全部待抄表週期</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="pending-status">列狀態</label>
+                  <select id="pending-status" class="select">
+                    <option>全部</option>
+                    <option>已輸入</option>
+                    <option>需要修正</option>
+                  </select>
+                </div>
+                <button class="btn">套用</button>
+              </div>
+
+              <div class="alert info">
+                <strong>i</strong>
+                <div>
+                  <div class="cell-main">送出後由 backend 計算用電度數、金額與狀態</div>
+                  <div class="state-desc">畫面可協助逐列輸入與檢查，但不顯示「整批送出」或「整批交易成功」語意。</div>
+                </div>
+              </div>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width: 86px;">房號</th>
+                      <th>租客 / 週期</th>
+                      <th class="number">上期度數</th>
+                      <th style="width: 260px;">本期度數</th>
+                      <th class="number">預估用量</th>
+                      <th>狀態</th>
+                      <th style="width: 180px;">動作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><div class="cell-main">A-101</div><div class="small">2F</div></td>
+                      <td><div class="cell-main">王小明</div><div class="small">2026-05-01..2026-06-30</div></td>
+                      <td class="number">1,250</td>
+                      <td>
+                        <div class="meter-input">
+                          <input class="input" value="1380" aria-label="A-101 本期度數">
+                          <button class="btn primary">送出</button>
+                        </div>
+                        <div class="small">單筆 POST /bills/{id}/meter</div>
+                      </td>
+                      <td class="number">130 度</td>
+                      <td><span class="tag gold">待抄表</span></td>
+                      <td class="inline-actions"><button class="btn">詳情</button><button class="btn">歷史</button></td>
+                    </tr>
+                    <tr>
+                      <td><div class="cell-main">A-102</div><div class="small">2F</div></td>
+                      <td><div class="cell-main">林佳蓉</div><div class="small">2026-05-01..2026-06-30</div></td>
+                      <td class="number">980</td>
+                      <td>
+                        <div class="meter-input">
+                          <input class="input error" value="960" aria-label="A-102 本期度數">
+                          <button class="btn disabled" disabled>送出</button>
+                        </div>
+                        <div class="small" style="color: var(--danger);">不可小於上期度數 980</div>
+                      </td>
+                      <td class="number">-20 度</td>
+                      <td><span class="tag red">需修正</span></td>
+                      <td class="inline-actions"><button class="btn">詳情</button><button class="btn">歷史</button></td>
+                    </tr>
+                    <tr>
+                      <td><div class="cell-main">B-203</div><div class="small">3F</div></td>
+                      <td><div class="cell-main">張志宏</div><div class="small">2026-05-01..2026-06-30</div></td>
+                      <td class="number">2,410</td>
+                      <td>
+                        <div class="meter-input">
+                          <input class="input" value="" placeholder="輸入度數" aria-label="B-203 本期度數">
+                          <button class="btn disabled" disabled>送出</button>
+                        </div>
+                        <div class="small">等待輸入</div>
+                      </td>
+                      <td class="number">-</td>
+                      <td><span class="tag gold">待抄表</span></td>
+                      <td class="inline-actions"><button class="btn">詳情</button><button class="btn">歷史</button></td>
+                    </tr>
+                    <tr>
+                      <td><div class="cell-main">C-305</div><div class="small">5F</div></td>
+                      <td><div class="cell-main">吳佩珊</div><div class="small">2026-05-01..2026-06-30</div></td>
+                      <td class="number">740</td>
+                      <td>
+                        <div class="meter-input">
+                          <input class="input" value="812" aria-label="C-305 本期度數">
+                          <button class="btn disabled" disabled>送出中</button>
+                        </div>
+                        <div class="small">submit loading，避免重複送出</div>
+                      </td>
+                      <td class="number">72 度</td>
+                      <td><span class="tag blue">送出中</span></td>
+                      <td class="inline-actions"><button class="btn disabled" disabled>詳情</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section class="split-grid" aria-label="帳單詳情與抄表送出">
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">電費帳單詳情</h2>
+                  <div class="panel-subtitle">動作依 bill type、status 與角色顯示，不以前端自行判定授權結果。</div>
+                </div>
+                <span class="tag blue">GET /bills/{id}</span>
+              </div>
+              <div class="panel-body">
+                <!-- API boundary: GET /bills/{id}; status-gated actions for meter, payment, receipt. -->
+                <dl class="description-list">
+                  <dt>帳單</dt>
+                  <dd><strong>電費帳單 #ELE-2026-05-A101</strong></dd>
+                  <dt>物業 / 房間</dt>
+                  <dd>台北大安物業 / A-101</dd>
+                  <dt>租客</dt>
+                  <dd>王小明</dd>
+                  <dt>帳單週期</dt>
+                  <dd>2026-05-01..2026-06-30</dd>
+                  <dt>狀態</dt>
+                  <dd><span class="tag gold">pending_meter</span></dd>
+                  <dt>上期度數</dt>
+                  <dd>1,250</dd>
+                  <dt>本期度數</dt>
+                  <dd>尚未抄錄</dd>
+                  <dt>單價</dt>
+                  <dd>每度 4.5 元</dd>
+                </dl>
+
+                <div class="alert warning" style="margin-top: 12px;">
+                  <strong>!</strong>
+                  <div>
+                    <div class="cell-main">尚未抄表，不能收款或預覽收據</div>
+                    <div class="state-desc">完成單筆抄表後，backend 會將狀態更新為 pending_payment。</div>
+                  </div>
+                </div>
+
+                <div class="actions">
+                  <button class="btn primary">抄表</button>
+                  <button class="btn disabled" disabled>收款</button>
+                  <button class="btn disabled" disabled>預覽電費收據</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="drawer" aria-label="抄表 drawer 範例">
+              <div class="drawer-header">
+                <div class="cell-main">抄表送出</div>
+                <div class="small">POST /bills/{id}/meter</div>
+              </div>
+              <div class="drawer-body">
+                <!-- API boundary: POST /bills/{id}/meter current_reading only. -->
+                <div class="field">
+                  <label for="meter-room">房間</label>
+                  <input id="meter-room" class="input" value="A-101 / 王小明" readonly>
+                </div>
+                <div class="field">
+                  <label for="previous-reading">上期度數</label>
+                  <input id="previous-reading" class="input" value="1250" readonly>
+                </div>
+                <div class="field">
+                  <label for="current-reading">本期度數</label>
+                  <input id="current-reading" class="input" value="1380">
+                  <div class="small">backend 會驗證不可小於 previous reading。</div>
+                </div>
+                <div class="alert info">
+                  <strong>i</strong>
+                  <div>
+                    <div class="cell-main">金額由 backend 計算</div>
+                    <div class="state-desc">usage、amount、status transition 以 response 為準，前端不作為權威計算來源。</div>
+                  </div>
+                </div>
+                <div class="alert danger">
+                  <strong>!</strong>
+                  <div>
+                    <div class="cell-main">Business rule error 範例</div>
+                    <div class="state-desc">METER_READING_LESS_THAN_PREVIOUS 要顯示在欄位或 drawer 內，不只 toast。</div>
+                  </div>
+                </div>
+              </div>
+              <div class="drawer-footer">
+                <button class="btn">取消</button>
+                <button class="btn primary">送出抄表</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="split-grid" aria-label="電表歷史">
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">物業電表歷史</h2>
+                  <div class="panel-subtitle">使用 dedicated history endpoint，不從 generic bill list 前端重組。</div>
+                </div>
+                <span class="tag blue">GET /properties/{id}/meter-history</span>
+              </div>
+              <div class="panel-body">
+                <!-- API boundary: GET /properties/{id}/meter-history?year=YYYY. -->
+                <div class="filter-band" style="grid-template-columns: 180px 1fr auto;">
+                  <div class="field">
+                    <label for="property-history-year">年度</label>
+                    <select id="property-history-year" class="select">
+                      <option>2026</option>
+                      <option>2025</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="property-history-keyword">房號 / 租客</label>
+                    <input id="property-history-keyword" class="input" placeholder="搜尋房號、租客">
+                  </div>
+                  <button class="btn">套用</button>
+                </div>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>房號</th>
+                        <th>租客</th>
+                        <th>週期</th>
+                        <th class="number">上期</th>
+                        <th class="number">本期</th>
+                        <th class="number">用量</th>
+                        <th class="number">金額</th>
+                        <th>狀態</th>
+                        <th>動作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><strong>A-101</strong></td>
+                        <td>王小明</td>
+                        <td>2026-04-01..2026-04-30</td>
+                        <td class="number">1,120</td>
+                        <td class="number">1,250</td>
+                        <td class="number">130</td>
+                        <td class="number">$650</td>
+                        <td><span class="tag green">paid</span></td>
+                        <td><button class="btn">開帳單</button></td>
+                      </tr>
+                      <tr>
+                        <td><strong>B-203</strong></td>
+                        <td>張志宏</td>
+                        <td>2026-04-01..2026-04-30</td>
+                        <td class="number">2,260</td>
+                        <td class="number">2,410</td>
+                        <td class="number">150</td>
+                        <td class="number">$750</td>
+                        <td><span class="tag red">overdue</span></td>
+                        <td><button class="btn primary">收款</button></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">房間電表歷史</h2>
+                  <div class="panel-subtitle">從房間詳情或出租中 hub 進入，target page 顯示單房間歷史與帳單動作。</div>
+                </div>
+                <span class="tag blue">GET /rooms/{id}/meter-history</span>
+              </div>
+              <div class="panel-body">
+                <!-- API boundary: GET /rooms/{id}/meter-history?year=YYYY&month=M. -->
+                <div class="alert info">
+                  <strong>i</strong>
+                  <div>
+                    <div class="cell-main">A-101 電表歷史</div>
+                    <div class="state-desc">year/month filter 對應 backend query params；空月份顯示 empty state。</div>
+                  </div>
+                </div>
+                <div class="state-grid" style="grid-template-columns: 1fr;">
+                  <div class="state-card">
+                    <div class="status-line">
+                      <span class="tag green">paid</span>
+                      <strong>2026-04</strong>
+                    </div>
+                    <div class="metric-row"><span class="small">1120 → 1250</span><span class="small">130 度</span><span class="small">$650</span></div>
+                    <div class="inline-actions" style="margin-top: 10px;"><button class="btn">帳單詳情</button><button class="btn">收據</button></div>
+                  </div>
+                  <div class="state-card">
+                    <div class="status-line">
+                      <span class="tag gold">pending_meter</span>
+                      <strong>2026-05..2026-06</strong>
+                    </div>
+                    <div class="metric-row"><span class="small">1250 → 尚未抄錄</span><span class="small">等待抄表</span></div>
+                    <div class="inline-actions" style="margin-top: 10px;"><button class="btn primary">抄表</button><button class="btn">帳單詳情</button></div>
+                  </div>
+                </div>
+                <div class="page-state" style="margin-top: 12px;">
+                  <div class="cell-main">此月份沒有電表紀錄</div>
+                  <div class="state-desc">Empty state 要保留篩選條件與返回房間詳情的入口。</div>
+                  <button class="btn">回房間詳情</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="split-grid" aria-label="電費收款與收據">
+            <div class="drawer">
+              <div class="drawer-header">
+                <div class="cell-main">電費收款</div>
+                <div class="small">POST /bills/{id}/payment</div>
+              </div>
+              <div class="drawer-body">
+                <!-- API boundary: POST /bills/{id}/payment; paid_amount must equal bill amount, paid_at optional. -->
+                <div class="alert info">
+                  <strong>i</strong>
+                  <div>
+                    <div class="cell-main">收款金額鎖定為 backend bill amount</div>
+                    <div class="state-desc">不支援部分收款或溢收；會計分錄與事件由 backend transaction 處理。</div>
+                  </div>
+                </div>
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="payment-bill">帳單</label>
+                    <input id="payment-bill" class="input" value="A-101 / 2026-05..2026-06 電費" readonly>
+                  </div>
+                  <div class="field">
+                    <label for="payment-amount">收款金額</label>
+                    <input id="payment-amount" class="input" value="585" readonly>
+                  </div>
+                  <div class="field">
+                    <label for="payment-method">付款方式</label>
+                    <select id="payment-method" class="select">
+                      <option>轉帳</option>
+                      <option>現金</option>
+                      <option>其他</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="payment-paid-at">收款時間</label>
+                    <input id="payment-paid-at" class="input" value="現在，或留空用系統時間">
+                    <div class="small">paid_at optional；implementation 可用 date-time picker。</div>
+                  </div>
+                </div>
+                <div class="alert danger">
+                  <strong>!</strong>
+                  <div>
+                    <div class="cell-main">BILL_PAID_AMOUNT_MISMATCH</div>
+                    <div class="state-desc">金額不一致要停留在 drawer 內顯示 durable error，不只彈 toast。</div>
+                  </div>
+                </div>
+              </div>
+              <div class="drawer-footer">
+                <button class="btn">取消</button>
+                <button class="btn primary">確認收款</button>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">收據預覽 / 匯出</h2>
+                  <div class="panel-subtitle">backend owns runtime HTML body；frontend 只負責 action placement、loading、error 與開啟方式。</div>
+                </div>
+                <span class="tag blue">GET /bills/{id}/receipt</span>
+              </div>
+              <div class="panel-body">
+                <!-- API boundary: GET /bills/{id}/receipt?format=html for paid bills. -->
+                <div class="state-grid" style="grid-template-columns: 1fr;">
+                  <div class="state-card">
+                    <div class="status-line"><span class="tag green">paid</span><strong>A-101 電費收據</strong></div>
+                    <div class="small">預設動作：新分頁開啟 backend HTML，使用瀏覽器列印或另存。</div>
+                    <div class="inline-actions" style="margin-top: 10px;">
+                      <button class="btn primary">新分頁開啟</button>
+                      <button class="btn">重新整理帳單</button>
+                    </div>
+                  </div>
+                  <div class="state-card">
+                    <div class="status-line"><span class="tag blue">loading</span><strong>正在開啟收據</strong></div>
+                    <div class="small">避免重複點擊；失敗用 toast 加 row-level retry。</div>
+                    <div class="inline-actions" style="margin-top: 10px;">
+                      <button class="btn disabled" disabled>開啟中</button>
+                    </div>
+                  </div>
+                  <div class="state-card">
+                    <div class="status-line"><span class="tag gray">future</span><strong>站內預覽模式</strong></div>
+                    <div class="small">先不實作 app-shell viewer；此狀態只標示未來可擴充的入口。</div>
+                    <button class="btn disabled" disabled style="margin-top: 10px;">站內預覽未啟用</button>
+                  </div>
+                </div>
+                <div class="alert warning" style="margin-top: 12px;">
+                  <strong>!</strong>
+                  <div>
+                    <div class="cell-main">不做 PDF、GCS、attachment 或前端重畫收據</div>
+                    <div class="state-desc">帳單收據內容、金額、meter fields 與 display labels 以 backend HTML response 為準。</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel" aria-labelledby="entry-states-title">
+            <div class="panel-header">
+              <div>
+                <h2 id="entry-states-title" class="panel-title">跨切片入口與頁面狀態</h2>
+                <div class="panel-subtitle">入口只示意 routing context；實際頁面仍要重新讀取 backend 狀態。</div>
+              </div>
+              <span class="tag gray">Display only</span>
+            </div>
+            <div class="panel-body">
+              <div class="entry-grid">
+                <div class="entry-card">
+                  <div class="cell-main">物業 dashboard</div>
+                  <div class="small">顯示待抄表數與逾期電費，點入目前物業待抄表頁。</div>
+                  <button class="btn" style="margin-top: 10px;">前往待抄表</button>
+                </div>
+                <div class="entry-card">
+                  <div class="cell-main">房間詳情</div>
+                  <div class="small">提供 A-101 電表歷史與最近帳單入口。</div>
+                  <button class="btn" style="margin-top: 10px;">查看房間歷史</button>
+                </div>
+                <div class="entry-card">
+                  <div class="cell-main">出租中 hub</div>
+                  <div class="small">從 lease context 開啟待繳電費或收據，不複製電費頁 layout。</div>
+                  <button class="btn" style="margin-top: 10px;">開啟電費帳單</button>
+                </div>
+                <div class="entry-card">
+                  <div class="cell-main">退租 blocker</div>
+                  <div class="small">pending_meter / pending_payment 只提供解決連結；final electric settlement 屬於 checkout issue。</div>
+                  <button class="btn danger" style="margin-top: 10px;">處理阻擋帳單</button>
+                </div>
+                <div class="entry-card">
+                  <div class="cell-main">Owner read-only</div>
+                  <div class="small">業主可查看允許資料與 paid receipt；抄表、收款 action 不顯示或 disabled。</div>
+                  <button class="btn disabled" disabled style="margin-top: 10px;">抄表不可用</button>
+                </div>
+                <div class="entry-card">
+                  <div class="cell-main">Staff role mismatch</div>
+                  <div class="small">未指派物業時以 route-level forbidden 顯示，不偽裝成空資料。</div>
+                  <button class="btn disabled" disabled style="margin-top: 10px;">沒有權限</button>
+                </div>
+              </div>
+
+              <div class="two-grid" style="margin-top: 14px;">
+                <div class="page-state warning">
+                  <div class="cell-main">載入失敗</div>
+                  <div class="state-desc">GET pending meter 或 history retryable error，保留重試與回工作台。</div>
+                  <button class="btn primary">重試</button>
+                </div>
+                <div class="page-state danger">
+                  <div class="cell-main">沒有權限查看此物業</div>
+                  <div class="state-desc">403 route-level forbidden；backend 仍是 authorization source of truth。</div>
+                  <button class="btn">回工作台</button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,1443 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>STDS 退租結算</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      color-scheme: light;
+      --brand: #1677ff;
+      --canvas: #f5f7fa;
+      --surface: #ffffff;
+      --surface-subtle: #fafafa;
+      --border: #d9d9d9;
+      --text: rgba(0, 0, 0, 0.88);
+      --text-secondary: rgba(0, 0, 0, 0.65);
+      --text-tertiary: rgba(0, 0, 0, 0.45);
+      --success: #52c41a;
+      --warning: #faad14;
+      --danger: #ff4d4f;
+      --info-bg: #e6f4ff;
+      --warning-bg: #fffbe6;
+      --danger-bg: #fff1f0;
+      --success-bg: #f6ffed;
+      --radius: 8px;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+      font-size: 14px;
+      line-height: 1.5715;
+      letter-spacing: 0;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    .template {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 248px minmax(0, 1fr);
+    }
+
+    .sider {
+      background: #001529;
+      color: rgba(255, 255, 255, 0.88);
+      min-height: 100vh;
+      position: sticky;
+      top: 0;
+      align-self: start;
+    }
+
+    .brand {
+      min-height: 64px;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 24px;
+    }
+
+    .brand-subtitle,
+    .property-option-meta {
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 12px;
+    }
+
+    .nav {
+      padding: 12px 8px 20px;
+    }
+
+    .nav-group {
+      margin-top: 14px;
+    }
+
+    .nav-label {
+      color: rgba(255, 255, 255, 0.45);
+      font-size: 12px;
+      padding: 0 12px 6px;
+    }
+
+    .nav-item {
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: rgba(255, 255, 255, 0.78);
+    }
+
+    .nav-item.active {
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .nav-item.disabled,
+    .property-option.disabled {
+      color: rgba(255, 255, 255, 0.34);
+      cursor: not-allowed;
+    }
+
+    .nav-icon {
+      width: 18px;
+      text-align: center;
+      flex: 0 0 auto;
+    }
+
+    .nav-context {
+      margin: 0 8px 8px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .nav-context-label {
+      color: rgba(255, 255, 255, 0.52);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .nav-context-trigger {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: #fff;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .property-menu {
+      margin: 0 8px 8px;
+      padding: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.16);
+    }
+
+    .property-option {
+      display: grid;
+      gap: 2px;
+      padding: 8px;
+      border-radius: 6px;
+      color: rgba(255, 255, 255, 0.82);
+    }
+
+    .property-option.active {
+      background: rgba(22, 119, 255, 0.24);
+      color: #fff;
+    }
+
+    .main {
+      min-width: 0;
+    }
+
+    .topbar {
+      min-height: 64px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .breadcrumb {
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .user-area {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #d6e4ff;
+      color: #0958d9;
+      display: grid;
+      place-items: center;
+      font-weight: 600;
+    }
+
+    .content {
+      padding: 24px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .page-header,
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .page-header {
+      padding: 20px 24px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .header-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .title-block {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 20px;
+      line-height: 28px;
+      font-weight: 600;
+    }
+
+    .page-desc,
+    .panel-subtitle,
+    .small {
+      color: var(--text-secondary);
+    }
+
+    .page-desc {
+      max-width: 920px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .button {
+      min-height: 32px;
+      padding: 4px 15px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .button.primary {
+      background: var(--brand);
+      color: #fff;
+      border-color: var(--brand);
+    }
+
+    .button.danger {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .button.disabled {
+      color: var(--text-tertiary);
+      background: var(--surface-subtle);
+      cursor: not-allowed;
+    }
+
+    .button.block {
+      width: 100%;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      padding: 0 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--surface-subtle);
+      font-size: 12px;
+      line-height: 20px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .tag.blue {
+      color: #0958d9;
+      background: #e6f4ff;
+      border-color: #91caff;
+    }
+
+    .tag.green {
+      color: #237804;
+      background: #f6ffed;
+      border-color: #b7eb8f;
+    }
+
+    .tag.gold {
+      color: #ad6800;
+      background: #fffbe6;
+      border-color: #ffe58f;
+    }
+
+    .tag.red {
+      color: #cf1322;
+      background: #fff1f0;
+      border-color: #ffa39e;
+    }
+
+    .tag.gray {
+      color: var(--text-tertiary);
+      background: #f5f5f5;
+      border-color: var(--border);
+    }
+
+    .jump-grid,
+    .summary-grid,
+    .state-grid,
+    .metrics-grid,
+    .force-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .jump-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .summary-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .state-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .metrics-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .force-grid {
+      grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+      align-items: start;
+    }
+
+    .jump-link,
+    .summary-item,
+    .state-card,
+    .metric {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface-subtle);
+      padding: 12px;
+      min-width: 0;
+    }
+
+    .jump-link {
+      display: grid;
+      gap: 2px;
+    }
+
+    .jump-title,
+    .summary-label,
+    .metric-label,
+    .state-title,
+    .field-label,
+    .cell-main {
+      font-weight: 500;
+    }
+
+    .summary-label,
+    .metric-label,
+    .field-help,
+    .state-desc,
+    .cell-sub,
+    .api-note,
+    .option-note {
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 20px;
+    }
+
+    .metric-value {
+      margin-top: 4px;
+      font-size: 24px;
+      line-height: 32px;
+      font-weight: 600;
+    }
+
+    .metric-value.refund {
+      color: #237804;
+    }
+
+    .metric-value.payable,
+    .danger-text {
+      color: var(--danger);
+    }
+
+    .metric-value.zero {
+      color: var(--text);
+    }
+
+    .panel {
+      padding: 20px 24px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 16px;
+      line-height: 24px;
+      font-weight: 600;
+    }
+
+    .panel-title-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .form-grid.two {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    .input,
+    .select,
+    .textarea {
+      width: 100%;
+      min-height: 34px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      padding: 5px 11px;
+    }
+
+    .textarea {
+      min-height: 78px;
+      resize: vertical;
+    }
+
+    .input[readonly],
+    .select.disabled {
+      background: var(--surface-subtle);
+      color: var(--text-secondary);
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: minmax(0, 0.95fr) minmax(360px, 1.05fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .subpanel {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      overflow: hidden;
+    }
+
+    .subpanel-header {
+      padding: 12px 16px;
+      background: var(--surface-subtle);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .subpanel-body {
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .alert {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      display: grid;
+      gap: 4px;
+    }
+
+    .alert.info {
+      background: var(--info-bg);
+      border-color: #91caff;
+    }
+
+    .alert.warning {
+      background: var(--warning-bg);
+      border-color: #ffe58f;
+    }
+
+    .alert.danger {
+      background: var(--danger-bg);
+      border-color: #ffa39e;
+    }
+
+    .alert.success {
+      background: var(--success-bg);
+      border-color: #b7eb8f;
+    }
+
+    .alert-title {
+      font-weight: 500;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 860px;
+    }
+
+    th,
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--surface-subtle);
+      color: var(--text-secondary);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .money {
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .row-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      white-space: nowrap;
+    }
+
+    .list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .list-item {
+      display: grid;
+      gap: 3px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface-subtle);
+    }
+
+    .modal {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      overflow: hidden;
+    }
+
+    .modal-header,
+    .modal-footer {
+      padding: 14px 16px;
+      background: var(--surface-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .modal-header {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-footer {
+      border-top: 1px solid var(--border);
+      justify-content: flex-end;
+    }
+
+    .modal-body {
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .toast-stack {
+      position: fixed;
+      right: 24px;
+      top: 80px;
+      width: min(360px, calc(100vw - 32px));
+      display: grid;
+      gap: 8px;
+      z-index: 20;
+    }
+
+    .toast {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+      padding: 10px 12px;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .toast.success {
+      border-color: #b7eb8f;
+    }
+
+    .toast.error {
+      border-color: #ffa39e;
+    }
+
+    .toast-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--success);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .toast.error .toast-icon {
+      background: var(--danger);
+    }
+
+    .toast-close {
+      color: var(--text-tertiary);
+    }
+
+    .api-note {
+      border-left: 3px solid var(--brand);
+      padding: 8px 12px;
+      background: var(--surface-subtle);
+    }
+
+    @media (max-width: 1180px) {
+      .jump-grid,
+      .state-grid,
+      .metrics-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .summary-grid,
+      .split,
+      .force-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 860px) {
+      .template {
+        grid-template-columns: 1fr;
+      }
+
+      .sider {
+        position: static;
+        min-height: auto;
+      }
+
+      .topbar {
+        position: static;
+        padding: 12px;
+        align-items: flex-start;
+      }
+
+      .content {
+        padding: 12px;
+      }
+
+      .page-header,
+      .panel {
+        padding: 16px;
+      }
+
+      .header-row,
+      .panel-header {
+        display: grid;
+      }
+
+      .actions {
+        justify-content: flex-start;
+      }
+
+      .jump-grid,
+      .state-grid,
+      .metrics-grid,
+      .summary-grid,
+      .form-grid,
+      .form-grid.two {
+        grid-template-columns: 1fr;
+      }
+
+      .toast-stack {
+        position: static;
+        width: auto;
+        margin: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="template">
+    <aside class="sider">
+      <div class="brand">
+        <div class="brand-title">STDS Admin</div>
+        <div class="brand-subtitle">物業營運管理</div>
+      </div>
+      <nav class="nav" aria-label="主選單">
+        <div class="nav-group">
+          <a class="nav-item" href="#"><span class="nav-icon">□</span><span>工作台</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">□</span><span>物業管理</span></a>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label">日常作業</div>
+          <div class="nav-context">
+            <div class="nav-context-label">目前物業</div>
+            <button class="nav-context-trigger" aria-label="切換目前物業">
+              <span>大安信義館</span>
+              <span>⌄</span>
+            </button>
+          </div>
+          <div class="property-menu" aria-label="物業切換示意">
+            <div class="property-option active">
+              <span>大安信義館</span>
+              <span class="property-option-meta">台北市大安區信義路三段</span>
+            </div>
+            <div class="property-option">
+              <span>中山南京館</span>
+              <span class="property-option-meta">切換後保留退租流程 route</span>
+            </div>
+            <div class="property-option disabled">
+              <span>松山民生館</span>
+              <span class="property-option-meta">目前角色沒有此物業權限</span>
+            </div>
+          </div>
+          <a class="nav-item" href="#"><span class="nav-icon">□</span><span>房間與租約</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">□</span><span>抄表與電費</span></a>
+          <a class="nav-item active" href="#"><span class="nav-icon">□</span><span>退租結算</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">□</span><span>維修與日誌</span></a>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label">帳務</div>
+          <a class="nav-item" href="#"><span class="nav-icon">□</span><span>財務報表</span></a>
+          <a class="nav-item disabled" href="#"><span class="nav-icon">□</span><span>系統設定</span></a>
+        </div>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div class="breadcrumb">日常作業 / 大安信義館 / 305 室 / 退租結算</div>
+        <div class="user-area">
+          <span class="tag green">營運管理</span>
+          <span class="avatar">林</span>
+          <span>林怡君</span>
+        </div>
+      </div>
+
+      <div class="toast-stack" aria-label="通知範例">
+        <div class="toast success">
+          <span class="toast-icon">✓</span>
+          <div>
+            <div class="cell-main">退租結算已完成</div>
+            <div class="cell-sub">租約、房間與 review list 已重新載入。</div>
+          </div>
+          <span class="toast-close">×</span>
+        </div>
+        <div class="toast error">
+          <span class="toast-icon">!</span>
+          <div>
+            <div class="cell-main">匯出失敗</div>
+            <div class="cell-sub">後端 HTML 暫時無法開啟，請稍後重試。</div>
+          </div>
+          <span class="toast-close">×</span>
+        </div>
+      </div>
+
+      <div class="content">
+        <header class="page-header">
+          <div class="header-row">
+            <div class="title-block">
+              <div class="panel-title-row">
+                <h1 class="page-title">退租結算</h1>
+                <span class="tag blue">目前物業</span>
+                <span class="tag gold">backend-owned 計算</span>
+              </div>
+              <div class="page-desc">
+                正常退租使用 preview → finalize → export 流程；強制終止是獨立危險流程。前端只呈現後端回傳的 blockers、warnings、totals、匯出狀態與權限可見性，不自行計算結算金額或會計影響。
+              </div>
+            </div>
+            <div class="actions">
+              <a class="button" href="#review-list">查看退租清單</a>
+              <a class="button danger" href="#force-termination">強制終止</a>
+              <a class="button primary" href="#checkout-preview">建立退租 preview</a>
+            </div>
+          </div>
+
+          <div class="jump-grid">
+            <a class="jump-link" href="#checkout-entry">
+              <span class="jump-title">退租入口</span>
+              <span class="small">租約 context 與可操作角色</span>
+            </a>
+            <a class="jump-link" href="#checkout-preview">
+              <span class="jump-title">Preview / Finalize</span>
+              <span class="small">blocker、stale token、不可逆確認</span>
+            </a>
+            <a class="jump-link" href="#review-list">
+              <span class="jump-title">Review List</span>
+              <span class="small">property/status/page/limit filter</span>
+            </a>
+            <a class="jump-link" href="#force-termination">
+              <span class="jump-title">Force Termination</span>
+              <span class="small">admin / organizer only</span>
+            </a>
+          </div>
+        </header>
+
+        <section id="checkout-entry" class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">退租入口與租約 context</h2>
+              <div class="panel-subtitle">從房間、租約或承租 hub 進入；進入後先重新讀取租約詳情。</div>
+            </div>
+            <span class="tag blue">GET /leases/{id}</span>
+          </div>
+
+          <div class="summary-grid">
+            <div class="summary-item">
+              <div class="summary-label">物業 / 房間</div>
+              <div class="cell-main">大安信義館 / 305 室</div>
+              <div class="cell-sub">property_id 由 route context 帶入，不用前端全域狀態猜測。</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">租客 / 租約</div>
+              <div class="cell-main">王小明 / 2025-06-01 至 2026-05-31</div>
+              <div class="cell-sub">月租 NT$18,000，押金 NT$36,000，押金狀態 held。</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">角色可見性</div>
+              <div class="cell-main">admin / organizer / staff 可正常退租</div>
+              <div class="cell-sub">owner 不顯示操作入口；後端仍是授權來源。</div>
+            </div>
+          </div>
+
+          <div class="alert info">
+            <div class="alert-title">入口行為</div>
+            <div class="small">如果 lease 已不是 active，正常退租按鈕 disabled，改提供 review list 或 force termination detail 的導覽。pending rent / electricity blocker 只連回收款或抄表流程，不在此頁實作付款。</div>
+          </div>
+        </section>
+
+        <section id="checkout-preview" class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">正常退租 preview 與 finalization</h2>
+              <div class="panel-subtitle">preview 只產生後端權威提案；finalize 使用 preview token 並重新鎖定驗證。</div>
+            </div>
+            <div class="actions">
+              <span class="tag blue">POST /leases/{id}/checkout-settlement/preview</span>
+              <span class="tag red">POST /leases/{id}/checkout-settlement/finalize</span>
+            </div>
+          </div>
+
+          <div class="split">
+            <div class="subpanel">
+              <div class="subpanel-header">
+                <div class="cell-main">退租輸入</div>
+                <span class="tag gold">reason value 待後端 enum</span>
+              </div>
+              <div class="subpanel-body">
+                <div class="form-grid two">
+                  <label class="field">
+                    <span class="field-label">實際退租日</span>
+                    <input class="input" value="2026-05-08" readonly>
+                  </label>
+                  <label class="field">
+                    <span class="field-label">退租原因</span>
+                    <select class="select">
+                      <option>合約期滿</option>
+                      <option>租客提前搬離</option>
+                      <option>其他原因</option>
+                    </select>
+                    <span class="field-help">實作時提交 backend-defined value；template 不硬定 enum。</span>
+                  </label>
+                  <label class="field">
+                    <span class="field-label">退租電表讀數</span>
+                    <input class="input" value="1280" readonly>
+                    <span class="field-help">僅作為 snapshot input；前端不計算電費。</span>
+                  </label>
+                  <label class="field">
+                    <span class="field-label">清潔費</span>
+                    <input class="input" value="2,000" readonly>
+                  </label>
+                  <label class="field">
+                    <span class="field-label">門禁卡遺失費</span>
+                    <input class="input" value="0" readonly>
+                  </label>
+                  <label class="field">
+                    <span class="field-label">其他費用</span>
+                    <input class="input" value="1,200" readonly>
+                  </label>
+                  <label class="field full">
+                    <span class="field-label">其他費用原因</span>
+                    <input class="input" value="牆面局部補漆與清運費" readonly>
+                  </label>
+                  <label class="field full">
+                    <span class="field-label">退租備註</span>
+                    <textarea class="textarea" readonly>租客已於現場交還鑰匙，房間待清潔後可重新出租。</textarea>
+                  </label>
+                </div>
+                <div class="actions">
+                  <button class="button">取消</button>
+                  <button class="button primary">產生 preview</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="subpanel">
+              <div class="subpanel-header">
+                <div class="cell-main">Backend preview result</div>
+                <span class="tag green">可 finalize</span>
+              </div>
+              <div class="subpanel-body">
+                <div class="metrics-grid">
+                  <div class="metric">
+                    <div class="metric-label">押金</div>
+                    <div class="metric-value">36,000</div>
+                  </div>
+                  <div class="metric">
+                    <div class="metric-label">退款合計</div>
+                    <div class="metric-value refund">36,000</div>
+                  </div>
+                  <div class="metric">
+                    <div class="metric-label">扣款合計</div>
+                    <div class="metric-value payable">3,200</div>
+                  </div>
+                  <div class="metric">
+                    <div class="metric-label">應退還</div>
+                    <div class="metric-value refund">32,800</div>
+                  </div>
+                </div>
+
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th style="width: 160px;">項目</th>
+                        <th style="width: 120px;">方向</th>
+                        <th>說明</th>
+                        <th class="money" style="width: 130px;">金額</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><div class="cell-main">押金返還</div><div class="cell-sub">deposit_refund</div></td>
+                        <td><span class="tag green">退款</span></td>
+                        <td>後端依租約押金狀態與 settlement basis 回傳。</td>
+                        <td class="money">36,000</td>
+                      </tr>
+                      <tr>
+                        <td><div class="cell-main">清潔費</div><div class="cell-sub">cleaning_fee</div></td>
+                        <td><span class="tag red">扣款</span></td>
+                        <td>由退租輸入送出，後端列入扣款 line。</td>
+                        <td class="money">2,000</td>
+                      </tr>
+                      <tr>
+                        <td><div class="cell-main">其他費用</div><div class="cell-sub">other_fee</div></td>
+                        <td><span class="tag red">扣款</span></td>
+                        <td>牆面局部補漆與清運費。</td>
+                        <td class="money">1,200</td>
+                      </tr>
+                      <tr>
+                        <td><div class="cell-main">電表快照</div><div class="cell-sub">electricity_settlement</div></td>
+                        <td><span class="tag gray">資訊</span></td>
+                        <td>final_meter_reading 僅為 snapshot；v1 不由前端計算 final electric settlement。</td>
+                        <td class="money">-</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="alert warning">
+                  <div class="alert-title">Warnings</div>
+                  <div class="small">final_meter_snapshot_only：退租電表讀數已保存為快照，但金額計算仍由後端支援狀態決定。</div>
+                </div>
+
+                <div class="api-note">preview_token 存在且 blockers 為空時，才啟用 finalize。finalize 後 refetch lease、room、bill、review list，不從本地 preview 推導狀態。</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="split">
+            <div class="subpanel">
+              <div class="subpanel-header">
+                <div class="cell-main">Blocker state</div>
+                <span class="tag red">無法 finalize</span>
+              </div>
+              <div class="subpanel-body">
+                <ul class="list">
+                  <li class="list-item">
+                    <div class="cell-main">pending_meter</div>
+                    <div class="cell-sub">305 室 2026-05 電費仍待抄表。連到抄表與電費頁處理，退租頁不提供電費付款 UI。</div>
+                  </li>
+                  <li class="list-item">
+                    <div class="cell-main">unpaid_bill</div>
+                    <div class="cell-sub">2026-04 租金帳單尚未結清。連到租金收款流程。</div>
+                  </li>
+                  <li class="list-item">
+                    <div class="cell-main">rent_refund_not_calculated</div>
+                    <div class="cell-sub">提前退租退款規則尚未由後端定義，v1 阻擋 early checkout。</div>
+                  </li>
+                </ul>
+                <div class="actions">
+                  <button class="button">前往租金收款</button>
+                  <button class="button">前往抄表</button>
+                  <button class="button disabled">完成退租</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="modal" aria-label="finalize confirmation">
+              <div class="modal-header">
+                <div class="cell-main">完成退租確認</div>
+                <span class="tag red">不可逆</span>
+              </div>
+              <div class="modal-body">
+                <div class="alert danger">
+                  <div class="alert-title">完成後將終止租約並寫入會計影響</div>
+                  <div class="small">此動作會使用 preview token 送出。若其他人已修改帳單、租約或押金狀態，後端會回傳 stale preview / 409，使用者必須重新產生 preview。</div>
+                </div>
+                <div class="summary-grid">
+                  <div class="summary-item">
+                    <div class="summary-label">租客</div>
+                    <div class="cell-main">王小明</div>
+                  </div>
+                  <div class="summary-item">
+                    <div class="summary-label">房間</div>
+                    <div class="cell-main">305 室</div>
+                  </div>
+                  <div class="summary-item">
+                    <div class="summary-label">應退還</div>
+                    <div class="cell-main">NT$32,800</div>
+                  </div>
+                </div>
+                <label class="field">
+                  <span class="field-label">確認文字</span>
+                  <input class="input" value="我確認完成退租結算" readonly>
+                </label>
+              </div>
+              <div class="modal-footer">
+                <button class="button">返回修改</button>
+                <button class="button danger">確認完成退租</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="checkout-export" class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">退租結算匯出</h2>
+              <div class="panel-subtitle">只在後端回傳 export_available 時提供；HTML body、filename、內容排序由後端擁有。</div>
+            </div>
+            <span class="tag blue">GET /leases/{id}/checkout-settlement/export?format=html</span>
+          </div>
+
+          <div class="summary-grid">
+            <div class="summary-item">
+              <div class="summary-label">已完成結算</div>
+              <div class="cell-main">2026-05-08 18:20</div>
+              <div class="cell-sub">可開啟退租結算 HTML。</div>
+              <div class="actions" style="margin-top: 10px;">
+                <button class="button primary">預覽 HTML</button>
+                <button class="button">在新分頁開啟</button>
+              </div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">尚未完成結算</div>
+              <div class="cell-main">匯出不可用</div>
+              <div class="cell-sub">使用 backend export_available，不由 lease status 推論。</div>
+              <div class="actions" style="margin-top: 10px;">
+                <button class="button disabled">預覽 HTML</button>
+              </div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">匯出失敗</div>
+              <div class="cell-main">retryable error</div>
+              <div class="cell-sub">以 toast 或 inline alert 告知；不建立 attachment、不存 GCS、不做 PDF。</div>
+              <div class="actions" style="margin-top: 10px;">
+                <button class="button">重試</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="review-list" class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">退租 / 已到期 / 強制終止 review list</h2>
+              <div class="panel-subtitle">物業範圍的退租審閱清單，filter 直接對應後端 query params。</div>
+            </div>
+            <span class="tag blue">GET /lease-checkout-reviews</span>
+          </div>
+
+          <div class="form-grid">
+            <label class="field">
+              <span class="field-label">物業</span>
+              <select class="select">
+                <option>大安信義館</option>
+              </select>
+              <span class="field-help">property_id</span>
+            </label>
+            <label class="field">
+              <span class="field-label">狀態</span>
+              <select class="select">
+                <option>全部</option>
+                <option>已退租</option>
+                <option>已到期</option>
+                <option>強制終止</option>
+              </select>
+              <span class="field-help">status: terminated / expired / force_terminated</span>
+            </label>
+            <label class="field">
+              <span class="field-label">每頁筆數</span>
+              <select class="select">
+                <option>20</option>
+                <option>50</option>
+                <option>100</option>
+              </select>
+              <span class="field-help">limit max 100</span>
+            </label>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 150px;">房間 / 租客</th>
+                  <th style="width: 210px;">租期</th>
+                  <th style="width: 130px;">租約狀態</th>
+                  <th style="width: 150px;">押金</th>
+                  <th style="width: 170px;">退租 / 強制終止</th>
+                  <th style="width: 130px;">匯出</th>
+                  <th style="width: 180px;">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><div class="cell-main">305 室</div><div class="cell-sub">王小明</div></td>
+                  <td><div class="cell-main">2025-06-01 至 2026-05-31</div><div class="cell-sub">checkout finalized: 2026-05-08</div></td>
+                  <td><span class="tag green">已退租</span></td>
+                  <td><div class="cell-main">settled</div><div class="cell-sub">退 32,800 / 扣 3,200</div></td>
+                  <td><div class="cell-main">正常退租</div><div class="cell-sub">合約期滿</div></td>
+                  <td><span class="tag blue">可匯出</span></td>
+                  <td><div class="row-actions"><button class="button">詳情</button><button class="button">預覽 HTML</button></div></td>
+                </tr>
+                <tr>
+                  <td><div class="cell-main">402 室</div><div class="cell-sub">陳佳玲</div></td>
+                  <td><div class="cell-main">2025-01-01 至 2026-01-01</div><div class="cell-sub">未完成 checkout settlement</div></td>
+                  <td><span class="tag gold">已到期</span></td>
+                  <td><div class="cell-main">held</div><div class="cell-sub">待處理</div></td>
+                  <td><div class="cell-main">需要退租結算</div><div class="cell-sub">從租約詳情進入 preview</div></td>
+                  <td><span class="tag gray">不可匯出</span></td>
+                  <td><div class="row-actions"><button class="button">開啟租約</button><button class="button disabled">預覽 HTML</button></div></td>
+                </tr>
+                <tr>
+                  <td><div class="cell-main">201 室</div><div class="cell-sub">張志豪</div></td>
+                  <td><div class="cell-main">2025-03-01 至 2026-02-28</div><div class="cell-sub">force termination completed</div></td>
+                  <td><span class="tag red">強制終止</span></td>
+                  <td><div class="cell-main">written_off</div><div class="cell-sub">押金 write_off</div></td>
+                  <td><div class="cell-main">租客失聯</div><div class="cell-sub">2 筆未結帳單已 written_off</div></td>
+                  <td><span class="tag gray">不適用</span></td>
+                  <td><div class="row-actions"><button class="button">強制終止詳情</button></div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="actions">
+            <button class="button disabled">上一頁</button>
+            <span class="small">第 1 / 3 頁，共 42 筆</span>
+            <button class="button">下一頁</button>
+          </div>
+        </section>
+
+        <section id="force-termination" class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">強制終止 workflow</h2>
+              <div class="panel-subtitle">獨立於正常退租結算；不顯示 itemized checkout settlement controls。</div>
+            </div>
+            <div class="actions">
+              <span class="tag red">POST /leases/{id}/force-terminate</span>
+              <span class="tag blue">GET /force-terminations/{id}</span>
+            </div>
+          </div>
+
+          <div class="force-grid">
+            <div class="subpanel">
+              <div class="subpanel-header">
+                <div class="cell-main">強制終止輸入</div>
+                <span class="tag red">admin / organizer</span>
+              </div>
+              <div class="subpanel-body">
+                <div class="alert danger">
+                  <div class="alert-title">危險操作</div>
+                  <div class="small">完成後後端會建立 ForceTermination、將未結清帳單標記 written_off、終止租約並觸發後續房間 / 租客處理。</div>
+                </div>
+                <div class="form-grid two">
+                  <label class="field">
+                    <span class="field-label">押金處理</span>
+                    <select class="select">
+                      <option>write_off：押金轉銷</option>
+                      <option>keep_held：保留押金待後續處理</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span class="field-label">目前角色</span>
+                    <input class="input" value="organizer，可執行" readonly>
+                  </label>
+                  <label class="field full">
+                    <span class="field-label">強制終止原因</span>
+                    <textarea class="textarea" readonly>租客失聯，連續 3 個月未繳租金，已完成內部催收記錄。</textarea>
+                  </label>
+                </div>
+                <div class="summary-grid">
+                  <div class="summary-item">
+                    <div class="summary-label">未結租金</div>
+                    <div class="cell-main">2 筆 / NT$36,000</div>
+                  </div>
+                  <div class="summary-item">
+                    <div class="summary-label">未結電費</div>
+                    <div class="cell-main">1 筆 / NT$1,840</div>
+                  </div>
+                  <div class="summary-item">
+                    <div class="summary-label">staff 狀態</div>
+                    <div class="cell-main">按鈕 disabled</div>
+                    <div class="cell-sub">後端 403: FORBIDDEN_FORCE_TERMINATION</div>
+                  </div>
+                </div>
+                <div class="actions">
+                  <button class="button">取消</button>
+                  <button class="button danger">送出強制終止</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="subpanel">
+              <div class="subpanel-header">
+                <div class="cell-main">強制終止詳情</div>
+                <span class="tag green">completed</span>
+              </div>
+              <div class="subpanel-body">
+                <div class="summary-grid">
+                  <div class="summary-item">
+                    <div class="summary-label">建立者</div>
+                    <div class="cell-main">林怡君</div>
+                  </div>
+                  <div class="summary-item">
+                    <div class="summary-label">押金處理</div>
+                    <div class="cell-main">write_off</div>
+                  </div>
+                  <div class="summary-item">
+                    <div class="summary-label">建立時間</div>
+                    <div class="cell-main">2026-05-08 17:42</div>
+                  </div>
+                </div>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th style="width: 120px;">帳單類型</th>
+                        <th>期間</th>
+                        <th style="width: 120px;">處理狀態</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>rent</td>
+                        <td>2026-03</td>
+                        <td><span class="tag green">done</span></td>
+                      </tr>
+                      <tr>
+                        <td>rent</td>
+                        <td>2026-04</td>
+                        <td><span class="tag green">done</span></td>
+                      </tr>
+                      <tr>
+                        <td>electricity</td>
+                        <td>2026-04</td>
+                        <td><span class="tag green">done</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="alert info">
+                  <div class="alert-title">Detail is read-only</div>
+                  <div class="small">此頁只檢視強制終止進度、原因、押金處理與 bills；不提供 retry 或正常退租 settlement editor。</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="states" class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">頁面與操作狀態</h2>
+              <div class="panel-subtitle">page-level state 用於整頁不可用；toast 用於短暫結果；blocker 保留在流程區塊內。</div>
+            </div>
+            <span class="tag blue">Foundation state surfaces</span>
+          </div>
+
+          <div class="state-grid">
+            <div class="state-card">
+              <div class="state-title">Loading</div>
+              <div class="state-desc">保留 header、filter 和表格骨架，避免空白頁。</div>
+            </div>
+            <div class="state-card">
+              <div class="state-title">Empty</div>
+              <div class="state-desc">目前物業沒有已到期或已退租租約，提供返回租約名冊的入口。</div>
+            </div>
+            <div class="state-card">
+              <div class="state-title">Forbidden</div>
+              <div class="state-desc">目前角色或物業權限不足；不要把 403 呈現成空清單。</div>
+            </div>
+            <div class="state-card">
+              <div class="state-title">Not found</div>
+              <div class="state-desc">租約或強制終止記錄不存在，提供返回 review list。</div>
+            </div>
+            <div class="state-card">
+              <div class="state-title">Stale preview</div>
+              <div class="state-desc">409 或 preview token mismatch 時，停用 finalize 並要求重新 preview。</div>
+            </div>
+            <div class="state-card">
+              <div class="state-title">Validation</div>
+              <div class="state-desc">reason / deposit_handling 必填錯誤留在表單欄位附近。</div>
+            </div>
+            <div class="state-card">
+              <div class="state-title">Export failure</div>
+              <div class="state-desc">用 toast 或 inline alert 提供重試，不承諾 PDF 或儲存檔案。</div>
+            </div>
+            <div class="state-card">
+              <div class="state-title">Success</div>
+              <div class="state-desc">完成退租後 refetch lease、room、bill、review list，並顯示 toast。</div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

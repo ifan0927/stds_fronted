@@ -44,9 +44,9 @@
       "slug": "checkout-settlement",
       "issue": "#16",
       "title": "Checkout Settlement",
-      "status": "planned",
+      "status": "ready",
       "description": "Checkout preview/finalize/export, review list, and force termination templates.",
-      "file": ""
+      "file": "checkout-settlement.html"
     },
     {
       "slug": "journal-repair-accounting-reports",

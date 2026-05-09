@@ -105,6 +105,26 @@ Every PR should state:
 - whether tests were added, deferred, or judged unnecessary for this issue
 - whether `ai-review` was requested, suggested, or intentionally not added
 
+## Basic PR CI Gate
+
+Pull requests targeting `dev` should pass the basic frontend CI gate before merge.
+The gate maps to these local commands:
+
+```text
+npm run openapi:check
+npm run typecheck
+npm run lint
+npm run test
+npm run build
+```
+
+CI provides the backend OpenAPI source by checking out `ifan0927/STDS_backend_go` at `dev`
+and setting `OPENAPI_SPEC_PATH` to that checkout's `docs/spec/openapi.yaml`.
+Local development uses `/Users/cheni-fan/stds_backend/docs/spec/openapi.yaml` by default.
+
+This gate intentionally does not include Playwright E2E, deployment, backend E2E orchestration,
+coverage thresholds, visual regression, or performance budgets.
+
 If tests are deferred after implementation, keep that follow-up inside the same issue unless the user explicitly splits it.
 
 ## Local Verification Before CI Exists

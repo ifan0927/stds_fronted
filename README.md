@@ -32,7 +32,25 @@ npm run typecheck
 npm run lint
 npm run test
 npm run build
+npm run openapi:check
 ```
+
+## Pull Request CI
+
+Pull requests targeting `dev` run the basic frontend CI gate from `.github/workflows/pr-ci.yml`.
+The gate installs dependencies with `npm ci`, checks generated OpenAPI types, then runs
+`typecheck`, `lint`, `test`, and `build`.
+
+CI checks out `ifan0927/STDS_backend_go` at `dev` inside the workflow workspace and points
+`OPENAPI_SPEC_PATH` at that checkout's `docs/spec/openapi.yaml`. Local development keeps the
+default sibling-repo path:
+
+```text
+/Users/cheni-fan/stds_backend/docs/spec/openapi.yaml
+```
+
+Set `OPENAPI_SPEC_PATH` only when the backend OpenAPI file lives somewhere else. This repository
+still must not copy or maintain its own OpenAPI contract.
 
 The app uses `BrowserRouter`. Static hosting must provide an SPA fallback to `index.html` before production deployment, but deployment config is intentionally not part of the first scaffold.
 

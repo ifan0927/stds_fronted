@@ -9,8 +9,8 @@
     "lint": "eslint .",
     "typecheck": "tsc -b",
     "test": "vitest run",
-    "openapi:generate": "openapi-typescript /Users/cheni-fan/stds_backend/docs/spec/openapi.yaml -o src/api/generated/schema.ts --export-type",
-    "openapi:check": "openapi-typescript /Users/cheni-fan/stds_backend/docs/spec/openapi.yaml -o src/api/generated/schema.ts --export-type --check"
+    "openapi:generate": "openapi-typescript ${OPENAPI_SPEC_PATH:-/Users/cheni-fan/stds_backend/docs/spec/openapi.yaml} -o src/api/generated/schema.ts --export-type",
+    "openapi:check": "openapi-typescript ${OPENAPI_SPEC_PATH:-/Users/cheni-fan/stds_backend/docs/spec/openapi.yaml} -o src/api/generated/schema.ts --export-type --check"
   },
   "dependencies": {
     "@ant-design/icons": "^5.5.2",

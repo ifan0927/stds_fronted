@@ -1,10 +1,18 @@
 import type { HomeDashboard } from '../api/dashboard';
+import type { PropertyDashboard } from '../api/properties';
 
 type RecentJournalType = HomeDashboard['recent_journals'][number]['type'];
+type PropertyDashboardRoomStatus = NonNullable<PropertyDashboard['rooms']>[number]['status'];
 
 const journalTypeLabels: Record<RecentJournalType, string> = {
   journal_log: '一般日誌',
   repair_request: '維修紀錄',
+};
+
+const roomStatusLabels: Record<NonNullable<PropertyDashboardRoomStatus>, string> = {
+  vacant: '空房',
+  occupied: '出租中',
+  maintenance: '維修中',
 };
 
 const dateTimeFormatter = new Intl.DateTimeFormat('zh-TW', {
@@ -39,4 +47,16 @@ export function formatDashboardDateTime(value: string) {
 
 export function getJournalTypeLabel(type: RecentJournalType) {
   return journalTypeLabels[type];
+}
+
+export function getReadableJournalTypeLabel(type: string | undefined) {
+  if (type === 'journal_log' || type === 'repair_request') {
+    return journalTypeLabels[type];
+  }
+
+  return '日誌';
+}
+
+export function getRoomStatusLabel(status: PropertyDashboardRoomStatus) {
+  return status ? roomStatusLabels[status] : '未提供';
 }

@@ -11,11 +11,12 @@ import {
   TeamOutlined,
   ToolOutlined,
 } from '@ant-design/icons';
-import { Avatar, Button, Drawer, Grid, Layout, Menu, Space, Tag, Typography } from 'antd';
+import { Avatar, Button, Drawer, Grid, Layout, Menu, Select, Space, Tag, Typography } from 'antd';
 import type { ItemType } from 'antd/es/menu/interface';
 import type { ReactNode } from 'react';
-import { useMemo, useState } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { classifyApiErrorForUi, listProperties, type Property } from '../api';
 import { getRoleLabel, useAuth } from '../auth';
 
 const { Header, Content, Sider } = Layout;
@@ -29,8 +30,42 @@ function getRoutePropertyId(
   return match?.[1] ?? fallbackPropertyId;
 }
 
-function getPropertyName(propertyId: string | undefined) {
-  return propertyId ? `物業 ${propertyId}` : '尚未選擇物業';
+type PropertyOption = {
+  value: string;
+  label: string;
+};
+
+type PropertyOptionsLoadState =
+  | { status: 'idle'; options: PropertyOption[] }
+  | { status: 'loading'; options: PropertyOption[] }
+  | { status: 'ready'; options: PropertyOption[] }
+  | { status: 'error'; options: PropertyOption[] };
+
+function getPropertyDisplayName(property: Property) {
+  return property.name?.trim() || property.address?.trim() || '未命名物業';
+}
+
+function getPropertyOptions(properties: Property[]) {
+  return properties
+    .filter((property): property is Property & { id: string } => typeof property.id === 'string')
+    .map((property) => ({
+      value: property.id,
+      label: getPropertyDisplayName(property),
+    }));
+}
+
+function getPropertyName(propertyId: string | undefined, options: PropertyOption[], loading: boolean) {
+  if (!propertyId) {
+    return '尚未選擇物業';
+  }
+
+  const option = options.find((item) => item.value === propertyId);
+
+  if (option) {
+    return option.label;
+  }
+
+  return loading ? '載入物業中' : '目前物業';
 }
 
 function createPropertyMenuItem(
@@ -100,17 +135,89 @@ function getSelectedKey(pathname: string) {
 
 export default function AppShell() {
   const location = useLocation();
+  const navigate = useNavigate();
   const screens = useBreakpoint();
-  const { currentUser, logout } = useAuth();
+  const { currentUser, getAccessToken, logout } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const activeRequestRef = useRef<AbortController | null>(null);
+  const [propertyOptionsState, setPropertyOptionsState] = useState<PropertyOptionsLoadState>({
+    status: 'idle',
+    options: [],
+  });
   const propertyId = getRoutePropertyId(location.pathname, currentUser?.assigned_property_ids?.[0]);
-  const propertyName = getPropertyName(propertyId);
+  const propertyOptions = propertyOptionsState.options;
+  const propertyName = getPropertyName(
+    propertyId,
+    propertyOptions,
+    propertyOptionsState.status === 'loading',
+  );
   const menuItems = useMemo(() => createMenuItems(propertyId), [propertyId]);
   const selectedKeys = [getSelectedKey(location.pathname)];
   const isMobile = !screens.md;
   const roleLabel = getRoleLabel(currentUser?.role);
   const displayName = currentUser?.name ?? currentUser?.email ?? '使用者';
   const displayEmail = currentUser?.email ?? '';
+  const selectorValue = propertyOptions.some((item) => item.value === propertyId) ? propertyId : undefined;
+  const selectorDisabled = propertyOptions.length === 0;
+  const selectorPlaceholder = propertyOptionsState.status === 'loading'
+    ? '載入物業中'
+    : '選擇物業';
+
+  useEffect(() => {
+    if (!currentUser) {
+      activeRequestRef.current?.abort();
+      setPropertyOptionsState({ status: 'idle', options: [] });
+      return undefined;
+    }
+
+    activeRequestRef.current?.abort();
+    const controller = new AbortController();
+    activeRequestRef.current = controller;
+    setPropertyOptionsState((previous) => ({ status: 'loading', options: previous.options }));
+
+    void listProperties(getAccessToken, { signal: controller.signal })
+      .then((response) => {
+        if (activeRequestRef.current !== controller) {
+          return;
+        }
+
+        setPropertyOptionsState({
+          status: 'ready',
+          options: getPropertyOptions(response.data ?? []),
+        });
+      })
+      .catch((error: unknown) => {
+        if (activeRequestRef.current !== controller) {
+          return;
+        }
+
+        const errorState = classifyApiErrorForUi(error);
+
+        if (errorState.kind === 'cancelled') {
+          return;
+        }
+
+        setPropertyOptionsState((previous) => ({ status: 'error', options: previous.options }));
+      });
+
+    return () => controller.abort();
+  }, [currentUser, getAccessToken]);
+
+  const renderPropertySelector = () => (
+    <Select
+      className="property-selector"
+      aria-label="選擇物業"
+      value={selectorValue}
+      placeholder={selectorPlaceholder}
+      loading={propertyOptionsState.status === 'loading'}
+      disabled={selectorDisabled}
+      options={propertyOptions}
+      onChange={(value) => {
+        navigate(`/properties/${value}`);
+        setDrawerOpen(false);
+      }}
+    />
+  );
 
   const menu = (
     <div className="shell-menu">
@@ -121,8 +228,11 @@ export default function AppShell() {
       <div className="property-context">
         <Typography.Text className="property-context-label">目前物業</Typography.Text>
         <Typography.Text className="property-context-title">{propertyName}</Typography.Text>
+        {renderPropertySelector()}
         <Typography.Text className="property-context-note">
-          由 route 與後端授權共同決定可見內容。
+          {propertyOptionsState.status === 'error'
+            ? '物業清單暫時無法讀取。'
+            : '選擇後會進入該物業工作台。'}
         </Typography.Text>
       </div>
       <Menu
@@ -157,7 +267,7 @@ export default function AppShell() {
             <div className="header-property">
               <Typography.Text strong>{propertyName}</Typography.Text>
               <Typography.Text type="secondary">
-                route 與後端授權會共同決定可見內容
+                可在側邊欄切換物業
               </Typography.Text>
             </div>
           </Space>

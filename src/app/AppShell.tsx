@@ -19,6 +19,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { classifyApiErrorForUi, listProperties, type Property } from '../api';
 import { getRoleLabel, useAuth } from '../auth';
+import { abortRequest } from './requestAbort';
 
 const { Header, Content, Sider } = Layout;
 const { useBreakpoint } = Grid;
@@ -171,12 +172,12 @@ export default function AppShell() {
 
   useEffect(() => {
     if (!currentUser) {
-      activeRequestRef.current?.abort();
+      abortRequest(activeRequestRef.current);
       setPropertyOptionsState({ status: 'idle', options: [] });
       return undefined;
     }
 
-    activeRequestRef.current?.abort();
+    abortRequest(activeRequestRef.current);
     const controller = new AbortController();
     activeRequestRef.current = controller;
     setPropertyOptionsState((previous) => ({ status: 'loading', options: previous.options }));
@@ -206,7 +207,7 @@ export default function AppShell() {
         setPropertyOptionsState((previous) => ({ status: 'error', options: previous.options }));
       });
 
-    return () => controller.abort();
+    return () => abortRequest(controller);
   }, [currentUser, getAccessToken]);
 
   const renderPropertySelector = () => (

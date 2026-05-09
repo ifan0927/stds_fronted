@@ -4,8 +4,19 @@ export { getCurrentUser, syncAuth, updateCurrentUser } from './auth';
 export type { CurrentUser, UpdateCurrentUserRequest } from './auth';
 export { getDashboard } from './dashboard';
 export type { HomeDashboard } from './dashboard';
-export { getProperty, getPropertyDashboard, listProperties, listPropertyRooms } from './properties';
+export {
+  createPropertyRoom,
+  createRoomMaintenance,
+  deleteRoom,
+  getProperty,
+  getPropertyDashboard,
+  getRoom,
+  listProperties,
+  listPropertyRooms,
+  updateRoom,
+} from './properties';
 export type {
+  CreateRoomRequest,
   ListPropertyRoomsQuery,
   Property,
   PropertyDashboard,
@@ -13,6 +24,9 @@ export type {
   Room,
   RoomList,
   RoomStatus,
+  SetMaintenanceRequest,
+  SetMaintenanceResponse,
+  UpdateRoomRequest,
 } from './properties';
 export { ApiError } from './errors';
 export { classifyApiErrorForUi, getFormErrorState } from './errors';

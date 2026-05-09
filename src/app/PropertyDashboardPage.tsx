@@ -44,6 +44,7 @@ import {
   getReadableJournalTypeLabel,
   getRoomStatusLabel,
 } from './format';
+import { abortRequest } from './requestAbort';
 
 type PropertyDashboardLoadState =
   | { status: 'loading'; data: null }
@@ -147,7 +148,7 @@ export default function PropertyDashboardPage() {
       return;
     }
 
-    activeRequestRef.current?.controller.abort();
+    abortRequest(activeRequestRef.current?.controller);
     const controller = new AbortController();
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
@@ -199,7 +200,7 @@ export default function PropertyDashboardPage() {
   useEffect(() => {
     loadPropertyDashboard();
 
-    return () => activeRequestRef.current?.controller.abort();
+    return () => abortRequest(activeRequestRef.current?.controller);
   }, [loadPropertyDashboard]);
 
   if (loadState.status === 'loading') {

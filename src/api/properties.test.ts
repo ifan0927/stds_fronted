@@ -1,6 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError } from './errors';
-import { getProperty, getPropertyDashboard, listProperties, listPropertyRooms } from './properties';
+import {
+  createPropertyRoom,
+  createRoomMaintenance,
+  deleteRoom,
+  getProperty,
+  getPropertyDashboard,
+  getRoom,
+  listProperties,
+  listPropertyRooms,
+  updateRoom,
+} from './properties';
 
 function jsonResponse(body: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(body), {
@@ -150,5 +160,101 @@ describe('property API helpers', () => {
       errorCode: 'PROPERTY_NOT_FOUND',
       message: 'Property not found.',
     } satisfies Partial<ApiError>);
+  });
+
+  it('creates a property room through the shared API boundary', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        id: 'room-1',
+        property_id: 'property/with/slash',
+        name: '301 室',
+        status: 'vacant',
+      }, { status: 201 }),
+    );
+
+    const result = await createPropertyRoom(
+      'property/with/slash',
+      {
+        name: '301 室',
+        size: 7.5,
+        floor: '3F',
+        room_type: '套房',
+        facilities: { 冷氣: true },
+        default_rent_amount: 16000,
+        notes: null,
+        zone: 'A 區',
+      },
+      () => 'firebase-id-token',
+      { fetcher },
+    );
+
+    const [url, init] = fetcher.mock.calls[0];
+    expect(url).toBe('/api/v1/properties/property%2Fwith%2Fslash/rooms');
+    expect(init?.method).toBe('POST');
+    expect(await new Response(init?.body).json()).toMatchObject({
+      name: '301 室',
+      default_rent_amount: 16000,
+      notes: null,
+    });
+    expect(result.id).toBe('room-1');
+  });
+
+  it('gets and updates rooms by encoded room id', async () => {
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ id: 'room/with/slash', name: '101 室', status: 'vacant' }))
+      .mockResolvedValueOnce(jsonResponse({ id: 'room/with/slash', name: '101A 室', status: 'vacant' }));
+
+    await getRoom('room/with/slash', () => 'firebase-id-token', { fetcher });
+    const updated = await updateRoom(
+      'room/with/slash',
+      { name: '101A 室', floor: null },
+      () => 'firebase-id-token',
+      { fetcher },
+    );
+
+    expect(fetcher.mock.calls[0][0]).toBe('/api/v1/rooms/room%2Fwith%2Fslash');
+    expect(fetcher.mock.calls[0][1]?.method).toBe('GET');
+    expect(fetcher.mock.calls[1][0]).toBe('/api/v1/rooms/room%2Fwith%2Fslash');
+    expect(fetcher.mock.calls[1][1]?.method).toBe('PATCH');
+    expect(await new Response(fetcher.mock.calls[1][1]?.body).json()).toEqual({
+      name: '101A 室',
+      floor: null,
+    });
+    expect(updated.name).toBe('101A 室');
+  });
+
+  it('deletes a room with a void response', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 204 }));
+
+    await expect(deleteRoom('room-1', () => 'firebase-id-token', { fetcher })).resolves.toBeUndefined();
+
+    const [url, init] = fetcher.mock.calls[0];
+    expect(url).toBe('/api/v1/rooms/room-1');
+    expect(init?.method).toBe('DELETE');
+  });
+
+  it('creates a room maintenance entry and returns the repair request', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        room: { id: 'room-1', status: 'maintenance' },
+        repair_request: { id: 'repair-1', title: '浴室漏水', status: 'submitted' },
+      }),
+    );
+
+    const result = await createRoomMaintenance(
+      'room-1',
+      { title: '浴室漏水', description: '浴室天花板持續漏水。' },
+      () => 'firebase-id-token',
+      { fetcher },
+    );
+
+    const [url, init] = fetcher.mock.calls[0];
+    expect(url).toBe('/api/v1/rooms/room-1/maintenance');
+    expect(init?.method).toBe('POST');
+    expect(await new Response(init?.body).json()).toEqual({
+      title: '浴室漏水',
+      description: '浴室天花板持續漏水。',
+    });
+    expect(result.repair_request.id).toBe('repair-1');
   });
 });

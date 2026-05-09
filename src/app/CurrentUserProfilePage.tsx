@@ -38,6 +38,7 @@ import {
   type AccountPropertyOption,
 } from './accountProfile';
 import { getMutationSuccessFeedback } from './operation';
+import { abortRequest } from './requestAbort';
 
 type ProfileLoadState =
   | { status: 'loading'; user: null }
@@ -106,7 +107,7 @@ export default function CurrentUserProfilePage() {
   const [submitting, setSubmitting] = useState(false);
 
   const loadProfile = useCallback(() => {
-    profileRequestRef.current?.controller.abort();
+    abortRequest(profileRequestRef.current?.controller);
     const controller = new AbortController();
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
@@ -155,7 +156,7 @@ export default function CurrentUserProfilePage() {
   }, [form, getAccessToken, location.pathname, navigate]);
 
   const loadPropertyContext = useCallback(() => {
-    propertyRequestRef.current?.abort();
+    abortRequest(propertyRequestRef.current);
     const controller = new AbortController();
     propertyRequestRef.current = controller;
     setPropertyContextState((previous) => ({ status: 'loading', options: previous.options }));
@@ -191,8 +192,8 @@ export default function CurrentUserProfilePage() {
     loadPropertyContext();
 
     return () => {
-      profileRequestRef.current?.controller.abort();
-      propertyRequestRef.current?.abort();
+      abortRequest(profileRequestRef.current?.controller);
+      abortRequest(propertyRequestRef.current);
     };
   }, [loadProfile, loadPropertyContext]);
 

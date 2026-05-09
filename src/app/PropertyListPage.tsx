@@ -19,6 +19,7 @@ import {
   RetryableErrorState,
 } from './routeState';
 import { formatPercent } from './format';
+import { abortRequest } from './requestAbort';
 
 type PropertyListLoadState =
   | { status: 'loading'; data: null }
@@ -90,7 +91,7 @@ export default function PropertyListPage() {
   });
 
   const loadProperties = useCallback(() => {
-    activeRequestRef.current?.controller.abort();
+    abortRequest(activeRequestRef.current?.controller);
     const controller = new AbortController();
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
@@ -134,7 +135,7 @@ export default function PropertyListPage() {
   useEffect(() => {
     loadProperties();
 
-    return () => activeRequestRef.current?.controller.abort();
+    return () => abortRequest(activeRequestRef.current?.controller);
   }, [loadProperties]);
 
   if (loadState.status === 'loading') {

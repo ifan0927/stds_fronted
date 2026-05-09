@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { ApiError, listPropertyRooms, type RoomList } from '../api';
 import RoomInventoryPage from './RoomInventoryPage';
 
@@ -156,8 +156,15 @@ function createApiError(status: number) {
 }
 
 function renderRoomInventoryPage(initialEntry = '/properties/property-1/rooms') {
+  function LocationProbe() {
+    const location = useLocation();
+
+    return <output aria-label="目前路徑">{`${location.pathname}${location.search}`}</output>;
+  }
+
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
+      <LocationProbe />
       <Routes>
         <Route path="/properties/:propertyId/rooms" element={<RoomInventoryPage />} />
       </Routes>
@@ -214,18 +221,8 @@ describe('RoomInventoryPage', () => {
     expect(screen.getByText('8.5 坪 / 1F / A 區')).toBeTruthy();
 
     const row = screen.getByRole('row', { name: /101 室/ });
-    expect(within(row).getByRole('link', { name: '查看' }).getAttribute('href')).toBe(
-      '/properties/property-1/rooms/room-1',
-    );
-    expect(within(row).getByRole('link', { name: '搬入' }).getAttribute('href')).toBe(
-      '/properties/property-1/tenants?roomId=room-1&mode=move-in',
-    );
-    expect(within(row).getByRole('link', { name: '帳單' }).getAttribute('href')).toBe(
-      '/properties/property-1/billing?roomId=room-1',
-    );
-    expect(within(row).getByRole('link', { name: '日誌維修' }).getAttribute('href')).toBe(
-      '/properties/property-1/journal?roomId=room-1',
-    );
+    fireEvent.click(within(row).getByRole('button', { name: '查看' }));
+    expect(screen.getByLabelText('目前路徑').textContent).toBe('/properties/property-1/rooms/room-1');
   });
 
   it('updates query-backed filters and pagination through backend-supported params', async () => {

@@ -1,0 +1,219 @@
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #f5f7fa;
+  color: rgba(0, 0, 0, 0.88);
+  letter-spacing: 0;
+}
+
+a {
+  color: inherit;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.app-sider {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: auto;
+}
+
+.shell-menu {
+  min-height: 100%;
+  background: #001529;
+}
+
+.shell-brand {
+  min-height: 64px;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  display: grid;
+  gap: 2px;
+}
+
+.shell-brand-title {
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.shell-brand-subtitle {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 12px;
+}
+
+.property-context {
+  margin: 12px 16px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  display: grid;
+  gap: 3px;
+}
+
+.property-context-label,
+.property-context-note {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 12px;
+}
+
+.property-context-title {
+  color: rgba(255, 255, 255, 0.88);
+  font-weight: 600;
+}
+
+.app-main {
+  min-width: 0;
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  min-height: 64px;
+  padding: 0 24px;
+  border-bottom: 1px solid #d9d9d9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.header-context,
+.header-user {
+  min-width: 0;
+}
+
+.header-property,
+.header-user > div {
+  min-width: 0;
+  display: grid;
+  line-height: 20px;
+}
+
+.header-email {
+  font-size: 12px;
+}
+
+.app-content {
+  padding: 24px;
+}
+
+.page-stack {
+  width: 100%;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.page-header h1.ant-typography {
+  margin: 8px 0 4px;
+  font-size: 20px;
+  line-height: 28px;
+}
+
+.page-header .ant-typography {
+  margin-bottom: 0;
+}
+
+.page-header > :first-child {
+  min-width: 0;
+}
+
+.route-state-panel {
+  min-height: 220px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  padding: 20px;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.route-state h3.ant-typography {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.state-sample .route-state-panel,
+.state-sample .ant-result {
+  min-height: 220px;
+}
+
+.ant-result {
+  padding: 20px 12px;
+}
+
+.public-page {
+  min-height: 100vh;
+  padding: 24px;
+  background: #f5f7fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.public-panel {
+  width: min(420px, 100%);
+}
+
+.mobile-nav-drawer .ant-drawer-body {
+  padding: 0;
+  background: #001529;
+}
+
+@media (max-width: 767px) {
+  .app-header {
+    padding: 0 12px;
+  }
+
+  .header-property {
+    max-width: 168px;
+  }
+
+  .header-property .ant-typography {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-content {
+    padding: 12px;
+  }
+
+  .page-header {
+    flex-direction: column;
+  }
+
+  .page-header > .ant-space {
+    width: 100%;
+  }
+
+  .page-header > .ant-space .ant-space-item {
+    flex: 1 1 auto;
+  }
+
+  .page-header button {
+    width: 100%;
+    min-height: 40px;
+  }
+}

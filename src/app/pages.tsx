@@ -1,0 +1,140 @@
+import { Button, Card, Col, Row, Space, Tag, Typography } from 'antd';
+import { Link } from 'react-router-dom';
+import {
+  EmptyState,
+  ForbiddenState,
+  LoadingState,
+  NotFoundState,
+  RetryableErrorState,
+} from './routeState';
+
+const pageContent = {
+  dashboard: {
+    title: '工作台',
+    description: '顯示營運摘要、近期事件與常用入口；實際資料會在後續 API foundation 接上。',
+    tag: '總覽',
+  },
+  properties: {
+    title: '物業管理',
+    description: '管理物業清單與物業層級入口；此階段僅保留 route 與 shell 位置。',
+    tag: '管理',
+  },
+  propertyDashboard: {
+    title: '物業工作台',
+    description: '物業 context 由 route 決定，後續頁面不應只依賴側邊切換器。',
+    tag: '目前物業',
+  },
+  rooms: {
+    title: '房間管理',
+    description: '房間、設備與狀態工作流的入口 placeholder。',
+    tag: '日常作業',
+  },
+  tenants: {
+    title: '租客與租約',
+    description: '租客資料、租約與搬遷流程的入口 placeholder。',
+    tag: '日常作業',
+  },
+  billing: {
+    title: '抄表與帳單',
+    description: '抄表、帳單、收款與收據流程的入口 placeholder。',
+    tag: '日常作業',
+  },
+  journal: {
+    title: '日誌與維修',
+    description: '營運日誌與維修單工作流的入口 placeholder。',
+    tag: '日常作業',
+  },
+  reports: {
+    title: '財務報表',
+    description: '報表查詢與 runtime HTML export 行為的入口 placeholder。',
+    tag: '報表',
+  },
+} as const;
+
+type PageKey = keyof typeof pageContent;
+
+type PlaceholderPageProps = {
+  pageKey: PageKey;
+};
+
+export function PlaceholderPage({ pageKey }: PlaceholderPageProps) {
+  const content = pageContent[pageKey];
+
+  return (
+    <Space direction="vertical" size={16} className="page-stack">
+      <div className="page-header">
+        <div>
+          <Space size={8} wrap>
+            <Tag color="blue">{content.tag}</Tag>
+            <Tag>Foundation</Tag>
+          </Space>
+          <Typography.Title level={1}>{content.title}</Typography.Title>
+          <Typography.Paragraph type="secondary">{content.description}</Typography.Paragraph>
+        </div>
+        <Space wrap>
+          <Button>重新整理</Button>
+          <Button type="primary">主要動作</Button>
+        </Space>
+      </div>
+
+      <Card>
+        <Typography.Title level={2}>Route 狀態樣式</Typography.Title>
+        <Typography.Paragraph type="secondary">
+          此頁只建立 shell 與可重用的視覺語言。真實 API、授權與錯誤碼映射會由後續 foundation issues 接上。
+        </Typography.Paragraph>
+        <Row gutter={[16, 16]}>
+          <Col xs={24} md={12} xl={6}>
+            <div className="state-sample">
+              <LoadingState />
+            </div>
+          </Col>
+          <Col xs={24} md={12} xl={6}>
+            <EmptyState
+              title="目前沒有資料"
+              description="列表頁應說明空狀態原因，並保留可用的下一步。"
+              action={<Button>清除篩選</Button>}
+            />
+          </Col>
+          <Col xs={24} md={12} xl={6}>
+            <RetryableErrorState />
+          </Col>
+          <Col xs={24} md={12} xl={6}>
+            <ForbiddenState />
+          </Col>
+        </Row>
+      </Card>
+    </Space>
+  );
+}
+
+export function LoginPlaceholder() {
+  return (
+    <main className="public-page">
+      <Card className="public-panel">
+        <Typography.Title level={1}>STDS 管理後台</Typography.Title>
+        <Typography.Paragraph type="secondary">
+          登入流程會在 auth foundation 接上。此頁先保留 public route 與版面位置。
+        </Typography.Paragraph>
+        <Button type="primary">
+          <Link to="/">進入工作台預覽</Link>
+        </Button>
+      </Card>
+    </main>
+  );
+}
+
+export function ForbiddenPage() {
+  return (
+    <main className="public-page">
+      <ForbiddenState />
+    </main>
+  );
+}
+
+export function NotFoundPage() {
+  return (
+    <main className="public-page">
+      <NotFoundState />
+    </main>
+  );
+}

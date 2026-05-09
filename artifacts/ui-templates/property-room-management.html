@@ -1,0 +1,1417 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>STDS 物業與房間管理</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      color-scheme: light;
+      --brand: #1677ff;
+      --canvas: #f5f7fa;
+      --surface: #ffffff;
+      --surface-subtle: #fafafa;
+      --border: #d9d9d9;
+      --text: rgba(0, 0, 0, 0.88);
+      --text-secondary: rgba(0, 0, 0, 0.65);
+      --text-tertiary: rgba(0, 0, 0, 0.45);
+      --success: #52c41a;
+      --warning: #faad14;
+      --danger: #ff4d4f;
+      --info-bg: #e6f4ff;
+      --warning-bg: #fffbe6;
+      --danger-bg: #fff1f0;
+      --success-bg: #f6ffed;
+      --radius: 8px;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+      font-size: 14px;
+      line-height: 1.5715;
+      letter-spacing: 0;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    .template {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 248px minmax(0, 1fr);
+    }
+
+    .sider {
+      background: #001529;
+      color: rgba(255, 255, 255, 0.88);
+      min-height: 100vh;
+      position: sticky;
+      top: 0;
+      align-self: start;
+    }
+
+    .brand {
+      min-height: 64px;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 24px;
+    }
+
+    .brand-subtitle,
+    .property-option-meta {
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 12px;
+    }
+
+    .nav {
+      padding: 12px 8px 20px;
+    }
+
+    .nav-group {
+      margin-top: 14px;
+    }
+
+    .nav-group:first-child {
+      margin-top: 0;
+    }
+
+    .nav-label {
+      color: rgba(255, 255, 255, 0.45);
+      font-size: 12px;
+      padding: 0 12px 6px;
+    }
+
+    .nav-item {
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: rgba(255, 255, 255, 0.78);
+    }
+
+    .nav-item.active {
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .nav-item.disabled {
+      color: rgba(255, 255, 255, 0.34);
+      cursor: not-allowed;
+    }
+
+    .nav-icon {
+      width: 18px;
+      text-align: center;
+      flex: 0 0 auto;
+    }
+
+    .nav-context {
+      margin: 0 8px 8px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .nav-context-label {
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 12px;
+      line-height: 20px;
+    }
+
+    .nav-context-trigger {
+      width: 100%;
+      margin-top: 8px;
+      min-height: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.88);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 4px 8px;
+      cursor: default;
+    }
+
+    .property-menu {
+      margin: 10px 8px 0;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 6px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.16);
+    }
+
+    .property-option {
+      display: grid;
+      gap: 2px;
+      padding: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .property-option:last-child {
+      border-bottom: 0;
+    }
+
+    .property-option.active {
+      background: rgba(22, 119, 255, 0.26);
+    }
+
+    .property-option.disabled {
+      color: rgba(255, 255, 255, 0.34);
+    }
+
+    .main {
+      min-width: 0;
+    }
+
+    .topbar {
+      min-height: 64px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    .menu-button {
+      display: none;
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .context-strip,
+    .user-area,
+    .actions,
+    .row-actions,
+    .form-footer,
+    .inline-list {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      flex-wrap: wrap;
+    }
+
+    .user-area {
+      justify-content: flex-end;
+      flex-wrap: nowrap;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--brand);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 600;
+      flex: 0 0 auto;
+    }
+
+    .content {
+      padding: 24px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .page-header,
+    .panel-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 20px;
+      line-height: 28px;
+      font-weight: 600;
+    }
+
+    .page-desc,
+    .panel-subtitle,
+    .muted {
+      color: var(--text-secondary);
+    }
+
+    .page-desc {
+      margin: 4px 0 0;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+
+    .panel-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 16px;
+      line-height: 24px;
+      font-weight: 600;
+    }
+
+    .panel-body {
+      padding: 16px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .summary-grid,
+    .state-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .split-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.8fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .two-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      align-items: start;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .filter-band {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(150px, 1fr)) auto;
+      gap: 12px;
+      align-items: end;
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-subtle);
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .field.wide {
+      grid-column: 1 / -1;
+    }
+
+    label,
+    .label {
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 20px;
+    }
+
+    .input,
+    .select,
+    .textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      padding: 6px 11px;
+    }
+
+    .input,
+    .select {
+      min-height: 40px;
+    }
+
+    .textarea {
+      min-height: 76px;
+      resize: vertical;
+    }
+
+    .input.error {
+      border-color: var(--danger);
+    }
+
+    .help {
+      color: var(--danger);
+      font-size: 12px;
+      line-height: 20px;
+    }
+
+    .btn {
+      min-height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      padding: 4px 12px;
+      cursor: default;
+      white-space: nowrap;
+    }
+
+    .btn.primary {
+      border-color: var(--brand);
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .btn.danger {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .btn.disabled,
+    .btn:disabled {
+      background: var(--surface-subtle);
+      color: var(--text-tertiary);
+      cursor: not-allowed;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 8px;
+      font-size: 12px;
+      line-height: 20px;
+      white-space: nowrap;
+    }
+
+    .tag.blue {
+      border-color: #91caff;
+      background: var(--info-bg);
+      color: #0958d9;
+    }
+
+    .tag.green {
+      border-color: #b7eb8f;
+      background: var(--success-bg);
+      color: #237804;
+    }
+
+    .tag.gold {
+      border-color: #ffe58f;
+      background: var(--warning-bg);
+      color: #874d00;
+    }
+
+    .tag.red {
+      border-color: #ffa39e;
+      background: var(--danger-bg);
+      color: #a8071a;
+    }
+
+    .tag.gray {
+      background: var(--surface-subtle);
+      color: var(--text-secondary);
+    }
+
+    .alert,
+    .state-card,
+    .metric-card,
+    .drawer-preview,
+    .modal-preview,
+    .link-card {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface-subtle);
+      padding: 12px;
+    }
+
+    .alert {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .alert.info,
+    .state-card.info {
+      border-color: #91caff;
+      background: var(--info-bg);
+    }
+
+    .alert.success,
+    .state-card.success {
+      border-color: #b7eb8f;
+      background: var(--success-bg);
+    }
+
+    .alert.warning,
+    .state-card.warning {
+      border-color: #ffe58f;
+      background: var(--warning-bg);
+    }
+
+    .alert.error,
+    .state-card.error {
+      border-color: #ffa39e;
+      background: var(--danger-bg);
+    }
+
+    .state-title,
+    .cell-main,
+    .metric-value {
+      font-weight: 600;
+      overflow-wrap: anywhere;
+    }
+
+    .state-desc,
+    .cell-sub,
+    .small {
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 20px;
+      overflow-wrap: anywhere;
+    }
+
+    .metric-value {
+      font-size: 24px;
+      line-height: 32px;
+    }
+
+    .metric-label {
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 20px;
+    }
+
+    .table-wrap {
+      overflow: auto;
+    }
+
+    table {
+      width: 100%;
+      min-width: 900px;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--border);
+      padding: 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--surface-subtle);
+      color: var(--text-secondary);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 16px;
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+
+    .drawer-preview {
+      background: var(--surface);
+      max-width: 760px;
+      margin-left: auto;
+    }
+
+    .drawer-top,
+    .modal-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+
+    .form-footer {
+      justify-content: flex-end;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .modal-preview {
+      background: var(--surface);
+      max-width: 560px;
+    }
+
+    .link-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .link-card {
+      display: grid;
+      gap: 8px;
+      background: var(--surface);
+    }
+
+    .toast-stack {
+      position: fixed;
+      top: 76px;
+      right: 20px;
+      width: min(360px, calc(100vw - 40px));
+      display: grid;
+      gap: 8px;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .toast {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+      padding: 10px 12px;
+      display: grid;
+      grid-template-columns: 22px minmax(0, 1fr) 18px;
+      gap: 8px;
+    }
+
+    .toast.success {
+      border-color: #b7eb8f;
+    }
+
+    .toast.error {
+      border-color: #ffa39e;
+    }
+
+    .toast-icon {
+      font-weight: 700;
+      color: var(--success);
+    }
+
+    .toast.error .toast-icon {
+      color: var(--danger);
+    }
+
+    .toast-close {
+      color: var(--text-tertiary);
+      text-align: right;
+    }
+
+    .api-note {
+      border-top: 1px dashed var(--border);
+      padding-top: 10px;
+      color: var(--text-tertiary);
+      font-size: 12px;
+      line-height: 20px;
+    }
+
+    @media (max-width: 1180px) {
+      .template {
+        grid-template-columns: 1fr;
+      }
+
+      .sider {
+        position: static;
+        min-height: auto;
+      }
+
+      .nav {
+        display: none;
+      }
+
+      .menu-button {
+        display: inline-grid;
+        place-items: center;
+      }
+
+      .summary-grid,
+      .state-grid,
+      .link-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .split-grid,
+      .two-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .filter-band {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 760px) {
+      .topbar,
+      .page-header,
+      .panel-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .content {
+        padding: 12px;
+      }
+
+      .summary-grid,
+      .state-grid,
+      .link-grid,
+      .filter-band,
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .btn {
+        min-height: 40px;
+      }
+
+      .toast-stack {
+        left: 12px;
+        right: 12px;
+        top: 72px;
+        width: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="toast-stack" aria-label="通知範例">
+    <div class="toast success">
+      <span class="toast-icon">✓</span>
+      <div>
+        <div class="state-title">物業已更新</div>
+        <div class="state-desc">列表與 dashboard 將重新整理後端資料。</div>
+      </div>
+      <span class="toast-close">×</span>
+    </div>
+    <div class="toast error">
+      <span class="toast-icon">!</span>
+      <div>
+        <div class="state-title">附件上傳失敗</div>
+        <div class="state-desc">短暫結果用通知；欄位錯誤仍留在表單內。</div>
+      </div>
+      <span class="toast-close">×</span>
+    </div>
+  </div>
+
+  <div class="template">
+    <aside class="sider" aria-label="主選單">
+      <div class="brand">
+        <div class="brand-title">STDS 管理後台</div>
+        <div class="brand-subtitle">內部營運工具</div>
+      </div>
+      <nav class="nav">
+        <div class="nav-group">
+          <div class="nav-label">總覽</div>
+          <a class="nav-item" href="#"><span class="nav-icon">⌂</span><span>工作台</span></a>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label">日常作業</div>
+          <div class="nav-context">
+            <div class="nav-context-label">目前物業</div>
+            <button class="nav-context-trigger" aria-label="切換目前物業">
+              <span>台北大安物業</span>
+              <span aria-hidden="true">⌄</span>
+            </button>
+          </div>
+          <div class="property-menu" aria-label="物業切換選單展開範例">
+            <div class="property-option active">
+              <strong>台北大安物業</strong>
+              <span class="property-option-meta">目前 room workflow route context</span>
+            </div>
+            <div class="property-option">
+              <strong>新竹東區物業</strong>
+              <span class="property-option-meta">切換後導向同 workflow 的 property route</span>
+            </div>
+            <div class="property-option disabled">
+              <strong>台中北區物業</strong>
+              <span class="property-option-meta">目前角色沒有此物業權限</span>
+            </div>
+          </div>
+          <a class="nav-item active" href="#"><span class="nav-icon">□</span><span>房間管理</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">◉</span><span>租客與租約</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">▣</span><span>抄表與帳單</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">✎</span><span>日誌與維修</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">▤</span><span>財務報表</span></a>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label">管理</div>
+          <a class="nav-item" href="#"><span class="nav-icon">▦</span><span>物業管理</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">⚙</span><span>成員與權限</span></a>
+          <a class="nav-item disabled" href="#" aria-disabled="true"><span class="nav-icon">⊘</span><span>業主不可編輯</span></a>
+        </div>
+      </nav>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div class="context-strip">
+          <button class="menu-button" aria-label="開啟主選單">☰</button>
+          <span class="tag blue">目前物業</span>
+          <div>
+            <div class="state-title">台北大安物業</div>
+            <div class="small">propertyId 來自 route / URL；切換物業導向同 workflow 的另一個 property route。</div>
+          </div>
+        </div>
+        <div class="user-area">
+          <span class="tag green">營運管理</span>
+          <div class="avatar" aria-hidden="true">陳</div>
+          <div>
+            <div class="cell-main">陳營運</div>
+            <div class="small">chen.ops@example.com</div>
+          </div>
+        </div>
+      </header>
+
+      <main class="content">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">物業與房間管理 Template</h1>
+            <p class="page-desc">Property list/detail/dashboard hub 與 property-scoped room inventory；此 HTML 只展示切板與狀態，不呼叫 backend API。</p>
+          </div>
+          <div class="actions">
+            <button class="btn">重新整理</button>
+            <button class="btn">匯入附件</button>
+            <button class="btn primary">新增物業</button>
+          </div>
+        </div>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">物業列表</h2>
+              <div class="panel-subtitle">可見資料由 backend role/property assignment 決定；搜尋框是 template UX，不代表目前有 backend query param。</div>
+            </div>
+            <span class="tag gray">GET /properties</span>
+          </div>
+          <!-- API boundary: GET /properties returns accessible properties and occupancy_summary. -->
+          <div class="filter-band" aria-label="物業列表篩選">
+            <div class="field">
+              <label for="property-keyword">關鍵字</label>
+              <input id="property-keyword" class="input" value="台北">
+            </div>
+            <div class="field">
+              <label for="property-role">角色視角</label>
+              <select id="property-role" class="select">
+                <option>營運管理</option>
+                <option>工作室成員</option>
+                <option>業主</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="property-status">顯示</label>
+              <select id="property-status" class="select">
+                <option>全部可見物業</option>
+                <option>有空房</option>
+                <option>有維修房</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="property-owner">業主</label>
+              <input id="property-owner" class="input" value="王業主">
+            </div>
+            <div class="actions">
+              <button class="btn">重設</button>
+              <button class="btn primary">查詢</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 240px;">物業</th>
+                  <th style="width: 280px;">地址 / 聯絡</th>
+                  <th style="width: 160px;">出租概況</th>
+                  <th style="width: 150px;">預設電費</th>
+                  <th style="width: 160px;">權限提示</th>
+                  <th style="width: 260px;">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <div class="cell-main">台北大安物業</div>
+                    <div class="cell-sub">副標：捷運站旁套房群</div>
+                  </td>
+                  <td>
+                    <div>台北市大安區復興南路一段100號</div>
+                    <div class="cell-sub">02-2345-6789 / daan@example.com</div>
+                  </td>
+                  <td>
+                    <span class="tag green">出租率 70%</span>
+                    <div class="cell-sub">10 間：7 出租、2 空房、1 維修</div>
+                  </td>
+                  <td>
+                    <div>NT$ 4.5 / 度</div>
+                    <div class="cell-sub">每月計費</div>
+                  </td>
+                  <td><span class="tag green">可管理</span></td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="btn primary">進入 Dashboard</button>
+                      <button class="btn">編輯</button>
+                      <button class="btn danger">刪除</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="cell-main">新竹東區物業</div>
+                    <div class="cell-sub">副標：園區通勤物件</div>
+                  </td>
+                  <td>
+                    <div>新竹市東區光復路二段88號</div>
+                    <div class="cell-sub">03-555-0101 / hsinchu@example.com</div>
+                  </td>
+                  <td>
+                    <span class="tag gold">出租率 42%</span>
+                    <div class="cell-sub">12 間：5 出租、7 空房、0 維修</div>
+                  </td>
+                  <td>
+                    <div>NT$ 4.8 / 度</div>
+                    <div class="cell-sub">雙月計費</div>
+                  </td>
+                  <td><span class="tag blue">唯讀報表</span></td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="btn">查看</button>
+                      <button class="btn disabled" disabled>無權編輯</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="split-grid">
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">物業 Detail / Dashboard Hub</h2>
+                <div class="panel-subtitle">Frontend 負責排版與入口；dashboard 數字語意由 backend read model 提供。</div>
+              </div>
+              <span class="tag gray">GET /properties/{id}/dashboard</span>
+            </div>
+            <!-- API boundary: GET /properties/{id} and GET /properties/{id}/dashboard. -->
+            <div class="panel-body">
+              <div class="summary-grid">
+                <div class="metric-card">
+                  <div class="metric-label">房間總數</div>
+                  <div class="metric-value">10</div>
+                  <div class="small">backend occupancy_summary</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">出租中</div>
+                  <div class="metric-value">7</div>
+                  <div class="small">occupied rooms</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">本月預期租金</div>
+                  <div class="metric-value">126k</div>
+                  <div class="small">monthly_summary.expected_rent</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">逾期帳單</div>
+                  <div class="metric-value">2</div>
+                  <div class="small">monthly_summary.overdue_bill_count</div>
+                </div>
+              </div>
+              <div class="alert info">
+                <strong>i</strong>
+                <div>
+                  <div class="state-title">物業 notes / facilities 是 master data；facility note-to-attachment 仍是 follow-up</div>
+                  <div class="state-desc">本模板只呈現物業備註、常用設施與獨立附件入口，不假設每個設施都有獨立筆記或附件模型。</div>
+                </div>
+              </div>
+              <div class="link-grid">
+                <div class="link-card">
+                  <div class="state-title">房間管理</div>
+                  <div class="state-desc">進入目前物業的 room inventory route。</div>
+                  <button class="btn primary">查看房間</button>
+                </div>
+                <div class="link-card">
+                  <div class="state-title">物業附件</div>
+                  <div class="state-desc">列表、上傳、登記與刪除 property attachments。</div>
+                  <button class="btn">管理附件</button>
+                </div>
+                <div class="link-card">
+                  <div class="state-title">成員權限</div>
+                  <div class="state-desc">跳轉 auth/access，不在本模板重做完整流程。</div>
+                  <button class="btn">前往權限</button>
+                </div>
+                <div class="link-card">
+                  <div class="state-title">租客與租約</div>
+                  <div class="state-desc">navigation placeholder；細節屬於 #14。</div>
+                  <button class="btn">查看租約</button>
+                </div>
+                <div class="link-card">
+                  <div class="state-title">抄表與帳單</div>
+                  <div class="state-desc">navigation placeholder；細節屬於 #15。</div>
+                  <button class="btn">查看帳務</button>
+                </div>
+                <div class="link-card">
+                  <div class="state-title">日誌與維修</div>
+                  <div class="state-desc">recent journals 可顯示摘要，編輯屬於後續模板。</div>
+                  <button class="btn">查看日誌</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">物業新增 / 編輯 Drawer</h2>
+                <div class="panel-subtitle">PATCH omitted=keep、null=clear；電價更新失敗需顯示 durable form alert。</div>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="drawer-preview">
+                <div class="drawer-top">
+                  <div>
+                    <div class="state-title">編輯台北大安物業</div>
+                    <div class="small">admin / organizer / staff 可編輯一般欄位；電價需主辦以上。</div>
+                  </div>
+                  <button class="btn" aria-label="關閉">×</button>
+                </div>
+                <div class="alert warning">
+                  <strong>!</strong>
+                  <div>
+                    <div class="state-title">電價異動只影響之後新建租約</div>
+                    <div class="state-desc">既有租約不會由前端回頭修改。</div>
+                  </div>
+                </div>
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="property-name">物業名稱</label>
+                    <input id="property-name" class="input" value="台北大安物業">
+                  </div>
+                  <div class="field">
+                    <label for="property-subtitle">副標</label>
+                    <input id="property-subtitle" class="input" value="捷運站旁套房群">
+                  </div>
+                  <div class="field wide">
+                    <label for="property-address">地址</label>
+                    <input id="property-address" class="input" value="台北市大安區復興南路一段100號">
+                  </div>
+                  <div class="field">
+                    <label for="property-price">電費單價</label>
+                    <input id="property-price" class="input error" value="0">
+                    <div class="help">電價必須大於 0</div>
+                  </div>
+                  <div class="field">
+                    <label for="property-cadence">預設電費週期</label>
+                    <select id="property-cadence" class="select">
+                      <option>每月</option>
+                      <option>雙月</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="property-phone">聯絡電話</label>
+                    <input id="property-phone" class="input" value="02-2345-6789">
+                  </div>
+                  <div class="field">
+                    <label for="property-email">聯絡信箱</label>
+                    <input id="property-email" class="input" value="daan@example.com">
+                  </div>
+                  <div class="field wide">
+                    <label for="property-facilities">常用設施</label>
+                    <input id="property-facilities" class="input" value="電梯, 垃圾集中區, 管理室">
+                    <div class="small">設施來源未定，先以靜態視覺示意呈現。</div>
+                  </div>
+                  <div class="field wide">
+                    <label for="property-notes">物業備註</label>
+                    <textarea id="property-notes" class="textarea">水塔清洗固定每季安排，管理室聯絡窗口為李先生。</textarea>
+                  </div>
+                </div>
+                <div class="form-footer">
+                  <button class="btn">取消</button>
+                  <button class="btn primary">儲存變更</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">目前物業的房間列表</h2>
+              <div class="panel-subtitle">Room list 是 property-scoped workflow；status/page/limit 明確對應 backend query params。</div>
+            </div>
+            <div class="actions">
+              <span class="tag gray">GET /properties/{id}/rooms</span>
+              <button class="btn primary">新增房間</button>
+            </div>
+          </div>
+          <!-- API boundary: GET /properties/{id}/rooms?page=&limit=&status= returns data and pagination. -->
+          <div class="filter-band" aria-label="房間列表篩選">
+            <div class="field">
+              <label for="room-status">房況</label>
+              <select id="room-status" class="select">
+                <option>全部房況</option>
+                <option>空房</option>
+                <option>出租中</option>
+                <option>維修中</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="room-floor">樓層</label>
+              <input id="room-floor" class="input" value="3F">
+            </div>
+            <div class="field">
+              <label for="room-keyword">房號 / 區域</label>
+              <input id="room-keyword" class="input" value="A">
+            </div>
+            <div class="field">
+              <label for="room-limit">每頁筆數</label>
+              <select id="room-limit" class="select">
+                <option>20</option>
+                <option>50</option>
+                <option>100</option>
+              </select>
+            </div>
+            <div class="actions">
+              <button class="btn">重設</button>
+              <button class="btn primary">查詢</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 180px;">房間</th>
+                  <th style="width: 130px;">狀態</th>
+                  <th style="width: 180px;">坪數 / 樓層 / 區域</th>
+                  <th style="width: 160px;">預設租金</th>
+                  <th style="width: 220px;">備註</th>
+                  <th style="width: 280px;">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <div class="cell-main">101 室</div>
+                    <div class="cell-sub">套房 / A 區</div>
+                  </td>
+                  <td><span class="tag green">出租中</span></td>
+                  <td>8.5 坪 / 1F / A</td>
+                  <td>NT$ 18,000</td>
+                  <td>面中庭，採光佳。</td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="btn primary">查看</button>
+                      <button class="btn">附件</button>
+                      <button class="btn disabled" disabled>不可刪除</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="cell-main">302 室</div>
+                    <div class="cell-sub">雅房 / B 區</div>
+                  </td>
+                  <td><span class="tag blue">空房</span></td>
+                  <td>6.2 坪 / 3F / B</td>
+                  <td>NT$ 12,000</td>
+                  <td>可安排帶看。</td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="btn primary">查看</button>
+                      <button class="btn">設為維修</button>
+                      <button class="btn danger">刪除</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="cell-main">505 室</div>
+                    <div class="cell-sub">套房 / C 區</div>
+                  </td>
+                  <td><span class="tag gold">維修中</span></td>
+                  <td>7.9 坪 / 5F / C</td>
+                  <td>NT$ 15,500</td>
+                  <td>浴室漏水，維修單已建立。</td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="btn primary">查看</button>
+                      <button class="btn">維修單</button>
+                      <button class="btn disabled" disabled>不可刪除</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination">
+            <span>第 1 頁，共 3 頁，總計 42 間；使用 backend pagination.total_pages。</span>
+            <div class="actions">
+              <button class="btn disabled" disabled>上一頁</button>
+              <button class="btn primary">1</button>
+              <button class="btn">2</button>
+              <button class="btn">下一頁</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="two-grid">
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">房間 Detail 與操作入口</h2>
+                <div class="panel-subtitle">Detail 不吸收租約、帳單、日誌細節，只保留導航 placeholder。</div>
+              </div>
+              <span class="tag gray">GET /rooms/{id}</span>
+            </div>
+            <!-- API boundary: GET /rooms/{id}, GET /rooms/{id}/attachments. -->
+            <div class="panel-body">
+              <div class="summary-grid">
+                <div class="metric-card">
+                  <div class="metric-label">房況</div>
+                  <div class="state-title">空房</div>
+                  <div class="small">vacant</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">預設租金</div>
+                  <div class="state-title">NT$ 12,000</div>
+                  <div class="small">default_rent_amount</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">坪數</div>
+                  <div class="state-title">6.2 坪</div>
+                  <div class="small">size</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">附件</div>
+                  <div class="state-title">3 件</div>
+                  <div class="small">room attachments</div>
+                </div>
+              </div>
+              <div class="link-grid">
+                <div class="link-card">
+                  <div class="state-title">租約</div>
+                  <div class="state-desc">active lease lookup / move-in 屬於 #14。</div>
+                  <button class="btn">前往租約</button>
+                </div>
+                <div class="link-card">
+                  <div class="state-title">抄表紀錄</div>
+                  <div class="state-desc">meter history 屬於 #15。</div>
+                  <button class="btn">查看抄表</button>
+                </div>
+                <div class="link-card">
+                  <div class="state-title">日誌</div>
+                  <div class="state-desc">room-to-log navigation placeholder。</div>
+                  <button class="btn">查看日誌</button>
+                </div>
+              </div>
+              <div class="alert success">
+                <strong>✓</strong>
+                <div>
+                  <div class="state-title">房間可設定維修</div>
+                  <div class="state-desc">只有 vacant room 顯示可提交的 maintenance entry；occupied/maintenance 狀態顯示 disabled reason。</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">房間新增 / 編輯 Drawer</h2>
+                <div class="panel-subtitle">不做 room cadence price matrix；租金週期屬於 lease-level contract。</div>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="drawer-preview">
+                <div class="drawer-top">
+                  <div>
+                    <div class="state-title">新增房間</div>
+                    <div class="small">POST /properties/{id}/rooms</div>
+                  </div>
+                  <button class="btn" aria-label="關閉">×</button>
+                </div>
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="room-name">房間名稱</label>
+                    <input id="room-name" class="input" value="302 室">
+                  </div>
+                  <div class="field">
+                    <label for="room-type">房型</label>
+                    <input id="room-type" class="input" value="雅房">
+                  </div>
+                  <div class="field">
+                    <label for="room-size">坪數</label>
+                    <input id="room-size" class="input" value="6.2">
+                  </div>
+                  <div class="field">
+                    <label for="room-floor-field">樓層</label>
+                    <input id="room-floor-field" class="input" value="3F">
+                  </div>
+                  <div class="field">
+                    <label for="room-zone">區域</label>
+                    <input id="room-zone" class="input" value="B">
+                    <div class="small">zone label 是否保留仍待產品確認。</div>
+                  </div>
+                  <div class="field">
+                    <label for="room-rent">預設租金</label>
+                    <input id="room-rent" class="input" value="12000">
+                  </div>
+                  <div class="field wide">
+                    <label for="room-facilities">房內設施</label>
+                    <input id="room-facilities" class="input" value="冷氣, 書桌, 衣櫃">
+                  </div>
+                  <div class="field wide">
+                    <label for="room-notes">備註</label>
+                    <textarea id="room-notes" class="textarea">窗邊需加裝遮光簾，帶看前確認清潔狀態。</textarea>
+                  </div>
+                </div>
+                <div class="form-footer">
+                  <button class="btn">取消</button>
+                  <button class="btn primary">建立房間</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="two-grid">
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">維修入口與刪除確認</h2>
+                <div class="panel-subtitle">Backend 拒絕規則要顯示在 durable alert，不只 toast。</div>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="modal-preview">
+                <div class="modal-top">
+                  <div>
+                    <div class="state-title">將 302 室設為維修</div>
+                    <div class="small">POST /rooms/{id}/maintenance</div>
+                  </div>
+                  <span class="tag blue">vacant only</span>
+                </div>
+                <div class="form-grid">
+                  <div class="field wide">
+                    <label for="maintenance-title">維修標題</label>
+                    <input id="maintenance-title" class="input" value="浴室漏水">
+                  </div>
+                  <div class="field wide">
+                    <label for="maintenance-desc">問題描述</label>
+                    <textarea id="maintenance-desc" class="textarea">浴室天花板持續漏水，需安排廠商檢修。</textarea>
+                  </div>
+                </div>
+                <div class="form-footer">
+                  <button class="btn">取消</button>
+                  <button class="btn primary">建立維修單</button>
+                </div>
+              </div>
+              <div class="alert error">
+                <strong>!</strong>
+                <div>
+                  <div class="state-title">出租中或維修中的房間不得刪除</div>
+                  <div class="state-desc">對應 ROOM_IS_OCCUPIED / ROOM_IS_IN_MAINTENANCE；刪除按鈕可 disabled 並保留原因。</div>
+                </div>
+              </div>
+              <div class="alert warning">
+                <strong>!</strong>
+                <div>
+                  <div class="state-title">物業底下有出租中房間，無法刪除</div>
+                  <div class="state-desc">對應 PROPERTY_HAS_OCCUPIED_ROOMS；刪除 property 時需 confirmation 與 backend rejection state。</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">Page-level States</h2>
+                <div class="panel-subtitle">整頁不可用才用 page state；短暫成功/失敗用 toast。</div>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="state-grid">
+                <div class="state-card info">
+                  <div class="state-title">載入物業中</div>
+                  <div class="state-desc">保留 shell 與頁面骨架。</div>
+                </div>
+                <div class="state-card">
+                  <div class="state-title">沒有房間</div>
+                  <div class="state-desc">空列表可提供新增房間入口。</div>
+                </div>
+                <div class="state-card error">
+                  <div class="state-title">頁面載入失敗</div>
+                  <div class="state-desc">retryable error，保留重試。</div>
+                </div>
+                <div class="state-card warning">
+                  <div class="state-title">沒有權限</div>
+                  <div class="state-desc">403 route-level forbidden。</div>
+                </div>
+              </div>
+              <div class="alert info">
+                <strong>i</strong>
+                <div>
+                  <div class="state-title">附件 UX 共用</div>
+                  <div class="state-desc">物業與房間附件只顯示檔名、排序、上傳者與建立時間；畫面不顯示儲存服務的技術資訊。</div>
+                </div>
+              </div>
+              <div class="api-note">
+                Backend paths represented: GET/POST/PATCH/DELETE /properties, GET /properties/{id}/dashboard, GET/POST /properties/{id}/attachments, GET/POST /properties/{id}/rooms, GET/PATCH/DELETE /rooms/{id}, GET/POST /rooms/{id}/attachments, POST /rooms/{id}/maintenance.
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

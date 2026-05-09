@@ -20,9 +20,9 @@
       "slug": "property-room-management",
       "issue": "#13",
       "title": "Property + Room Management",
-      "status": "planned",
+      "status": "ready",
       "description": "Property list/detail and room inventory templates.",
-      "file": ""
+      "file": "property-room-management.html"
     },
     {
       "slug": "tenant-lease-management",

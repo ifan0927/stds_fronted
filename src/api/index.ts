@@ -15,6 +15,13 @@ export {
   listPropertyRooms,
   updateRoom,
 } from './properties';
+export {
+  getLease,
+  getTenant,
+  listBills,
+  listLeases,
+  listPropertyTenantLeaseRoster,
+} from './tenants';
 export type {
   CreateRoomRequest,
   ListPropertyRoomsQuery,
@@ -28,6 +35,18 @@ export type {
   SetMaintenanceResponse,
   UpdateRoomRequest,
 } from './properties';
+export type {
+  Bill,
+  BillList,
+  Lease,
+  LeaseList,
+  ListBillsQuery,
+  ListLeasesQuery,
+  ListPropertyTenantLeaseRosterQuery,
+  PropertyTenantLeaseRoster,
+  PropertyTenantLeaseRosterRow,
+  Tenant,
+} from './tenants';
 export { ApiError } from './errors';
 export { classifyApiErrorForUi, getFormErrorState } from './errors';
 export type { ErrorResponse, FormErrorState, UiErrorKind, UiErrorState } from './errors';

@@ -65,13 +65,13 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ## Project-Specific Guidelines
 
-This repository is the STDS frontend workspace. Detailed backend references for Codex live in [`docs/codex/backend-reference.md`](docs/codex/backend-reference.md). Frontend architecture principles live in [`docs/codex/frontend-principles.md`](docs/codex/frontend-principles.md). Issue and testing workflow lives in [`docs/codex/workflow.md`](docs/codex/workflow.md). GitHub workflow rules live in [`docs/codex/github-workflow.md`](docs/codex/github-workflow.md). UI design workflow lives in [`docs/codex/ui-design-workflow.md`](docs/codex/ui-design-workflow.md). Baseline UI rules live in [`DESIGN.md`](DESIGN.md).
+This repository is the STDS frontend workspace. Feature-page implementation reference lives in [`docs/codex/frontend-implementation-reference.md`](docs/codex/frontend-implementation-reference.md). Detailed backend references for Codex live in [`docs/codex/backend-reference.md`](docs/codex/backend-reference.md). Frontend architecture principles live in [`docs/codex/frontend-principles.md`](docs/codex/frontend-principles.md). Issue and testing workflow lives in [`docs/codex/workflow.md`](docs/codex/workflow.md). GitHub workflow rules live in [`docs/codex/github-workflow.md`](docs/codex/github-workflow.md). UI design workflow lives in [`docs/codex/ui-design-workflow.md`](docs/codex/ui-design-workflow.md). Baseline UI rules live in [`DESIGN.md`](DESIGN.md).
 
 ### Current Scope
 
-- This frontend project is being prepared for frontend implementation.
-- Do not assume the frontend framework, UI library, router, state library, API client generator, or test runner until the repo scaffold or user direction defines them.
-- Do not create application code, generated API clients, or package configuration unless the task explicitly asks for that implementation step.
+- This frontend project has the initial React + Vite + TypeScript + Ant Design bootstrap foundation.
+- Use the established scaffold, API client, auth/session, route-state, logging, runtime HTML, and operation primitives before adding new patterns.
+- Do not add another UI framework, router, global state library, API client generator, test runner, E2E framework, or production client logging backend unless the task explicitly asks for that implementation step.
 
 ### OpenAPI And Backend Contract
 
@@ -83,6 +83,7 @@ This repository is the STDS frontend workspace. Detailed backend references for 
 ### Frontend Implementation Rules
 
 - Treat GitHub issues as the normal unit of work. Read the issue goal, out of scope, implementation scope, DoD, and reference docs before coding.
+- Before implementing feature pages, read `docs/codex/frontend-implementation-reference.md` and reuse the listed primitives.
 - Use the label, branch, commit, PR, and `ai-review` rules in `docs/codex/github-workflow.md`.
 - For legacy page refresh work, survey the legacy UI and produce a reviewable UI design template before implementation when the screen is non-trivial.
 - For UI work, follow `DESIGN.md` unless an issue or accepted template explicitly supersedes it.

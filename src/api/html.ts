@@ -23,3 +23,32 @@ export function parseContentDispositionFilename(contentDisposition: string | nul
   const plainMatch = contentDisposition.match(/filename=([^;]+)/i);
   return plainMatch?.[1]?.trim() ?? null;
 }
+
+export type HtmlPreviewWindow = {
+  document: Pick<Document, 'open' | 'write' | 'close'>;
+  focus: () => void;
+};
+
+export type OpenHtmlDocumentPreviewResult =
+  | { ok: true }
+  | { ok: false; reason: 'popup-blocked' | 'unsupported-document' };
+
+export function openHtmlDocumentPreview(
+  documentResponse: HtmlDocumentResponse,
+  previewWindow: HtmlPreviewWindow | null,
+): OpenHtmlDocumentPreviewResult {
+  if (!documentResponse.contentType.toLowerCase().includes('text/html')) {
+    return { ok: false, reason: 'unsupported-document' };
+  }
+
+  if (!previewWindow) {
+    return { ok: false, reason: 'popup-blocked' };
+  }
+
+  previewWindow.document.open();
+  previewWindow.document.write(documentResponse.html);
+  previewWindow.document.close();
+  previewWindow.focus();
+
+  return { ok: true };
+}

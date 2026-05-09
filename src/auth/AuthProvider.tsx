@@ -65,6 +65,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     return onAuthStateChanged(auth, (firebaseUser) => {
       if (!firebaseUser) {
+        syncAttemptRef.current += 1;
         setCurrentUser(null);
         setStatus((previous) => previous === 'invalid-session' ? 'invalid-session' : 'unauthenticated');
         return;

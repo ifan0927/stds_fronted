@@ -151,6 +151,10 @@ export function LoginPage() {
     }
   }, [navigate, returnTo, status]);
 
+  if (status === 'authenticated') {
+    return null;
+  }
+
   if (loginViewState === 'account-not-found') {
     return (
       <main className="public-page">

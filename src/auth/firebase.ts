@@ -47,8 +47,12 @@ export function getFirebaseAuth(): FirebaseAuthConfig {
 
   if (import.meta.env.VITE_FIREBASE_USE_EMULATOR === 'true' && !emulatorConnected) {
     const emulatorUrl = import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_URL ?? 'http://127.0.0.1:9099';
-    connectAuthEmulator(cachedAuth, emulatorUrl, { disableWarnings: true });
-    emulatorConnected = true;
+    try {
+      connectAuthEmulator(cachedAuth, emulatorUrl, { disableWarnings: true });
+      emulatorConnected = true;
+    } catch {
+      // Vite HMR can preserve Firebase Auth while reloading this module.
+    }
   }
 
   return { ok: true, auth: cachedAuth };

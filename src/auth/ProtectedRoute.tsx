@@ -11,7 +11,7 @@ type ProtectedRouteProps = {
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const location = useLocation();
   const { status, logout, retrySync } = useAuth();
-  const returnTo = encodeURIComponent(`${location.pathname}${location.search}`);
+  const returnTo = encodeURIComponent(`${location.pathname}${location.search}${location.hash}`);
 
   if (status === 'loading' || status === 'syncing') {
     return <LoadingState />;

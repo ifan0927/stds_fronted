@@ -13,6 +13,7 @@ import {
 } from '@ant-design/icons';
 import { Avatar, Button, Drawer, Grid, Layout, Menu, Space, Tag, Typography } from 'antd';
 import type { ItemType } from 'antd/es/menu/interface';
+import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { getRoleLabel, useAuth } from '../auth';
@@ -20,16 +21,36 @@ import { getRoleLabel, useAuth } from '../auth';
 const { Header, Content, Sider } = Layout;
 const { useBreakpoint } = Grid;
 
-function getRoutePropertyId(pathname: string, fallbackPropertyId: string | undefined) {
+function getRoutePropertyId(
+  pathname: string,
+  fallbackPropertyId: string | undefined,
+): string | undefined {
   const match = pathname.match(/^\/properties\/([^/]+)/);
-  return match?.[1] ?? fallbackPropertyId ?? 'current-property';
+  return match?.[1] ?? fallbackPropertyId;
 }
 
-function getPropertyName(propertyId: string) {
-  return propertyId === 'current-property' ? '尚未選擇物業' : `物業 ${propertyId}`;
+function getPropertyName(propertyId: string | undefined) {
+  return propertyId ? `物業 ${propertyId}` : '尚未選擇物業';
 }
 
-function createMenuItems(propertyId: string): ItemType[] {
+function createPropertyMenuItem(
+  propertyId: string | undefined,
+  pathSuffix: string,
+  label: string,
+  icon: ReactNode,
+): ItemType {
+  const disabled = !propertyId;
+  const path = propertyId ? `/properties/${propertyId}${pathSuffix}` : `property-disabled-${pathSuffix || 'dashboard'}`;
+
+  return {
+    key: path,
+    icon,
+    disabled,
+    label: disabled ? label : <Link to={path}>{label}</Link>,
+  };
+}
+
+function createMenuItems(propertyId: string | undefined): ItemType[] {
   return [
     {
       key: '/',
@@ -41,36 +62,12 @@ function createMenuItems(propertyId: string): ItemType[] {
       label: '日常作業',
       type: 'group',
       children: [
-        {
-          key: `/properties/${propertyId}`,
-          icon: <HomeOutlined />,
-          label: <Link to={`/properties/${propertyId}`}>物業工作台</Link>,
-        },
-        {
-          key: `/properties/${propertyId}/rooms`,
-          icon: <BankOutlined />,
-          label: <Link to={`/properties/${propertyId}/rooms`}>房間管理</Link>,
-        },
-        {
-          key: `/properties/${propertyId}/tenants`,
-          icon: <TeamOutlined />,
-          label: <Link to={`/properties/${propertyId}/tenants`}>租客與租約</Link>,
-        },
-        {
-          key: `/properties/${propertyId}/billing`,
-          icon: <AuditOutlined />,
-          label: <Link to={`/properties/${propertyId}/billing`}>抄表與帳單</Link>,
-        },
-        {
-          key: `/properties/${propertyId}/journal`,
-          icon: <ToolOutlined />,
-          label: <Link to={`/properties/${propertyId}/journal`}>日誌與維修</Link>,
-        },
-        {
-          key: `/properties/${propertyId}/reports`,
-          icon: <FileTextOutlined />,
-          label: <Link to={`/properties/${propertyId}/reports`}>財務報表</Link>,
-        },
+        createPropertyMenuItem(propertyId, '', '物業工作台', <HomeOutlined />),
+        createPropertyMenuItem(propertyId, '/rooms', '房間管理', <BankOutlined />),
+        createPropertyMenuItem(propertyId, '/tenants', '租客與租約', <TeamOutlined />),
+        createPropertyMenuItem(propertyId, '/billing', '抄表與帳單', <AuditOutlined />),
+        createPropertyMenuItem(propertyId, '/journal', '日誌與維修', <ToolOutlined />),
+        createPropertyMenuItem(propertyId, '/reports', '財務報表', <FileTextOutlined />),
       ],
     },
     {

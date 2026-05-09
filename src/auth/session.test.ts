@@ -48,6 +48,7 @@ describe('auth visibility helpers', () => {
   it('labels backend roles for user-facing UI', () => {
     expect(getRoleLabel('admin')).toBe('系統管理員');
     expect(getRoleLabel(undefined)).toBe('未設定角色');
+    expect(getRoleLabel('unknown' as CurrentUser['role'])).toBe('未設定角色');
   });
 
   it('checks route visibility roles without becoming the authorization source of truth', () => {

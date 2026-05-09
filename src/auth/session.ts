@@ -54,7 +54,7 @@ export function shouldShowSessionExpiredNotice(status: AuthStatus, hasSessionExp
 }
 
 export function getRoleLabel(role: CurrentUser['role']) {
-  return role ? roleLabels[role] : '未設定角色';
+  return role ? roleLabels[role as UserRole] ?? '未設定角色' : '未設定角色';
 }
 
 export function hasRole(currentUser: CurrentUser | null, roles: UserRole[]) {

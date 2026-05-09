@@ -52,9 +52,9 @@
       "slug": "journal-repair-accounting-reports",
       "issue": "#17",
       "title": "Journal / Repair + Accounting Reports",
-      "status": "planned",
+      "status": "ready",
       "description": "Journal, repair, report detail, export, and send-action templates.",
-      "file": ""
+      "file": "journal-repair-accounting-reports.html"
     }
   ]
 }

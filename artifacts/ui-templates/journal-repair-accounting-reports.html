@@ -1,0 +1,1426 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>STDS Journal / Repair + Accounting Reports</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --brand: #1677ff;
+      --brand-hover: #0958d9;
+      --canvas: #f5f7fa;
+      --surface: #ffffff;
+      --surface-subtle: #fafafa;
+      --border: #d9d9d9;
+      --text: rgba(0, 0, 0, 0.88);
+      --text-secondary: rgba(0, 0, 0, 0.65);
+      --text-tertiary: rgba(0, 0, 0, 0.45);
+      --success: #52c41a;
+      --warning: #faad14;
+      --danger: #ff4d4f;
+      --info-bg: #e6f4ff;
+      --warning-bg: #fffbe6;
+      --danger-bg: #fff1f0;
+      --radius: 8px;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+      font-size: 14px;
+      line-height: 1.5715;
+      letter-spacing: 0;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 248px minmax(0, 1fr);
+    }
+
+    .sider {
+      background: #001529;
+      color: rgba(255, 255, 255, 0.88);
+      min-height: 100vh;
+      position: sticky;
+      top: 0;
+      align-self: start;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand {
+      min-height: 64px;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 24px;
+    }
+
+    .brand-subtitle {
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .nav {
+      padding: 12px 8px 20px;
+      overflow: auto;
+    }
+
+    .nav-group {
+      margin-top: 14px;
+    }
+
+    .nav-group:first-child {
+      margin-top: 0;
+    }
+
+    .nav-label {
+      color: rgba(255, 255, 255, 0.45);
+      font-size: 12px;
+      padding: 0 12px 6px;
+    }
+
+    .nav-context {
+      margin: 0 8px 8px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .nav-context-label {
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 12px;
+      line-height: 20px;
+    }
+
+    .nav-context-title {
+      margin-top: 2px;
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .nav-context-trigger {
+      width: 100%;
+      margin-top: 8px;
+      min-height: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.88);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 4px 8px;
+      cursor: default;
+    }
+
+    .nav-item {
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      color: rgba(255, 255, 255, 0.72);
+    }
+
+    .nav-item.active {
+      color: #ffffff;
+      background: var(--brand);
+    }
+
+    .main {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      height: 64px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    .topbar-title {
+      font-weight: 600;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+
+    .content {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 28px;
+    }
+
+    .page-description {
+      margin-top: 4px;
+      color: var(--text-secondary);
+      max-width: 920px;
+    }
+
+    .page-actions,
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .button {
+      min-height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 4px 12px;
+      white-space: nowrap;
+    }
+
+    .button.primary {
+      border-color: var(--brand);
+      background: var(--brand);
+      color: #ffffff;
+    }
+
+    .button.danger {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .button.disabled {
+      background: #f5f5f5;
+      color: var(--text-tertiary);
+      cursor: not-allowed;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 24px;
+    }
+
+    .panel-description {
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .panel-body {
+      padding: 16px;
+    }
+
+    .tabs,
+    .segments {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tab,
+    .segment {
+      min-height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 12px;
+      background: var(--surface);
+      color: var(--text-secondary);
+    }
+
+    .tab.active,
+    .segment.active {
+      color: var(--brand);
+      border-color: var(--brand);
+      background: var(--info-bg);
+    }
+
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(140px, 1fr));
+      gap: 12px;
+      padding: 16px;
+      background: var(--surface-subtle);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .field {
+      min-width: 0;
+    }
+
+    .field-label {
+      display: block;
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 20px;
+      margin-bottom: 4px;
+    }
+
+    .input,
+    .select,
+    .textarea {
+      width: 100%;
+      min-height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      padding: 4px 11px;
+    }
+
+    .textarea {
+      min-height: 88px;
+      resize: vertical;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 960px;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--border);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--surface-subtle);
+      color: var(--text-secondary);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .cell-main {
+      font-weight: 500;
+    }
+
+    .cell-sub,
+    .small {
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 20px;
+    }
+
+    .nowrap {
+      white-space: nowrap;
+    }
+
+    .truncate {
+      max-width: 340px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tag {
+      min-height: 22px;
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0 7px;
+      font-size: 12px;
+      line-height: 20px;
+      white-space: nowrap;
+      background: var(--surface);
+      color: var(--text-secondary);
+    }
+
+    .tag.blue {
+      color: #0958d9;
+      border-color: #91caff;
+      background: #e6f4ff;
+    }
+
+    .tag.green {
+      color: #389e0d;
+      border-color: #b7eb8f;
+      background: #f6ffed;
+    }
+
+    .tag.gold {
+      color: #ad6800;
+      border-color: #ffe58f;
+      background: #fffbe6;
+    }
+
+    .tag.red {
+      color: #cf1322;
+      border-color: #ffa39e;
+      background: #fff1f0;
+    }
+
+    .tag.gray {
+      color: var(--text-secondary);
+      border-color: var(--border);
+      background: #f5f5f5;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .summary-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      padding: 12px;
+      min-width: 0;
+    }
+
+    .summary-label {
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 20px;
+    }
+
+    .summary-value {
+      margin-top: 4px;
+      font-size: 24px;
+      line-height: 32px;
+      font-weight: 600;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+      gap: 16px;
+    }
+
+    .drawer-preview {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      overflow: hidden;
+    }
+
+    .drawer-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .drawer-title {
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 24px;
+    }
+
+    .drawer-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .full {
+      grid-column: 1 / -1;
+    }
+
+    .alert {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .alert.info {
+      border-color: #91caff;
+      background: var(--info-bg);
+    }
+
+    .alert.warning {
+      border-color: #ffe58f;
+      background: var(--warning-bg);
+    }
+
+    .alert.error {
+      border-color: #ffa39e;
+      background: var(--danger-bg);
+    }
+
+    .alert-title {
+      font-weight: 500;
+    }
+
+    .attachment-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .attachment {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface-subtle);
+      min-height: 96px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .state-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .state-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      background: var(--surface);
+    }
+
+    .modal-preview {
+      max-width: 520px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      overflow: hidden;
+    }
+
+    .modal-header,
+    .modal-footer {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-footer {
+      border-top: 1px solid var(--border);
+      border-bottom: 0;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .modal-body {
+      padding: 16px;
+    }
+
+    .api-note {
+      margin-top: 12px;
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 20px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      background: var(--surface-subtle);
+      border: 1px dashed var(--border);
+    }
+
+    .toast-stack {
+      position: fixed;
+      right: 24px;
+      top: 80px;
+      width: min(360px, calc(100vw - 48px));
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toast {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+      padding: 10px 12px;
+    }
+
+    @media (max-width: 1199px) {
+      .app {
+        grid-template-columns: 220px minmax(0, 1fr);
+      }
+
+      .filter-grid {
+        grid-template-columns: repeat(3, minmax(140px, 1fr));
+      }
+
+      .summary-grid,
+      .state-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .split {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 767px) {
+      .app {
+        display: block;
+      }
+
+      .sider {
+        position: static;
+        min-height: auto;
+      }
+
+      .topbar {
+        position: static;
+        padding: 0 12px;
+      }
+
+      .content {
+        padding: 12px;
+      }
+
+      .page-header,
+      .panel-header,
+      .drawer-header {
+        flex-direction: column;
+      }
+
+      .page-actions,
+      .button-row {
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      .filter-grid,
+      .summary-grid,
+      .form-grid,
+      .attachment-grid,
+      .state-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .summary-value {
+        font-size: 20px;
+        line-height: 28px;
+      }
+
+      .toast-stack {
+        position: static;
+        width: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sider">
+      <div class="brand">
+        <div class="brand-title">STDS Admin</div>
+        <div class="brand-subtitle">營運管理後台</div>
+      </div>
+      <nav class="nav" aria-label="主要導覽">
+        <div class="nav-group">
+          <div class="nav-label">總覽</div>
+          <div class="nav-item">工作台</div>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label">管理</div>
+          <div class="nav-item">物業管理</div>
+          <div class="nav-item">使用者與權限</div>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label">日常作業</div>
+          <div class="nav-context">
+            <div class="nav-context-label">目前物業</div>
+            <div class="nav-context-title">信義安和 A 館</div>
+            <button class="nav-context-trigger" type="button">
+              <span>切換物業</span>
+              <span>⌄</span>
+            </button>
+          </div>
+          <div class="nav-item">租客與租約</div>
+          <div class="nav-item">抄表與帳單</div>
+          <div class="nav-item active">日誌與維修</div>
+          <div class="nav-item">財務報表</div>
+        </div>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-title">信義安和 A 館</div>
+        <div class="topbar-actions">
+          <span class="tag blue">營運管理</span>
+          <span>ifan@example.com</span>
+        </div>
+      </header>
+
+      <div class="content">
+        <div class="toast-stack" aria-label="短暫操作結果">
+          <div class="toast">
+            <div class="cell-main">維修單已更新</div>
+            <div class="cell-sub">已重新載入維修詳情與房間狀態。</div>
+          </div>
+          <div class="toast">
+            <div class="cell-main">匯出失敗</div>
+            <div class="cell-sub">後端暫時無法產生 HTML，請稍後重試。</div>
+          </div>
+        </div>
+
+        <section class="page-header">
+          <div>
+            <h1 class="page-title">日誌、維修與財務報表</h1>
+            <div class="page-description">
+              同一個物業 context 下 review 日誌、維修 lifecycle、月報明細與 runtime HTML 匯出。前端只呈現後端回傳的 labels、狀態、entries、totals 與權限可見性，不合併分頁資料、不自行計算財報。
+            </div>
+          </div>
+          <div class="page-actions">
+            <button class="button" type="button">開啟月報</button>
+            <button class="button primary" type="button">新增日誌</button>
+            <button class="button primary" type="button">新增維修</button>
+          </div>
+        </section>
+
+        <section class="panel" id="workspace-context">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">物業作業 context</h2>
+              <div class="panel-description">日常作業 route 以 property context 帶入；切換物業會導向同一 workflow 的另一個 property route。</div>
+            </div>
+            <span class="tag blue">property_id from route</span>
+          </div>
+          <div class="panel-body">
+            <div class="summary-grid">
+              <div class="summary-item">
+                <div class="summary-label">目前物業</div>
+                <div class="summary-value">信義安和 A 館</div>
+                <div class="small">台北市大安區安和路二段 18 號</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">進行中維修</div>
+                <div class="summary-value">6</div>
+                <div class="small">由 `GET /repair-requests` 查詢，不從 journal 合併推導。</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">本月日誌費用</div>
+                <div class="summary-value">NT$ 8,450</div>
+                <div class="small">僅作 sample 顯示；實作時以對應 read model / report response 為準。</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">報表月份</div>
+                <div class="summary-value">2026 / 05</div>
+                <div class="small">year/month explicit，frontend 不自行猜月份。</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" id="journal-repair-workspace">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">日誌與維修工作區</h2>
+              <div class="panel-description">同頁切換兩個後端 paginated datasets；不把 journal 與 repair 組成權威單一 timeline。</div>
+            </div>
+            <div class="tabs" aria-label="日誌維修切換">
+              <button class="tab active" type="button">日誌</button>
+              <button class="tab" type="button">維修</button>
+              <button class="tab" type="button">附件狀態</button>
+            </div>
+          </div>
+          <div class="filter-grid">
+            <label class="field">
+              <span class="field-label">房間</span>
+              <select class="select">
+                <option>全部房間</option>
+                <option>201 - 林怡君</option>
+                <option>305 - 空房</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="field-label">日期起</span>
+              <input class="input" value="2026-05-01" readonly>
+            </label>
+            <label class="field">
+              <span class="field-label">日期迄</span>
+              <input class="input" value="2026-05-31" readonly>
+            </label>
+            <label class="field">
+              <span class="field-label">維修狀態</span>
+              <select class="select">
+                <option>全部</option>
+                <option>待派工</option>
+                <option>處理中</option>
+                <option>已完成</option>
+              </select>
+            </label>
+            <div class="field">
+              <span class="field-label">操作</span>
+              <div class="button-row">
+                <button class="button primary" type="button">查詢</button>
+                <button class="button" type="button">清除</button>
+              </div>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="split">
+              <div>
+                <div class="table-wrap">
+                  <!-- API: GET /journal-logs?property_id&room_id&date_from&date_to&page&limit -->
+                  <table>
+                    <thead>
+                      <tr>
+                        <th style="width: 150px;">時間</th>
+                        <th style="width: 150px;">位置</th>
+                        <th>內容</th>
+                        <th style="width: 160px;">費用</th>
+                        <th style="width: 140px;">附件</th>
+                        <th style="width: 180px;">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>
+                          <div class="cell-main">2026-05-08</div>
+                          <div class="cell-sub">14:30 王小明</div>
+                        </td>
+                        <td>
+                          <div class="cell-main">201</div>
+                          <div class="cell-sub">信義安和 A 館</div>
+                        </td>
+                        <td>
+                          <div class="cell-main truncate">浴室排水不順，已請水電檢查並清除管線阻塞。</div>
+                          <div class="cell-sub">expense title snapshot: 6681 其他支出</div>
+                        </td>
+                        <td>
+                          <div class="cell-main">NT$ 3,500</div>
+                          <span class="tag gold">會計影響</span>
+                        </td>
+                        <td><span class="tag blue">3 個附件</span></td>
+                        <td>
+                          <div class="button-row">
+                            <button class="button" type="button">詳情</button>
+                            <button class="button" type="button">編輯</button>
+                            <button class="button danger" type="button">刪除</button>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <div class="cell-main">2026-05-07</div>
+                          <div class="cell-sub">09:15 陳美芳</div>
+                        </td>
+                        <td>
+                          <div class="cell-main">公共區域</div>
+                          <div class="cell-sub">大廳</div>
+                        </td>
+                        <td>
+                          <div class="cell-main truncate">更換大廳照明與緊急出口指示燈。</div>
+                          <div class="cell-sub">一般日誌，無費用資料。</div>
+                        </td>
+                        <td><span class="tag gray">無費用</span></td>
+                        <td><span class="tag gray">無附件</span></td>
+                        <td>
+                          <div class="button-row">
+                            <button class="button" type="button">詳情</button>
+                            <button class="button" type="button">編輯</button>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="api-note">Journal filters 對應 OpenAPI 目前支援的 property_id、room_id、date_from、date_to、page、limit。keyword/category/facility 不做成 v1 正式 filter。</div>
+              </div>
+
+              <aside class="drawer-preview" aria-label="日誌編輯抽屜預覽">
+                <div class="drawer-header">
+                  <div>
+                    <div class="drawer-title">新增 / 編輯日誌</div>
+                    <div class="cell-sub">Drawer width baseline 720px；mobile full width。</div>
+                  </div>
+                  <span class="tag blue">GET titles</span>
+                </div>
+                <div class="drawer-body">
+                  <!-- API: POST /journal-logs, PATCH /journal-logs/{id}, GET /journal-expense-accounting-titles -->
+                  <div class="alert warning">
+                    <div class="alert-title">已月結月份不可改變會計影響</div>
+                    <div class="small">若後端回傳 JOURNAL_EXPENSE_SNAPSHOT_FINALIZED，expense fields 附近顯示 blocking alert。</div>
+                  </div>
+                  <div class="form-grid">
+                    <label class="field">
+                      <span class="field-label">物業</span>
+                      <input class="input" value="信義安和 A 館" readonly>
+                    </label>
+                    <label class="field">
+                      <span class="field-label">房間</span>
+                      <select class="select">
+                        <option>201 - 林怡君</option>
+                        <option>公共區域</option>
+                      </select>
+                    </label>
+                    <label class="field full">
+                      <span class="field-label">日誌內容</span>
+                      <textarea class="textarea" readonly>浴室排水不順，已請水電檢查並清除管線阻塞。</textarea>
+                    </label>
+                    <label class="field">
+                      <span class="field-label">費用金額</span>
+                      <input class="input" value="3500" readonly>
+                    </label>
+                    <label class="field">
+                      <span class="field-label">會計科目</span>
+                      <select class="select">
+                        <option>6681 其他支出</option>
+                        <option>6601 修繕費</option>
+                      </select>
+                    </label>
+                    <label class="field full">
+                      <span class="field-label">費用說明</span>
+                      <input class="input" value="水管更換費用" readonly>
+                    </label>
+                  </div>
+                  <div class="button-row">
+                    <button class="button" type="button">取消</button>
+                    <button class="button primary" type="button">儲存並重新載入</button>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" id="repair-lifecycle">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">維修 lifecycle</h2>
+              <div class="panel-description">維修列表、詳情與狀態機操作。每次 mutation 後重新讀取 repair 與房間 context，不從本地推導 room status。</div>
+            </div>
+            <div class="segments">
+              <button class="segment active" type="button">待處理</button>
+              <button class="segment" type="button">處理中</button>
+              <button class="segment" type="button">已結案</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="table-wrap">
+              <!-- API: GET /repair-requests?property_id&room_id&status&assigned_to&page&limit -->
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 130px;">狀態</th>
+                    <th style="width: 150px;">房間</th>
+                    <th>維修事項</th>
+                    <th style="width: 150px;">指派</th>
+                    <th style="width: 150px;">更新時間</th>
+                    <th style="width: 260px;">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="tag gold">待派工</span></td>
+                    <td>
+                      <div class="cell-main">305</div>
+                      <div class="cell-sub">空房 / 維修中</div>
+                    </td>
+                    <td>
+                      <div class="cell-main">冷氣無法啟動</div>
+                      <div class="cell-sub truncate">住戶退租後檢查發現遙控器正常，但室內機無反應。</div>
+                    </td>
+                    <td><span class="tag gray">尚未指派</span></td>
+                    <td>2026-05-09 10:20</td>
+                    <td>
+                      <div class="button-row">
+                        <button class="button primary" type="button">派工</button>
+                        <button class="button" type="button">詳情</button>
+                        <button class="button danger" type="button">取消</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="tag blue">處理中</span></td>
+                    <td>
+                      <div class="cell-main">201</div>
+                      <div class="cell-sub">林怡君</div>
+                    </td>
+                    <td>
+                      <div class="cell-main">浴室漏水</div>
+                      <div class="cell-sub">已有施工前照片，等待完成後補施工後照片。</div>
+                    </td>
+                    <td>陳美芳</td>
+                    <td>2026-05-08 18:05</td>
+                    <td>
+                      <div class="button-row">
+                        <button class="button primary" type="button">完成</button>
+                        <button class="button" type="button">詳情</button>
+                        <button class="button danger" type="button">取消</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><span class="tag green">已完成</span></td>
+                    <td>
+                      <div class="cell-main">503</div>
+                      <div class="cell-sub">周先生</div>
+                    </td>
+                    <td>
+                      <div class="cell-main">門鎖更換</div>
+                      <div class="cell-sub">已完成，房間狀態由後端 workflow 判斷恢復。</div>
+                    </td>
+                    <td>王小明</td>
+                    <td>2026-05-06 15:40</td>
+                    <td>
+                      <div class="button-row">
+                        <button class="button" type="button">詳情</button>
+                        <button class="button disabled" type="button">不可再完成</button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="split" style="margin-top: 16px;">
+              <div class="drawer-preview">
+                <div class="drawer-header">
+                  <div>
+                    <div class="drawer-title">維修詳情與附件</div>
+                    <div class="cell-sub">取消原因可送出；detail display 等後端 response 穩定支援。</div>
+                  </div>
+                  <span class="tag blue">in_progress</span>
+                </div>
+                <div class="drawer-body">
+                  <!-- API: GET /repair-requests/{id}, POST /repair-requests/{id}/progress|complete|cancel, attachment endpoints -->
+                  <div class="form-grid">
+                    <div class="field">
+                      <span class="field-label">標題</span>
+                      <div class="cell-main">浴室漏水</div>
+                    </div>
+                    <div class="field">
+                      <span class="field-label">指派人員</span>
+                      <div class="cell-main">陳美芳</div>
+                    </div>
+                    <div class="field full">
+                      <span class="field-label">描述</span>
+                      <div>浴室天花板持續漏水，已通知上層住戶並安排水電檢查。</div>
+                    </div>
+                  </div>
+                  <div class="attachment-grid">
+                    <div class="attachment">
+                      <div>
+                        <span class="tag gold">施工前</span>
+                        <div class="cell-main" style="margin-top: 8px;">bathroom-before.jpg</div>
+                      </div>
+                      <div class="small">sort_order 1</div>
+                    </div>
+                    <div class="attachment">
+                      <div>
+                        <span class="tag green">施工後</span>
+                        <div class="cell-main" style="margin-top: 8px;">bathroom-after.jpg</div>
+                      </div>
+                      <div class="small">等待上傳完成後登記</div>
+                    </div>
+                    <div class="attachment">
+                      <div>
+                        <span class="tag gray">其他</span>
+                        <div class="cell-main" style="margin-top: 8px;">quote.pdf</div>
+                      </div>
+                      <div class="small">不顯示 object_path / nonce</div>
+                    </div>
+                  </div>
+                  <div class="button-row">
+                    <button class="button" type="button">上傳附件</button>
+                    <button class="button primary" type="button">標記完成</button>
+                    <button class="button danger" type="button">取消維修</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="modal-preview">
+                <div class="modal-header">
+                  <div class="cell-main">派工 / 取消確認</div>
+                </div>
+                <div class="modal-body">
+                  <label class="field">
+                    <span class="field-label">指派工作室成員</span>
+                    <select class="select">
+                      <option>陳美芳 - 工作室成員</option>
+                      <option>王小明 - 工作室成員</option>
+                    </select>
+                  </label>
+                  <div class="alert error" style="margin-top: 12px;">
+                    <div class="alert-title">狀態已變更，無法執行此操作</div>
+                    <div class="small">REPAIR_INVALID_STATUS_FOR_ASSIGN / PROGRESS / COMPLETE 顯示為 workflow warning，並提供重新載入。</div>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button class="button" type="button">取消</button>
+                  <button class="button primary" type="button">確認派工</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" id="accounting-reports">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">財務報表 review / export</h2>
+              <div class="panel-description">後端提供年度摘要、月報明細、entries、runtime HTML exports 與寄送 action。前端不重建 HTML body。</div>
+            </div>
+            <div class="page-actions">
+              <button class="button" type="button">2026 年</button>
+              <button class="button primary" type="button">開啟 5 月明細</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="summary-grid">
+              <div class="summary-item">
+                <div class="summary-label">本月收入</div>
+                <div class="summary-value">NT$ 185,000</div>
+                <div class="small">backend total_income</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">本月支出</div>
+                <div class="summary-value">NT$ 12,450</div>
+                <div class="small">backend total_expense</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">本月淨額</div>
+                <div class="summary-value">NT$ 172,550</div>
+                <div class="small">backend net</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">資料狀態</div>
+                <div class="summary-value">即時</div>
+                <div class="small">is_finalized = false，歷史月份顯示已月結。</div>
+              </div>
+            </div>
+
+            <div class="table-wrap" style="margin-top: 16px;">
+              <!-- API: GET /properties/{id}/financial-report?year=2026 -->
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 120px;">月份</th>
+                    <th style="width: 160px;">收入</th>
+                    <th style="width: 160px;">支出</th>
+                    <th style="width: 160px;">淨額</th>
+                    <th style="width: 140px;">狀態</th>
+                    <th style="width: 320px;">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>2026 / 05</td>
+                    <td>NT$ 185,000</td>
+                    <td>NT$ 12,450</td>
+                    <td>NT$ 172,550</td>
+                    <td><span class="tag blue">即時資料</span></td>
+                    <td>
+                      <div class="button-row">
+                        <button class="button primary" type="button">明細</button>
+                        <button class="button" type="button">收支表</button>
+                        <button class="button" type="button">損益表</button>
+                        <button class="button" type="button">營運報告</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>2026 / 04</td>
+                    <td>NT$ 181,000</td>
+                    <td>NT$ 9,800</td>
+                    <td>NT$ 171,200</td>
+                    <td><span class="tag green">已月結</span></td>
+                    <td>
+                      <div class="button-row">
+                        <button class="button" type="button">明細</button>
+                        <button class="button" type="button">匯出</button>
+                        <button class="button primary" type="button">寄送業主</button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="api-note">Owner 可唯讀看報表；`POST /properties/{id}/financial-report/{year}/{month}/send` 僅 admin / organizer 顯示可執行。</div>
+          </div>
+        </section>
+
+        <section class="panel" id="monthly-report-detail">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">月報明細 entries</h2>
+              <div class="panel-description">使用 backend-provided display fields；不解析 description、不回查 mutable source records 重建 finalized rows。</div>
+            </div>
+            <span class="tag blue">2026 / 05 即時資料</span>
+          </div>
+          <div class="panel-body">
+            <div class="table-wrap">
+              <!-- API: GET /properties/{id}/financial-report/{year}/{month} -->
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 120px;">日期</th>
+                    <th style="width: 150px;">科目</th>
+                    <th style="width: 130px;">來源</th>
+                    <th style="width: 120px;">房間</th>
+                    <th style="width: 140px;">租客</th>
+                    <th>顯示摘要</th>
+                    <th style="width: 140px;">金額</th>
+                    <th style="width: 160px;">來源導航</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>2026-05-05</td>
+                    <td>
+                      <div class="cell-main">4101</div>
+                      <div class="cell-sub">租金收入</div>
+                    </td>
+                    <td><span class="tag green">帳單收款</span></td>
+                    <td>201</td>
+                    <td>林怡君</td>
+                    <td>2026 年 5 月租金</td>
+                    <td class="nowrap">NT$ 18,000</td>
+                    <td><button class="button" type="button">前往帳單</button></td>
+                  </tr>
+                  <tr>
+                    <td>2026-05-08</td>
+                    <td>
+                      <div class="cell-main">6681</div>
+                      <div class="cell-sub">其他支出</div>
+                    </td>
+                    <td><span class="tag gold">日誌費用</span></td>
+                    <td>201</td>
+                    <td>林怡君</td>
+                    <td>水管更換費用</td>
+                    <td class="nowrap">- NT$ 3,500</td>
+                    <td><button class="button" type="button">前往日誌</button></td>
+                  </tr>
+                  <tr>
+                    <td>2026-05-01</td>
+                    <td>
+                      <div class="cell-main">2191</div>
+                      <div class="cell-sub">押金扣抵</div>
+                    </td>
+                    <td><span class="tag gray">退租結算</span></td>
+                    <td>503</td>
+                    <td>周先生</td>
+                    <td>退租清潔費扣抵</td>
+                    <td class="nowrap">NT$ 2,000</td>
+                    <td><button class="button disabled" type="button">route 待定</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="api-note">source navigation 需要明確 route mapping；template 可呈現來源欄位與待定狀態，但不從 description 猜來源。</div>
+          </div>
+        </section>
+
+        <section class="panel" id="exports-and-send">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">runtime HTML export 與寄送</h2>
+              <div class="panel-description">匯出 endpoint 回傳 HTML document。前端處理 loading、open/preview、retryable error，不保存 bytes、不建 attachment。</div>
+            </div>
+            <span class="tag blue">format=html</span>
+          </div>
+          <div class="panel-body">
+            <div class="summary-grid">
+              <div class="summary-item">
+                <div class="summary-label">收支表</div>
+                <div class="cell-main">monthly cashflow HTML</div>
+                <div class="small">GET /cashflow-export?format=html</div>
+                <div class="button-row" style="margin-top: 12px; justify-content: flex-start;">
+                  <button class="button primary" type="button">開啟預覽</button>
+                  <button class="button" type="button">重試</button>
+                </div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">損益表</div>
+                <div class="cell-main">profit/loss HTML</div>
+                <div class="small">GET /profit-loss-export?format=html</div>
+                <div class="button-row" style="margin-top: 12px; justify-content: flex-start;">
+                  <button class="button primary" type="button">開啟預覽</button>
+                  <button class="button disabled" type="button">產生中</button>
+                </div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">營運報告</div>
+                <div class="cell-main">operation report HTML</div>
+                <div class="small">GET /operation-report/{year}/{month}?format=html</div>
+                <div class="button-row" style="margin-top: 12px; justify-content: flex-start;">
+                  <button class="button" type="button">開啟預覽</button>
+                  <button class="button" type="button">列印</button>
+                </div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">寄送財報</div>
+                <div class="cell-main">admin / organizer only</div>
+                <div class="small">POST /financial-report/{year}/{month}/send</div>
+                <div class="button-row" style="margin-top: 12px; justify-content: flex-start;">
+                  <button class="button primary" type="button">確認寄送</button>
+                  <button class="button disabled" type="button">staff 不可寄送</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="split" style="margin-top: 16px;">
+              <div class="alert error">
+                <div class="alert-title">匯出錯誤狀態</div>
+                <div class="small">FINANCIAL_REPORT_NOT_FOUND 顯示為可回上一層或更換月份；INTERNAL_SERVER_ERROR 顯示可重試。使用者不會看到 API path 或 backend error code。</div>
+              </div>
+              <div class="modal-preview">
+                <div class="modal-header">
+                  <div class="cell-main">寄送財報確認</div>
+                </div>
+                <div class="modal-body">
+                  <div>將寄送 2026 年 5 月信義安和 A 館財報給業主。請先確認月報明細與匯出內容。</div>
+                  <div class="alert warning" style="margin-top: 12px;">
+                    <div class="alert-title">寄送紀錄暫不顯示</div>
+                    <div class="small">send history / delivery status 是未來 scope；本 template 只呈現確認、送出、成功、失敗。</div>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button class="button" type="button">取消</button>
+                  <button class="button primary" type="button">送出</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" id="states">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">頁面與權限狀態</h2>
+              <div class="panel-description">保留 #11 foundation 的 page-level states 與 toast 分工；短暫成功/失敗用 toast， durable workflow warning 留在頁面或表單內。</div>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="state-grid">
+              <div class="state-card">
+                <span class="tag blue">Loading</span>
+                <div class="cell-main" style="margin-top: 8px;">保留 filters / table shell</div>
+                <div class="small">列表載入中不出現空白頁，table row 可用 skeleton。</div>
+              </div>
+              <div class="state-card">
+                <span class="tag gray">Empty</span>
+                <div class="cell-main" style="margin-top: 8px;">本月份沒有日誌或維修單</div>
+                <div class="small">如果有建立權限，顯示新增日誌 / 新增維修主要動作。</div>
+              </div>
+              <div class="state-card">
+                <span class="tag red">Forbidden</span>
+                <div class="cell-main" style="margin-top: 8px;">此帳號無法查看內部日誌與維修</div>
+                <div class="small">owner 只可進入報表唯讀表面；backend 仍是授權來源。</div>
+              </div>
+              <div class="state-card">
+                <span class="tag gold">Finalized</span>
+                <div class="cell-main" style="margin-top: 8px;">已月結，不可修改費用影響</div>
+                <div class="small">journal expense create/update/delete 409 顯示在 expense 區塊附近。</div>
+              </div>
+              <div class="state-card">
+                <span class="tag red">Mutation Error</span>
+                <div class="cell-main" style="margin-top: 8px;">維修狀態已被其他人更新</div>
+                <div class="small">提供重新載入，不讓使用者重複送出同一個 transition。</div>
+              </div>
+              <div class="state-card">
+                <span class="tag green">Success</span>
+                <div class="cell-main" style="margin-top: 8px;">儲存成功並重新載入</div>
+                <div class="small">使用 toast 告知短暫結果；table/detail 以後端回傳資料為準。</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,1370 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>STDS 登入與權限管理</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      color-scheme: light;
+      --brand: #1677ff;
+      --brand-hover: #0958d9;
+      --canvas: #f5f7fa;
+      --surface: #ffffff;
+      --surface-subtle: #fafafa;
+      --border: #d9d9d9;
+      --text: rgba(0, 0, 0, 0.88);
+      --text-secondary: rgba(0, 0, 0, 0.65);
+      --text-tertiary: rgba(0, 0, 0, 0.45);
+      --success: #52c41a;
+      --warning: #faad14;
+      --danger: #ff4d4f;
+      --info-bg: #e6f4ff;
+      --warning-bg: #fffbe6;
+      --danger-bg: #fff1f0;
+      --success-bg: #f6ffed;
+      --radius: 8px;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+      font-size: 14px;
+      line-height: 1.5715;
+      letter-spacing: 0;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .template {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 248px minmax(0, 1fr);
+    }
+
+    .sider {
+      background: #001529;
+      color: rgba(255, 255, 255, 0.88);
+      min-height: 100vh;
+      position: sticky;
+      top: 0;
+      align-self: start;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand {
+      min-height: 64px;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 24px;
+    }
+
+    .brand-subtitle {
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .nav {
+      padding: 12px 8px 20px;
+      overflow: auto;
+    }
+
+    .nav-group {
+      margin-top: 14px;
+    }
+
+    .nav-group:first-child {
+      margin-top: 0;
+    }
+
+    .nav-label {
+      color: rgba(255, 255, 255, 0.45);
+      font-size: 12px;
+      padding: 0 12px 6px;
+    }
+
+    .nav-item {
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: rgba(255, 255, 255, 0.78);
+      text-decoration: none;
+    }
+
+    .nav-item.active {
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .nav-item.disabled {
+      color: rgba(255, 255, 255, 0.34);
+      cursor: not-allowed;
+    }
+
+    .nav-icon {
+      width: 18px;
+      text-align: center;
+      flex: 0 0 auto;
+    }
+
+    .nav-context {
+      margin: 0 8px 8px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .nav-context-label {
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 12px;
+      line-height: 20px;
+    }
+
+    .nav-context-trigger {
+      width: 100%;
+      margin-top: 8px;
+      min-height: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.88);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 4px 8px;
+      cursor: default;
+    }
+
+    .property-menu {
+      margin: 10px 8px 0;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 6px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.16);
+    }
+
+    .property-option {
+      display: grid;
+      gap: 2px;
+      padding: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .property-option:last-child {
+      border-bottom: 0;
+    }
+
+    .property-option.active {
+      background: rgba(22, 119, 255, 0.26);
+    }
+
+    .property-option.disabled {
+      color: rgba(255, 255, 255, 0.34);
+    }
+
+    .property-option-meta {
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 12px;
+    }
+
+    .main {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      min-height: 64px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    .menu-button {
+      display: none;
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .context-strip,
+    .user-area,
+    .actions,
+    .row-actions,
+    .form-footer,
+    .inline-list {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      flex-wrap: wrap;
+    }
+
+    .user-area {
+      justify-content: flex-end;
+      flex-wrap: nowrap;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--brand);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 600;
+      flex: 0 0 auto;
+    }
+
+    .content {
+      padding: 24px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .page-header,
+    .panel-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 20px;
+      line-height: 28px;
+      font-weight: 600;
+    }
+
+    .page-desc,
+    .panel-subtitle,
+    .muted {
+      color: var(--text-secondary);
+    }
+
+    .page-desc {
+      margin: 4px 0 0;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+
+    .panel-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 16px;
+      line-height: 24px;
+      font-weight: 600;
+    }
+
+    .panel-body {
+      padding: 16px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .split-grid {
+      display: grid;
+      grid-template-columns: minmax(340px, 0.9fr) minmax(0, 1.4fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .three-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .field.wide {
+      grid-column: 1 / -1;
+    }
+
+    label,
+    .label {
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 20px;
+    }
+
+    .input,
+    .select {
+      min-height: 40px;
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      padding: 6px 11px;
+    }
+
+    .input.error,
+    .select.error {
+      border-color: var(--danger);
+    }
+
+    .help {
+      color: var(--danger);
+      font-size: 12px;
+      line-height: 20px;
+    }
+
+    .btn {
+      min-height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      padding: 4px 12px;
+      cursor: default;
+      white-space: nowrap;
+    }
+
+    .btn.primary {
+      border-color: var(--brand);
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .btn.danger {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .btn.disabled,
+    .btn:disabled {
+      background: var(--surface-subtle);
+      color: var(--text-tertiary);
+      cursor: not-allowed;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 8px;
+      font-size: 12px;
+      line-height: 20px;
+      white-space: nowrap;
+    }
+
+    .tag.blue {
+      border-color: #91caff;
+      background: var(--info-bg);
+      color: #0958d9;
+    }
+
+    .tag.green {
+      border-color: #b7eb8f;
+      background: var(--success-bg);
+      color: #237804;
+    }
+
+    .tag.gold {
+      border-color: #ffe58f;
+      background: var(--warning-bg);
+      color: #874d00;
+    }
+
+    .tag.red {
+      border-color: #ffa39e;
+      background: var(--danger-bg);
+      color: #a8071a;
+    }
+
+    .tag.gray {
+      background: var(--surface-subtle);
+      color: var(--text-secondary);
+    }
+
+    .alert,
+    .state-card,
+    .account-gate {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface-subtle);
+      padding: 12px;
+    }
+
+    .alert {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .alert.info,
+    .state-card.info {
+      border-color: #91caff;
+      background: var(--info-bg);
+    }
+
+    .alert.success,
+    .state-card.success {
+      border-color: #b7eb8f;
+      background: var(--success-bg);
+    }
+
+    .alert.warning,
+    .state-card.warning {
+      border-color: #ffe58f;
+      background: var(--warning-bg);
+    }
+
+    .alert.error,
+    .state-card.error {
+      border-color: #ffa39e;
+      background: var(--danger-bg);
+    }
+
+    .state-title,
+    .cell-main {
+      font-weight: 600;
+      overflow-wrap: anywhere;
+    }
+
+    .state-desc,
+    .cell-sub,
+    .small {
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 20px;
+      overflow-wrap: anywhere;
+    }
+
+    .login-screen {
+      min-height: 480px;
+      display: grid;
+      grid-template-columns: minmax(280px, 420px) minmax(0, 1fr);
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .login-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      display: grid;
+      gap: 16px;
+      align-content: start;
+      box-shadow: var(--shadow);
+    }
+
+    .login-side {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface-subtle);
+      padding: 24px;
+      display: grid;
+      gap: 16px;
+      align-content: center;
+    }
+
+    .account-gate {
+      display: grid;
+      grid-template-columns: 40px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 3px solid #bae0ff;
+      border-top-color: var(--brand);
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    table {
+      width: 100%;
+      min-width: 860px;
+      border-collapse: collapse;
+      background: var(--surface);
+    }
+
+    th,
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--surface-subtle);
+      color: var(--text-secondary);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .filter-band {
+      display: grid;
+      grid-template-columns: minmax(160px, 220px) minmax(160px, 220px) minmax(220px, 1fr) auto;
+      gap: 12px;
+      align-items: end;
+      padding: 16px;
+      background: var(--surface-subtle);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .profile-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+    }
+
+    .profile-item {
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface-subtle);
+      min-width: 0;
+    }
+
+    .drawer-preview {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      max-width: 720px;
+      margin-left: auto;
+      overflow: hidden;
+    }
+
+    .drawer-top,
+    .drawer-body,
+    .drawer-footer {
+      padding: 16px;
+    }
+
+    .drawer-top,
+    .drawer-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .drawer-footer {
+      border-top: 1px solid var(--border);
+      border-bottom: 0;
+      justify-content: flex-end;
+    }
+
+    .assignment-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .assignment-row {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: start;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    .assignment-row.disabled {
+      background: var(--surface-subtle);
+      color: var(--text-tertiary);
+    }
+
+    .toast-stack {
+      position: fixed;
+      top: 76px;
+      right: 24px;
+      z-index: 20;
+      display: grid;
+      gap: 8px;
+      width: min(360px, calc(100vw - 32px));
+    }
+
+    .toast {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 12px;
+      border: 1px solid #b7eb8f;
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+    }
+
+    .toast.error {
+      border-color: #ffa39e;
+    }
+
+    .api-note {
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 20px;
+      border-left: 3px solid var(--brand);
+      padding-left: 10px;
+    }
+
+    @media (max-width: 1180px) {
+      .template {
+        grid-template-columns: 1fr;
+      }
+
+      .sider {
+        display: none;
+      }
+
+      .menu-button {
+        display: inline-grid;
+        place-items: center;
+      }
+
+      .split-grid,
+      .login-screen {
+        grid-template-columns: 1fr;
+      }
+
+      .profile-grid,
+      .three-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 760px) {
+      .topbar {
+        padding: 0 12px;
+      }
+
+      .user-area .cell-sub {
+        display: none;
+      }
+
+      .content {
+        padding: 12px;
+      }
+
+      .page-header,
+      .panel-header,
+      .filter-band,
+      .form-grid,
+      .profile-grid,
+      .three-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .page-header,
+      .panel-header {
+        display: grid;
+      }
+
+      .filter-band {
+        display: grid;
+      }
+
+      .account-gate {
+        grid-template-columns: 40px minmax(0, 1fr);
+      }
+
+      .account-gate .actions {
+        grid-column: 1 / -1;
+      }
+
+      .drawer-preview {
+        max-width: none;
+      }
+
+      .toast-stack {
+        top: auto;
+        right: 12px;
+        bottom: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="toast-stack" aria-label="通知範例">
+    <div class="toast">
+      <strong>✓</strong>
+      <div>
+        <div class="state-title">設定密碼信已寄出</div>
+        <div class="state-desc">使用者可依信件連結完成密碼設定。</div>
+      </div>
+    </div>
+    <div class="toast error">
+      <strong>!</strong>
+      <div>
+        <div class="state-title">帳號更新失敗</div>
+        <div class="state-desc">請檢查欄位錯誤，或稍後重新送出。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="template">
+    <aside class="sider" aria-label="主選單">
+      <div class="brand">
+        <div class="brand-title">STDS 管理後台</div>
+        <div class="brand-subtitle">登入與權限管理</div>
+      </div>
+      <nav class="nav">
+        <div class="nav-group">
+          <div class="nav-label">總覽</div>
+          <a class="nav-item" href="#"><span class="nav-icon">⌂</span><span>工作台</span></a>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label">日常作業</div>
+          <div class="nav-context">
+            <div class="nav-context-label">目前物業</div>
+            <button class="nav-context-trigger" aria-label="切換目前物業">
+              <span>台北大安物業</span>
+              <span aria-hidden="true">⌄</span>
+            </button>
+          </div>
+          <div class="property-menu" aria-label="物業切換選單展開範例">
+            <div class="property-option active">
+              <strong>台北大安物業</strong>
+              <span class="property-option-meta">目前 context</span>
+            </div>
+            <div class="property-option">
+              <strong>新竹東區物業</strong>
+              <span class="property-option-meta">切換後回到相同作業頁</span>
+            </div>
+            <div class="property-option disabled">
+              <strong>台中北區物業</strong>
+              <span class="property-option-meta">目前角色沒有操作權限</span>
+            </div>
+          </div>
+          <a class="nav-item" href="#"><span class="nav-icon">□</span><span>房間管理</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">◉</span><span>租客與租約</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">▣</span><span>抄表與帳單</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">✎</span><span>日誌與維修</span></a>
+          <a class="nav-item" href="#"><span class="nav-icon">▤</span><span>財務報表</span></a>
+        </div>
+        <div class="nav-group">
+          <div class="nav-label">管理</div>
+          <a class="nav-item" href="#"><span class="nav-icon">▦</span><span>物業管理</span></a>
+          <a class="nav-item active" href="#"><span class="nav-icon">⚙</span><span>成員與權限</span></a>
+          <a class="nav-item disabled" href="#" aria-disabled="true"><span class="nav-icon">⊘</span><span>業主不可編輯</span></a>
+        </div>
+      </nav>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div class="context-strip">
+          <button class="menu-button" aria-label="開啟主選單">☰</button>
+          <span class="tag blue">目前物業</span>
+          <div>
+            <div class="cell-main">台北大安物業</div>
+            <div class="cell-sub">由系統權限決定可見物業；切換後保留相同作業頁</div>
+          </div>
+        </div>
+        <div class="user-area">
+          <span class="tag green">營運管理</span>
+          <div class="avatar" aria-hidden="true">陳</div>
+          <div>
+            <div class="cell-main">陳營運</div>
+            <div class="cell-sub">chen.ops@example.com</div>
+          </div>
+        </div>
+      </header>
+
+      <main class="content">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">登入與權限管理</h1>
+            <p class="page-desc">登入、帳號確認、目前使用者、成員管理與物業指派狀態。畫面只表達操作方式，實際權限由系統判斷。</p>
+          </div>
+          <div class="actions">
+            <button class="btn">查看共用版型</button>
+            <button class="btn primary">新增成員</button>
+          </div>
+        </div>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">登入入口</h2>
+              <div class="panel-subtitle">使用電子信箱與密碼登入；登入成功後會確認此帳號是否已開通管理權限。</div>
+            </div>
+            <span class="tag blue">帳號登入</span>
+          </div>
+          <div class="panel-body">
+            <div class="login-screen">
+              <form class="login-card">
+                <div>
+                  <h3 class="panel-title">登入 STDS 管理後台</h3>
+                  <div class="state-desc">請使用已建立的系統帳號登入。</div>
+                </div>
+                <div class="field">
+                  <label for="login-email">電子信箱</label>
+                  <input id="login-email" class="input" autocomplete="username" value="chen.ops@example.com">
+                </div>
+                <div class="field">
+                  <label for="login-password">密碼</label>
+                  <input id="login-password" class="input" type="password" autocomplete="current-password" value="password">
+                </div>
+                <button class="btn primary" type="button">登入</button>
+                <div class="alert warning">
+                  <strong>!</strong>
+                  <div>
+                    <div class="state-title">登入失敗</div>
+                    <div class="state-desc">帳號或密碼無法驗證時，停留在登入畫面並提示重試。</div>
+                  </div>
+                </div>
+                <div class="api-note">登入畫面只收電子信箱與密碼；建立新成員時不在管理後台設定密碼。</div>
+              </form>
+              <div class="login-side">
+                <span class="tag gray">帳號建立規則</span>
+                <div>
+                  <div class="state-title">管理者建立帳號時不輸入密碼</div>
+                  <div class="state-desc">系統會寄出設定密碼信；使用者完成密碼設定後，再回到此登入入口。</div>
+                </div>
+                <div class="alert info">
+                  <strong>i</strong>
+                  <div>
+                    <div class="state-title">畫面可見不代表一定可操作</div>
+                    <div class="state-desc">使用者送出操作後，系統仍會再次確認角色與物業權限。</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">帳號確認</h2>
+              <div class="panel-subtitle">登入成功後確認此帳號是否存在、是否啟用，以及可管理哪些物業。</div>
+            </div>
+          </div>
+          <div class="panel-body">
+            <!-- API boundary: POST /auth/sync returns UserResponse or INVALID_FIREBASE_TOKEN / USER_NOT_FOUND. -->
+            <div class="account-gate">
+              <div class="spinner" aria-hidden="true"></div>
+              <div>
+                <div class="state-title">正在同步帳號權限</div>
+                <div class="state-desc">正在確認帳號資料、角色與可管理物業。</div>
+              </div>
+              <div class="actions"><button class="btn disabled" disabled>請稍候</button></div>
+            </div>
+            <div class="three-grid">
+              <div class="state-card success">
+                <div class="state-title">帳號確認成功</div>
+                <div class="state-desc">進入管理後台，依目前角色顯示可用功能。</div>
+                <div class="inline-list"><span class="tag green">工作室成員</span><span class="tag gray">2 個指派物業</span></div>
+              </div>
+              <div class="state-card error">
+                <div class="state-title">登入狀態已失效</div>
+                <div class="state-desc">請重新登入後再繼續操作。</div>
+                <button class="btn">重新登入</button>
+              </div>
+              <div class="state-card warning">
+                <div class="state-title">帳號尚未建立</div>
+                <div class="state-desc">此登入帳號尚未開通管理權限，請聯絡管理者。</div>
+                <button class="btn">聯絡管理者</button>
+              </div>
+            </div>
+            <div class="alert error">
+              <strong>!</strong>
+              <div>
+                <div class="state-title">同步暫時失敗</div>
+                <div class="state-desc">可能是連線暫時異常，請先重試，不要直接視為沒有權限。</div>
+              </div>
+              <button class="btn primary">重試同步</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="split-grid">
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">目前使用者</h2>
+                <div class="panel-subtitle">顯示自己的角色、電子信箱與可管理物業；此頁只允許更新名稱。</div>
+              </div>
+            </div>
+            <div class="panel-body">
+              <!-- API boundary: GET /users/me and PATCH /users/me. -->
+              <div class="profile-grid">
+                <div class="profile-item">
+                  <div class="label">姓名</div>
+                  <div class="cell-main">陳營運</div>
+                </div>
+                <div class="profile-item">
+                  <div class="label">Email</div>
+                  <div class="cell-main">chen.ops@example.com</div>
+                </div>
+                <div class="profile-item">
+                  <div class="label">角色</div>
+                  <span class="tag green">營運管理</span>
+                </div>
+                <div class="profile-item">
+                  <div class="label">指派物業</div>
+                  <div class="cell-main">2 個</div>
+                </div>
+              </div>
+              <div class="form-grid">
+                <div class="field wide">
+                  <label for="profile-name">顯示名稱</label>
+                  <input id="profile-name" class="input" value="陳營運">
+                </div>
+              </div>
+              <div class="form-footer">
+                <button class="btn">取消</button>
+                <button class="btn primary">儲存名稱</button>
+              </div>
+              <div class="alert error">
+                <strong>!</strong>
+                <div>
+                  <div class="state-title">名稱為必填</div>
+                  <div class="state-desc">欄位錯誤應顯示在欄位附近，不只用短暫通知帶過。</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">受保護頁面狀態</h2>
+                <div class="panel-subtitle">整頁不可用時顯示完整狀態；儲存成功或失敗則用短暫通知。</div>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="three-grid">
+                <div class="state-card info">
+                  <div class="state-title">載入中</div>
+                  <div class="state-desc">保留頁面骨架，避免空白。</div>
+                </div>
+                <div class="state-card error">
+                  <div class="state-title">沒有權限</div>
+                  <div class="state-desc">業主或未授權角色不可進入成員管理。</div>
+                  <button class="btn">回工作台</button>
+                </div>
+                <div class="state-card warning">
+                  <div class="state-title">找不到使用者</div>
+                  <div class="state-desc">找不到指定成員時，應引導回列表，不要顯示成空資料。</div>
+                  <button class="btn">回成員列表</button>
+                </div>
+              </div>
+              <div class="alert info">
+                <strong>i</strong>
+                <div>
+                  <div class="state-title">角色可視性只是畫面提示</div>
+                  <div class="state-desc">系統管理員可看到完整權限操作；營運管理與工作室成員依權限顯示可用動作；業主不顯示管理入口。</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">成員列表</h2>
+              <div class="panel-subtitle">支援角色篩選與分頁；技術識別碼不作為主要顯示內容。</div>
+            </div>
+            <button class="btn primary">新增成員</button>
+          </div>
+          <!-- API boundary: GET /users?role=&page=&limit= returns UserListResponse with pagination. -->
+          <div class="filter-band" aria-label="成員篩選">
+            <div class="field">
+              <label for="role-filter">角色</label>
+              <select id="role-filter" class="select">
+                <option>全部角色</option>
+                <option>系統管理員</option>
+                <option>營運管理</option>
+                <option>工作室成員</option>
+                <option>業主</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="limit-filter">每頁筆數</label>
+              <select id="limit-filter" class="select">
+                <option>20</option>
+                <option>50</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="member-keyword">搜尋參考</label>
+              <input id="member-keyword" class="input" value="chen.ops@example.com">
+            </div>
+            <div class="actions">
+              <button class="btn">重設</button>
+              <button class="btn primary">查詢</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 240px;">成員</th>
+                    <th style="width: 150px;">角色</th>
+                    <th style="width: 180px;">指派物業</th>
+                    <th style="width: 160px;">帳號狀態</th>
+                    <th style="width: 180px;">更新時間</th>
+                    <th style="width: 220px;">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <div class="cell-main">王系統</div>
+                      <div class="cell-sub">admin@studio.com</div>
+                    </td>
+                    <td><span class="tag blue">系統管理員</span></td>
+                    <td>全部物業</td>
+                    <td><span class="tag green">已啟用</span></td>
+                    <td>2026-05-09 10:30</td>
+                    <td>
+                      <div class="row-actions">
+                        <button class="btn">查看</button>
+                        <button class="btn disabled" disabled>不可降級自己</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="cell-main">陳營運</div>
+                      <div class="cell-sub">chen.ops@example.com</div>
+                    </td>
+                    <td><span class="tag green">營運管理</span></td>
+                    <td>台北大安物業、新竹東區物業</td>
+                    <td><span class="tag green">已啟用</span></td>
+                    <td>2026-05-08 16:02</td>
+                    <td>
+                      <div class="row-actions">
+                        <button class="btn">查看</button>
+                        <button class="btn">重寄設定信</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="cell-main">林現場</div>
+                      <div class="cell-sub">lin.staff@example.com</div>
+                    </td>
+                    <td><span class="tag gold">工作室成員</span></td>
+                    <td>台北大安物業</td>
+                    <td><span class="tag gold">待設定密碼</span></td>
+                    <td>2026-05-07 09:18</td>
+                    <td>
+                      <div class="row-actions">
+                        <button class="btn">查看</button>
+                        <button class="btn">管理物業</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="cell-main">黃業主</div>
+                      <div class="cell-sub">owner.huang@example.com</div>
+                    </td>
+                    <td><span class="tag gray">業主</span></td>
+                    <td>依名下物業顯示</td>
+                    <td><span class="tag green">已啟用</span></td>
+                    <td>2026-05-05 14:40</td>
+                    <td>
+                      <div class="row-actions">
+                        <button class="btn">查看</button>
+                        <button class="btn disabled" disabled>不可指派物業</button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="actions" style="justify-content: space-between;">
+              <span class="state-desc">第 1 頁，共 3 頁，總計 42 筆</span>
+              <div class="actions">
+                <button class="btn disabled" disabled>上一頁</button>
+                <button class="btn primary">1</button>
+                <button class="btn">2</button>
+                <button class="btn">下一頁</button>
+              </div>
+            </div>
+            <div class="three-grid">
+              <div class="state-card info">
+                <div class="state-title">列表載入中</div>
+                <div class="state-desc">保留 filter 與 table 外框。</div>
+              </div>
+              <div class="state-card">
+                <div class="state-title">沒有符合條件的成員</div>
+                <div class="state-desc">可清除角色篩選或新增成員。</div>
+              </div>
+              <div class="state-card error">
+                <div class="state-title">業主無法查看成員列表</div>
+                <div class="state-desc">應顯示完整的無權限頁面，而不是空白列表。</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="split-grid">
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">新增成員 Drawer</h2>
+                <div class="panel-subtitle">建立帳號不收密碼；成功後後端寄出設定密碼信。</div>
+              </div>
+            </div>
+            <div class="panel-body">
+              <!-- API boundary: POST /users creates backend/Firebase user and sends setup email. -->
+              <div class="drawer-preview">
+                <div class="drawer-top">
+                  <div>
+                    <div class="state-title">新增成員</div>
+                    <div class="state-desc">帳號由系統建立，管理者不需要輸入密碼。</div>
+                  </div>
+                  <button class="btn" aria-label="關閉">×</button>
+                </div>
+                <div class="drawer-body">
+                  <div class="form-grid">
+                    <div class="field wide">
+                      <label for="new-email">Email</label>
+                      <input id="new-email" class="input error" value="">
+                      <div class="help">Email 為必填</div>
+                    </div>
+                    <div class="field">
+                      <label for="new-name">姓名</label>
+                      <input id="new-name" class="input" value="林現場">
+                    </div>
+                    <div class="field">
+                      <label for="new-role">角色</label>
+                      <select id="new-role" class="select">
+                        <option>工作室成員</option>
+                        <option>營運管理</option>
+                        <option>業主</option>
+                      </select>
+                    </div>
+                    <div class="field wide">
+                      <label>密碼</label>
+                      <div class="alert info">
+                        <strong>i</strong>
+                        <div>
+                          <div class="state-title">不在此流程輸入密碼</div>
+                          <div class="state-desc">建立後由設定密碼信完成密碼設定。</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="drawer-footer">
+                  <button class="btn">取消</button>
+                  <button class="btn primary">建立並寄出設定信</button>
+                </div>
+              </div>
+              <div class="alert success">
+                <strong>✓</strong>
+                <div>
+                  <div class="state-title">成員已建立</div>
+                  <div class="state-desc">列表重新整理後顯示最新帳號；短暫成功訊息可用通知呈現。</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">成員詳情與權限</h2>
+                <div class="panel-subtitle">系統管理員可調整角色、重寄設定信與管理工作室成員的物業指派。</div>
+              </div>
+              <span class="tag blue">系統管理員視角</span>
+            </div>
+            <div class="panel-body">
+              <!-- API boundary: GET /users/{id}, PATCH /users/{id}, POST /users/{id}/password-reset. -->
+              <div class="profile-grid">
+                <div class="profile-item">
+                  <div class="label">姓名</div>
+                  <div class="cell-main">林現場</div>
+                </div>
+                <div class="profile-item">
+                  <div class="label">Email</div>
+                  <div class="cell-main">lin.staff@example.com</div>
+                </div>
+                <div class="profile-item">
+                  <div class="label">角色</div>
+                  <span class="tag gold">工作室成員</span>
+                </div>
+                <div class="profile-item">
+                  <div class="label">帳號狀態</div>
+                  <div class="cell-main">待設定密碼</div>
+                </div>
+              </div>
+              <div class="form-grid">
+                <div class="field">
+                  <label for="detail-name">姓名</label>
+                  <input id="detail-name" class="input" value="林現場">
+                </div>
+                <div class="field">
+                  <label for="detail-role">角色</label>
+                  <select id="detail-role" class="select">
+                    <option>工作室成員</option>
+                    <option>營運管理</option>
+                    <option>業主</option>
+                  </select>
+                </div>
+              </div>
+              <div class="actions">
+                <button class="btn primary">儲存帳號</button>
+                <button class="btn">重寄設定密碼信</button>
+                <button class="btn disabled" disabled>無權變更角色</button>
+              </div>
+              <div class="alert warning">
+                <strong>!</strong>
+                <div>
+                  <div class="state-title">系統管理員不得降低自己的角色</div>
+                  <div class="state-desc">為了避免鎖住管理入口，系統管理員不能降低自己的角色。</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">物業指派管理</h2>
+              <div class="panel-subtitle">物業選項使用物業名稱與地址，方便管理者判斷要指派哪些物業。</div>
+            </div>
+            <span class="tag gray">範例資料</span>
+          </div>
+          <div class="panel-body">
+            <!-- API boundary: GET /properties for option labels, POST /users/{id}/property-assignments for assignment updates. -->
+            <div class="alert info">
+              <strong>i</strong>
+              <div>
+                <div class="state-title">指派生效時間</div>
+                <div class="state-desc">指派更新後，使用者重新登入或重新整理登入狀態後才會看到新的可管理物業。</div>
+              </div>
+            </div>
+            <div class="assignment-list">
+              <label class="assignment-row">
+                <input type="checkbox" checked>
+                <span>
+                  <span class="cell-main">台北大安物業</span>
+                  <span class="cell-sub">台北市大安區復興南路一段100號</span>
+                </span>
+                <span class="tag green">已指派</span>
+              </label>
+              <label class="assignment-row">
+                <input type="checkbox" checked>
+                <span>
+                  <span class="cell-main">新竹東區物業</span>
+                  <span class="cell-sub">新竹市東區光復路二段88號</span>
+                </span>
+                <span class="tag green">已指派</span>
+              </label>
+              <label class="assignment-row">
+                <input type="checkbox">
+                <span>
+                  <span class="cell-main">台中北區物業</span>
+                  <span class="cell-sub">台中市北區學士路66號</span>
+                </span>
+                <span class="tag gray">可指派</span>
+              </label>
+              <div class="assignment-row disabled">
+                <input type="checkbox" disabled>
+                <span>
+                  <span class="cell-main">業主帳號不可用此流程指派</span>
+                  <span class="cell-sub">物業指派只適用於工作室成員；業主帳號依名下物業顯示。</span>
+                </span>
+                <span class="tag red">不可指派</span>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="btn">取消</button>
+              <button class="btn primary">儲存物業指派</button>
+            </div>
+            <div class="three-grid">
+              <div class="state-card success">
+                <div class="state-title">指派已更新</div>
+                <div class="state-desc">重新載入成員資料，並提示使用者重新整理登入狀態。</div>
+              </div>
+              <div class="state-card error">
+                <div class="state-title">物業不存在</div>
+                <div class="state-desc">404 應停留在 drawer 內提示並允許重新整理選項。</div>
+              </div>
+              <div class="state-card warning">
+                <div class="state-title">沒有權限指派</div>
+                <div class="state-desc">可查看但不可操作時，按鈕應保留不可操作原因。</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

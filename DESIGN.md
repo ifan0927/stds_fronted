@@ -163,6 +163,24 @@ Rules:
 - Button groups must wrap without overlap.
 - Text must not overflow buttons, tags, menu items, or table cells incoherently.
 
+## Visible Copy And Role Labels
+
+Visible UI text should be written for operators, not engineers.
+
+- Use Traditional Chinese labels for roles and statuses in navigation, tables, filters, forms, tags, alerts, and buttons.
+- Do not expose API paths, HTTP methods, backend error codes, schema names, token names, third-party auth provider names, or internal implementation terms in user-facing UI text.
+- Keep technical identifiers in code comments, API mapping notes, tests, or developer documentation only.
+- Long emails, IDs shown as secondary metadata, names, addresses, and notes must wrap or truncate without escaping their card, table cell, tag, or button.
+
+Role labels:
+
+| API Role | UI Label |
+| --- | --- |
+| `admin` | 系統管理員 |
+| `organizer` | 營運管理 |
+| `staff` | 工作室成員 |
+| `owner` | 業主 |
+
 ## Do's And Don'ts
 
 Do:

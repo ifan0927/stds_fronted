@@ -12,9 +12,9 @@
       "slug": "auth-access",
       "issue": "#12",
       "title": "Auth / Access",
-      "status": "planned",
+      "status": "ready",
       "description": "Login, auth sync, user management, and property assignment templates.",
-      "file": ""
+      "file": "auth-access.html"
     },
     {
       "slug": "property-room-management",

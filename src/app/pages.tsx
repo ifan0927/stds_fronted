@@ -1,5 +1,7 @@
-import { Button, Card, Col, Row, Space, Tag, Typography } from 'antd';
-import { useNavigate } from 'react-router-dom';
+import { FirebaseError } from 'firebase/app';
+import { useEffect, useState } from 'react';
+import { Alert, Button, Card, Col, Form, Input, Result, Row, Space, Tag, Typography } from 'antd';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   EmptyState,
   ForbiddenState,
@@ -7,6 +9,12 @@ import {
   NotFoundState,
   RetryableErrorState,
 } from './routeState';
+import {
+  getLoginViewState,
+  getSafeReturnTo,
+  shouldShowSessionExpiredNotice,
+  useAuth,
+} from '../auth';
 
 const pageContent = {
   dashboard: {
@@ -107,19 +115,152 @@ export function PlaceholderPage({ pageKey }: PlaceholderPageProps) {
   );
 }
 
-export function LoginPlaceholder() {
+function getLoginErrorMessage(error: unknown) {
+  if (error instanceof FirebaseError) {
+    if (
+      error.code === 'auth/invalid-credential'
+      || error.code === 'auth/user-not-found'
+      || error.code === 'auth/wrong-password'
+    ) {
+      return '電子信箱或密碼不正確，請確認後再試一次。';
+    }
+
+    if (error.code === 'auth/too-many-requests') {
+      return '登入嘗試次數過多，請稍後再試。';
+    }
+  }
+
+  return '登入暫時無法完成，請稍後再試。';
+}
+
+export function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { login, logout, retrySync, status } = useAuth();
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const returnTo = getSafeReturnTo(searchParams.get('returnTo'));
+  const sessionExpired = shouldShowSessionExpiredNotice(
+    status,
+    searchParams.get('reason') === 'session-expired',
+  );
+  const loginViewState = getLoginViewState(status);
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      navigate(returnTo, { replace: true });
+    }
+  }, [navigate, returnTo, status]);
+
+  if (status === 'authenticated') {
+    return null;
+  }
+
+  if (loginViewState === 'account-not-found') {
+    return (
+      <main className="public-page">
+        <Result
+          status="403"
+          title="帳號尚未開通"
+          subTitle="此登入帳號尚未建立後台使用權限，請聯絡管理員。"
+          extra={<Button onClick={() => void logout()}>登出</Button>}
+        />
+      </main>
+    );
+  }
+
+  if (loginViewState === 'retryable-sync-error') {
+    return (
+      <main className="public-page">
+        <Result
+          status="error"
+          title="登入同步失敗"
+          subTitle="帳號狀態暫時無法確認，請稍後重試。"
+          extra={
+            <Space wrap>
+              <Button onClick={() => void logout()}>登出</Button>
+              <Button type="primary" onClick={() => void retrySync()}>
+                重試
+              </Button>
+            </Space>
+          }
+        />
+      </main>
+    );
+  }
+
+  if (loginViewState === 'config-error') {
+    return (
+      <main className="public-page">
+        <Result
+          status="error"
+          title="登入設定尚未完成"
+          subTitle="系統目前無法啟動登入流程，請聯絡管理員確認部署設定。"
+        />
+      </main>
+    );
+  }
 
   return (
     <main className="public-page">
       <Card className="public-panel">
         <Typography.Title level={1}>STDS 管理後台</Typography.Title>
         <Typography.Paragraph type="secondary">
-          登入流程會在 auth foundation 接上。此頁先保留 public route 與版面位置。
+          請使用已開通的後台帳號登入。
         </Typography.Paragraph>
-        <Button type="primary" onClick={() => navigate('/')}>
-          進入工作台預覽
-        </Button>
+        <Space direction="vertical" size={16} className="login-stack">
+          {sessionExpired && (
+            <Alert
+              type="warning"
+              showIcon
+              message="登入狀態已失效"
+              description="請重新登入後繼續使用。"
+            />
+          )}
+          {submitError && (
+            <Alert
+              type="error"
+              showIcon
+              message="登入失敗"
+              description={submitError}
+            />
+          )}
+          <Form
+            layout="vertical"
+            requiredMark={false}
+            onFinish={(values: { email: string; password: string }) => {
+              setSubmitError(null);
+              void login(values.email, values.password).catch((error: unknown) => {
+                setSubmitError(getLoginErrorMessage(error));
+              });
+            }}
+          >
+            <Form.Item
+              label="電子信箱"
+              name="email"
+              rules={[
+                { required: true, message: '請輸入電子信箱。' },
+                { type: 'email', message: '請輸入有效的電子信箱。' },
+              ]}
+            >
+              <Input autoComplete="username" />
+            </Form.Item>
+            <Form.Item
+              label="密碼"
+              name="password"
+              rules={[{ required: true, message: '請輸入密碼。' }]}
+            >
+              <Input.Password autoComplete="current-password" />
+            </Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={status === 'syncing'}
+              block
+            >
+              登入
+            </Button>
+          </Form>
+        </Space>
       </Card>
     </main>
   );

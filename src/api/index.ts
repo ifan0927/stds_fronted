@@ -19,6 +19,14 @@ export {
   getPropertyFinancialReportSummary,
 } from './reports';
 export {
+  createJournalLog,
+  deleteJournalLog,
+  getJournalLog,
+  listJournalExpenseAccountingTitles,
+  listJournalLogs,
+  updateJournalLog,
+} from './journal';
+export {
   createPropertyRoom,
   createRoomMaintenance,
   deleteRoom,
@@ -57,6 +65,15 @@ export type {
   FinancialReportSummaryItem,
   FinancialReportSummaryQuery,
 } from './reports';
+export type {
+  AccountingTitleOption,
+  AccountingTitleOptionList,
+  CreateJournalLogRequest,
+  JournalLog,
+  JournalLogList,
+  ListJournalLogsQuery,
+  UpdateJournalLogRequest,
+} from './journal';
 export type {
   CreateRoomRequest,
   ListPropertyRoomsQuery,

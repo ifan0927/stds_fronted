@@ -19,6 +19,7 @@ import {
   InputNumber,
   List,
   Modal,
+  Segmented,
   Select,
   Space,
   Tag,
@@ -49,6 +50,7 @@ import {
 } from '../api';
 import { useAuth } from '../auth';
 import { formatDashboardDateTime, formatTwd } from './format';
+import RepairWorkspace from './RepairWorkspace';
 import { abortRequest } from './requestAbort';
 import {
   ForbiddenState,
@@ -258,7 +260,23 @@ export default function JournalPage() {
   const total = pagination?.total ?? rows.length;
   const totalPages = pagination?.total_pages ?? 1;
   const repairRequestId = searchParams.get('repairRequestId')?.trim() || undefined;
+  const activeWorkspace = repairRequestId || searchParams.get('tab') === 'repair' ? 'repair' : 'journal';
   const canDelete = currentUser?.role !== 'staff';
+
+  const setWorkspaceTab = useCallback((next: 'journal' | 'repair') => {
+    setSearchParams((previous) => {
+      const updated = new URLSearchParams(previous);
+
+      if (next === 'repair') {
+        updated.set('tab', 'repair');
+      } else {
+        updated.delete('tab');
+        updated.delete('repairRequestId');
+      }
+
+      return updated;
+    });
+  }, [setSearchParams]);
 
   const setJournalQuery = useCallback((next: {
     roomId?: string | null;
@@ -730,27 +748,30 @@ export default function JournalPage() {
           </Typography.Paragraph>
         </div>
         <Space wrap>
-          <Button icon={<ReloadOutlined />} onClick={() => loadJournals()}>
-            重新整理
-          </Button>
-          <Button icon={<ToolOutlined />} disabled>
-            維修工作區
-          </Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreateDrawer}>
-            新增日誌
-          </Button>
+          {activeWorkspace === 'journal' && (
+            <>
+              <Button icon={<ReloadOutlined />} onClick={() => loadJournals()}>
+                重新整理
+              </Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={openCreateDrawer}>
+                新增日誌
+              </Button>
+            </>
+          )}
         </Space>
       </div>
 
-      {repairRequestId && (
-        <Alert
-          type="info"
-          showIcon
-          message="維修入口已建立"
-          description="此頁目前只處理日誌。完整維修派工、進度與完成流程會在維修工作區開放。"
-        />
-      )}
+      <Segmented
+        aria-label="日誌維修切換"
+        value={activeWorkspace}
+        options={[
+          { value: 'journal', label: '營運日誌' },
+          { value: 'repair', label: '維修工作區', icon: <ToolOutlined /> },
+        ]}
+        onChange={(value) => setWorkspaceTab(value as 'journal' | 'repair')}
+      />
 
+      {activeWorkspace === 'journal' && (
       <Card>
         <Space direction="vertical" size={16} className="page-stack">
           {pageActionError && (
@@ -901,6 +922,19 @@ export default function JournalPage() {
           />
         </Space>
       </Card>
+      )}
+
+      {activeWorkspace === 'repair' && (
+        <Card>
+          <RepairWorkspace
+            propertyId={propertyId}
+            roomId={roomId}
+            roomRows={roomOptionsState.data}
+            roomOptionsLoading={roomOptionsState.status === 'loading'}
+            onRoomContextRefetch={loadRoomOptions}
+          />
+        </Card>
+      )}
 
       <Drawer
         title="日誌詳情"

@@ -154,6 +154,14 @@ a {
   line-height: 24px;
 }
 
+.drawer-inline-loading {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
 .state-sample .route-state-panel,
 .state-sample .ant-result {
   min-height: 220px;

@@ -16,11 +16,14 @@ export {
   updateRoom,
 } from './properties';
 export {
+  createLease,
+  createTenant,
   getLease,
   getTenant,
   listBills,
   listLeases,
   listPropertyTenantLeaseRoster,
+  listTenants,
 } from './tenants';
 export type {
   CreateRoomRequest,
@@ -38,14 +41,18 @@ export type {
 export type {
   Bill,
   BillList,
+  CreateLeaseRequest,
+  CreateTenantRequest,
   Lease,
   LeaseList,
   ListBillsQuery,
   ListLeasesQuery,
   ListPropertyTenantLeaseRosterQuery,
+  ListTenantsQuery,
   PropertyTenantLeaseRoster,
   PropertyTenantLeaseRosterRow,
   Tenant,
+  TenantList,
 } from './tenants';
 export { ApiError } from './errors';
 export { classifyApiErrorForUi, getFormErrorState } from './errors';

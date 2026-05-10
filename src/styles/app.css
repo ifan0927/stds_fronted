@@ -216,6 +216,11 @@ a {
   gap: 6px;
 }
 
+.form-date-input,
+.form-number-input {
+  width: 100%;
+}
+
 .room-status-filter {
   width: 160px;
 }

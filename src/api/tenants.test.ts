@@ -1,10 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  createLease,
+  createTenant,
   getLease,
   getTenant,
   listBills,
   listLeases,
   listPropertyTenantLeaseRoster,
+  listTenants,
 } from './tenants';
 
 function jsonResponse(body: unknown, init?: ResponseInit) {
@@ -53,6 +56,83 @@ describe('tenant and lease API helpers', () => {
 
     expect(fetcher.mock.calls[0][0]).toBe('/api/v1/leases?room_id=room-1&status=active&page=1&limit=1');
     expect(result.data?.[0]?.id).toBe('lease-1');
+  });
+
+  it('lists tenants with backend-supported query params', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({ data: [{ id: 'tenant-1', name: '林家妤' }] }),
+    );
+
+    const result = await listTenants(
+      () => 'firebase-id-token',
+      { property_id: 'property/with/slash', page: 1, limit: 100 },
+      { fetcher },
+    );
+
+    expect(fetcher.mock.calls[0][0]).toBe('/api/v1/tenants?property_id=property%2Fwith%2Fslash&page=1&limit=100');
+    expect(result.data?.[0]?.name).toBe('林家妤');
+  });
+
+  it('creates tenant and lease with backend-aligned payloads', async () => {
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ id: 'tenant-1', name: '林家妤' }, { status: 201 }))
+      .mockResolvedValueOnce(jsonResponse({ id: 'lease-1', tenant_id: 'tenant-1' }, { status: 201 }));
+
+    await createTenant(
+      {
+        name: '林家妤',
+        email: 'tenant@example.com',
+        phone: '0912-345-678',
+        birth_date: null,
+        national_id: null,
+        address: null,
+        occupation: null,
+      },
+      () => 'firebase-id-token',
+      { fetcher },
+    );
+    const lease = await createLease(
+      {
+        tenant_id: 'tenant-1',
+        room_id: 'room-1',
+        rent_amount: 18000,
+        rent_billing_cadence: 'monthly',
+        start_date: '2026-06-01',
+        end_date: '2027-05-31',
+        deposit_amount: 36000,
+        electricity_billing_cadence: 'monthly',
+        starting_meter_reading: 0,
+        notes: null,
+      },
+      () => 'firebase-id-token',
+      { fetcher },
+    );
+
+    expect(fetcher.mock.calls[0][0]).toBe('/api/v1/tenants');
+    expect(fetcher.mock.calls[0][1]?.method).toBe('POST');
+    expect(fetcher.mock.calls[0][1]?.body).toBe(JSON.stringify({
+      name: '林家妤',
+      email: 'tenant@example.com',
+      phone: '0912-345-678',
+      birth_date: null,
+      national_id: null,
+      address: null,
+      occupation: null,
+    }));
+    expect(fetcher.mock.calls[1][0]).toBe('/api/v1/leases');
+    expect(fetcher.mock.calls[1][1]?.body).toBe(JSON.stringify({
+      tenant_id: 'tenant-1',
+      room_id: 'room-1',
+      rent_amount: 18000,
+      rent_billing_cadence: 'monthly',
+      start_date: '2026-06-01',
+      end_date: '2027-05-31',
+      deposit_amount: 36000,
+      electricity_billing_cadence: 'monthly',
+      starting_meter_reading: 0,
+      notes: null,
+    }));
+    expect(lease.id).toBe('lease-1');
   });
 
   it('loads lease, tenant, and rent bill context by encoded ids', async () => {

@@ -4,11 +4,16 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import {
+  ApiError,
+  createLease,
+  createTenant,
   getLease,
+  getRoom,
   getTenant,
   listBills,
   listLeases,
   listPropertyTenantLeaseRoster,
+  listTenants,
   type PropertyTenantLeaseRoster,
 } from '../api';
 import TenantLeaseRosterPage from './TenantLeaseRosterPage';
@@ -27,6 +32,7 @@ vi.mock('@ant-design/icons', () => ({
 
 vi.mock('antd', async () => {
   const React = await import('react');
+  let currentForm: { values: Record<string, unknown> } | null = null;
 
   type Column = {
     title?: string;
@@ -69,10 +75,18 @@ vi.mock('antd', async () => {
     Button: ({
       children,
       disabled,
+      htmlType,
+      loading,
       onClick,
       title,
-    }: React.PropsWithChildren<{ disabled?: boolean; onClick?: () => void; title?: string }>) => (
-      <button disabled={disabled} title={title} onClick={onClick} type="button">{children}</button>
+    }: React.PropsWithChildren<{
+      disabled?: boolean;
+      htmlType?: 'button' | 'submit';
+      loading?: boolean;
+      onClick?: () => void;
+      title?: string;
+    }>) => (
+      <button disabled={disabled || loading} title={title} onClick={onClick} type={htmlType ?? 'button'}>{children}</button>
     ),
     Card: ({ children, extra, title }: React.PropsWithChildren<{ extra?: React.ReactNode; title?: React.ReactNode }>) => (
       <section>
@@ -80,6 +94,14 @@ vi.mock('antd', async () => {
         {extra}
         {children}
       </section>
+    ),
+    DatePicker: ({ name, onChange }: { name?: string; onChange?: (value: { format: () => string }) => void }) => (
+      <input
+        aria-label={name}
+        name={name}
+        type="date"
+        onChange={(event) => onChange?.({ format: () => event.target.value })}
+      />
     ),
     Descriptions,
     Drawer: ({ children, extra, title }: React.PropsWithChildren<{ extra?: React.ReactNode; title?: React.ReactNode }>) => (
@@ -90,6 +112,128 @@ vi.mock('antd', async () => {
       </aside>
     ),
     Empty: ({ description }: { description?: React.ReactNode }) => <div>{description}</div>,
+    message: {
+      useMessage: () => [{ success: vi.fn(), error: vi.fn(), warning: vi.fn() }, null],
+    },
+    Form: Object.assign(
+      ({
+        children,
+        form,
+        onFinish,
+      }: React.PropsWithChildren<{
+        form?: {
+          values: Record<string, unknown>;
+        };
+        onFinish?: (values: Record<string, unknown>) => void;
+      }>) => {
+        currentForm = form ?? null;
+
+        return (
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              onFinish?.(form?.values ?? {});
+            }}
+          >
+            {children}
+          </form>
+        );
+      },
+      {
+        Item: ({
+          children,
+          label,
+          name,
+        }: React.PropsWithChildren<{ label?: React.ReactNode; name?: string }>) => (
+          <label>
+            {label && <span>{label}</span>}
+            {name && React.isValidElement(children)
+              ? React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
+                name,
+                onChange: (valueOrEvent: unknown) => {
+                  if (!currentForm) {
+                    return;
+                  }
+
+                  if (
+                    typeof valueOrEvent === 'object'
+                    && valueOrEvent !== null
+                    && 'target' in valueOrEvent
+                  ) {
+                    const target = (valueOrEvent as { target: { value: string; type?: string } }).target;
+                    currentForm.values[name] = target.type === 'number' ? Number(target.value) : target.value;
+                    return;
+                  }
+
+                  currentForm.values[name] = valueOrEvent;
+                },
+              })
+              : children}
+          </label>
+        ),
+        useForm: () => {
+          const formRef = React.useRef<{
+            values: Record<string, unknown>;
+            setFieldsValue: (values: Record<string, unknown>) => void;
+          }>();
+
+          if (!formRef.current) {
+            const form = {
+              values: {} as Record<string, unknown>,
+              setFieldsValue: (values: Record<string, unknown>) => {
+                Object.assign(form.values, values);
+              },
+            };
+            formRef.current = form;
+          }
+
+          return [formRef.current];
+        },
+        useWatch: (name: string, form: { values: Record<string, unknown> }) => form.values[name],
+      },
+    ),
+    Input: Object.assign(
+      ({
+        name,
+        onChange,
+        placeholder,
+      }: {
+        name?: string;
+        onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+        placeholder?: string;
+      }) => <input aria-label={name} name={name} onChange={onChange} placeholder={placeholder} />,
+      {
+        TextArea: ({ name, onChange }: { name?: string; onChange?: (event: React.ChangeEvent<HTMLTextAreaElement>) => void }) => (
+          <textarea aria-label={name} name={name} onChange={onChange} />
+        ),
+      },
+    ),
+    InputNumber: ({ name, onChange }: { name?: string; onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void }) => (
+      <input aria-label={name} name={name} onChange={onChange} type="number" />
+    ),
+    Radio: Object.assign(
+      ({ children }: React.PropsWithChildren) => <span>{children}</span>,
+      {
+        Button: ({ children, onClick, value }: React.PropsWithChildren<{ onClick?: () => void; value: string }>) => (
+          <button onClick={onClick} type="button" value={value}>{children}</button>
+        ),
+        Group: ({ children, name }: React.PropsWithChildren<{ name?: string }>) => (
+          <div>
+            {React.Children.map(children, (child) => (
+              React.isValidElement(child) && name
+                ? React.cloneElement(child as React.ReactElement<Record<string, unknown>>, {
+                  onClick: () => {
+                    if (currentForm) {
+                      currentForm.values[name] = (child.props as { value: string }).value;
+                    }
+                  },
+                })
+                : child
+            ))}
+          </div>
+        ),
+      },
+    ),
     Result: ({ title, subTitle, extra }: { title?: React.ReactNode; subTitle?: React.ReactNode; extra?: React.ReactNode }) => (
       <section>
         <h1>{title}</h1>
@@ -99,17 +243,20 @@ vi.mock('antd', async () => {
     ),
     Select: ({
       'aria-label': ariaLabel,
+      name,
       onChange,
       options,
       value,
     }: {
       'aria-label'?: string;
+      name?: string;
       onChange?: (value: string | number) => void;
       options?: Array<{ value: string | number; label: React.ReactNode }>;
       value?: string | number;
     }) => (
       <select
         aria-label={ariaLabel}
+        name={name}
         value={value}
         onChange={(event) => {
           const selected = options?.find((option) => String(option.value) === event.target.value);
@@ -187,11 +334,15 @@ vi.mock('../api', async () => {
 
   return {
     ...actual,
+    createLease: vi.fn(),
+    createTenant: vi.fn(),
     getLease: vi.fn(),
+    getRoom: vi.fn(),
     getTenant: vi.fn(),
     listBills: vi.fn(),
     listLeases: vi.fn(),
     listPropertyTenantLeaseRoster: vi.fn(),
+    listTenants: vi.fn(),
   };
 });
 
@@ -224,6 +375,16 @@ function mockRosterResponse(response: PropertyTenantLeaseRoster) {
 
 function mockRosterError(error: unknown) {
   vi.mocked(listPropertyTenantLeaseRoster).mockRejectedValue(error);
+}
+
+function createApiError(status: number, errorCode: string | null = null) {
+  return new ApiError({
+    status,
+    errorCode,
+    message: 'error',
+    details: null,
+    response: new Response(null, { status }),
+  });
 }
 
 afterEach(() => {
@@ -320,10 +481,27 @@ describe('TenantLeaseRosterPage', () => {
     });
   });
 
-  it('opens the move-in placeholder from a vacant row without implementing the flow', async () => {
+  it('opens the move-in drawer from a vacant row and creates a lease for an existing tenant', async () => {
     mockRosterResponse({
       data: [{ room_id: 'room-2', room_label: '102 室', room_status: 'vacant' }],
       pagination: { page: 1, limit: 20, total: 1, total_pages: 1, has_next: false },
+    });
+    vi.mocked(getRoom).mockResolvedValue({
+      id: 'room-2',
+      property_id: 'property-1',
+      name: '102 室',
+      status: 'vacant',
+      default_rent_amount: 18000,
+      zone: 'A 棟',
+    });
+    vi.mocked(listTenants).mockResolvedValue({
+      data: [{ id: 'tenant-1', name: '林家妤', phone: '0912-345-678' }],
+    });
+    vi.mocked(createLease).mockResolvedValue({
+      id: 'lease-1',
+      room_id: 'room-2',
+      tenant_id: 'tenant-1',
+      status: 'active',
     });
 
     renderTenantLeaseRosterPage('/properties/property-1/tenants?include_vacant=true');
@@ -331,9 +509,87 @@ describe('TenantLeaseRosterPage', () => {
     await screen.findByText('102 室');
     fireEvent.click(screen.getByRole('button', { name: '辦理入住' }));
 
-    expect(await screen.findByText('辦理入住入口已保留')).toBeTruthy();
+    expect(await screen.findByText('空房入住')).toBeTruthy();
+    expect(screen.getByText('既有租客（必填）')).toBeTruthy();
+    expect(screen.getByText('租金（必填）')).toBeTruthy();
+    expect(screen.getByText('租約開始（必填）')).toBeTruthy();
+    expect(screen.getByText('租約結束（必填）')).toBeTruthy();
+    expect(screen.getByText('押金（必填）')).toBeTruthy();
+    expect(screen.getByText('起始電表讀數（必填）')).toBeTruthy();
+    expect(screen.getByLabelText('start_date').getAttribute('type')).toBe('date');
+    expect(screen.getByLabelText('end_date').getAttribute('type')).toBe('date');
+    expect(getRoom).toHaveBeenCalledWith(
+      'room-2',
+      expect.any(Function),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    expect(listTenants).toHaveBeenCalledWith(
+      expect.any(Function),
+      { property_id: 'property-1', page: 1, limit: 100 },
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
     expect(screen.getByLabelText('目前路徑').textContent).toContain('mode=move-in');
     expect(screen.getByLabelText('目前路徑').textContent).toContain('roomId=room-2');
+
+    fireEvent.change(screen.getByLabelText('既有租客'), { target: { value: 'tenant-1' } });
+    fireEvent.change(screen.getByLabelText('rent_amount'), { target: { value: '18000' } });
+    fireEvent.change(screen.getByLabelText('租金週期'), { target: { value: 'monthly' } });
+    fireEvent.change(screen.getByLabelText('start_date'), { target: { value: '2026-06-01' } });
+    fireEvent.change(screen.getByLabelText('end_date'), { target: { value: '2027-05-31' } });
+    fireEvent.change(screen.getByLabelText('deposit_amount'), { target: { value: '36000' } });
+    fireEvent.change(screen.getByLabelText('電費週期'), { target: { value: 'monthly' } });
+    fireEvent.change(screen.getByLabelText('starting_meter_reading'), { target: { value: '0' } });
+    fireEvent.click(screen.getByRole('button', { name: '建立租約' }));
+
+    await waitFor(() => {
+      expect(createLease).toHaveBeenCalledWith(
+        {
+          tenant_id: 'tenant-1',
+          room_id: 'room-2',
+          rent_amount: 18000,
+          rent_billing_cadence: 'monthly',
+          start_date: '2026-06-01',
+          end_date: '2027-05-31',
+          deposit_amount: 36000,
+          electricity_billing_cadence: 'monthly',
+          starting_meter_reading: 0,
+          notes: null,
+        },
+        expect.any(Function),
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    });
+    expect(createTenant).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.getByLabelText('目前路徑').textContent).toBe('/properties/property-1/tenants?roomId=room-2&view=hub&leaseId=lease-1');
+    });
+  });
+
+  it('surfaces stale room state when backend rejects move-in because the room is no longer vacant', async () => {
+    mockRosterResponse({
+      data: [{ room_id: 'room-2', room_label: '102 室', room_status: 'vacant' }],
+      pagination: { page: 1, limit: 20, total: 1, total_pages: 1, has_next: false },
+    });
+    vi.mocked(getRoom).mockResolvedValue({
+      id: 'room-2',
+      property_id: 'property-1',
+      name: '102 室',
+      status: 'vacant',
+    });
+    vi.mocked(listTenants).mockResolvedValue({ data: [{ id: 'tenant-1', name: '林家妤' }] });
+    vi.mocked(createLease).mockRejectedValue(createApiError(422, 'ROOM_NOT_VACANT'));
+
+    renderTenantLeaseRosterPage('/properties/property-1/tenants?include_vacant=true&roomId=room-2&mode=move-in');
+
+    fireEvent.change(await screen.findByLabelText('既有租客'), { target: { value: 'tenant-1' } });
+    fireEvent.change(screen.getByLabelText('rent_amount'), { target: { value: '18000' } });
+    fireEvent.change(screen.getByLabelText('start_date'), { target: { value: '2026-06-01' } });
+    fireEvent.change(screen.getByLabelText('end_date'), { target: { value: '2027-05-31' } });
+    fireEvent.change(screen.getByLabelText('deposit_amount'), { target: { value: '36000' } });
+    fireEvent.change(screen.getByLabelText('starting_meter_reading'), { target: { value: '0' } });
+    fireEvent.click(screen.getByRole('button', { name: '建立租約' }));
+
+    expect(await screen.findByText('房間狀態已變更，無法辦理入住。請重新整理房間與名冊後再確認。')).toBeTruthy();
   });
 
   it('loads occupied room hub from roster row context', async () => {

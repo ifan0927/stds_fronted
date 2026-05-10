@@ -9,30 +9,46 @@ import {
   Alert,
   Button,
   Card,
+  DatePicker,
   Descriptions,
   Drawer,
   Empty,
+  Form,
+  Input,
+  InputNumber,
+  Radio,
   Select,
   Space,
   Table,
   Tag,
   Typography,
+  message,
 } from 'antd';
 import type { TableColumnsType, TablePaginationConfig } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
+  ApiError,
   classifyApiErrorForUi,
+  createLease,
+  createTenant,
   getLease,
+  getRoom,
   getTenant,
   listBills,
   listLeases,
   listPropertyTenantLeaseRoster,
+  listTenants,
   type BillList,
+  type CreateLeaseRequest,
+  type CreateTenantRequest,
+  type AccessTokenProvider,
   type Lease,
   type PropertyTenantLeaseRoster,
   type PropertyTenantLeaseRosterRow,
+  type Room,
   type Tenant,
+  type TenantList,
 } from '../api';
 import { useAuth } from '../auth';
 import { formatTwd, getRoomStatusLabel } from './format';
@@ -66,6 +82,35 @@ type HubLoadState =
   | { status: 'forbidden'; data: null }
   | { status: 'not-found'; data: null }
   | { status: 'error'; data: null };
+
+type MoveInRoomState =
+  | { status: 'idle'; room: null; tenants: Tenant[] }
+  | { status: 'loading'; room: null; tenants: Tenant[] }
+  | { status: 'ready'; room: Room; tenants: Tenant[]; tenantsStatus: 'loading' | 'ready' | 'error' }
+  | { status: 'stale'; room: Room; tenants: Tenant[] }
+  | { status: 'forbidden'; room: null; tenants: Tenant[] }
+  | { status: 'not-found'; room: null; tenants: Tenant[] }
+  | { status: 'error'; room: null; tenants: Tenant[] };
+
+type MoveInFormValues = {
+  tenantMode?: 'existing' | 'new';
+  tenant_id?: string;
+  tenant_name?: string;
+  tenant_email?: string;
+  tenant_phone?: string;
+  tenant_birth_date?: string | { format: (format: string) => string };
+  tenant_national_id?: string;
+  tenant_address?: string;
+  tenant_occupation?: string;
+  rent_amount?: number;
+  rent_billing_cadence?: CreateLeaseRequest['rent_billing_cadence'];
+  start_date?: string | { format: (format: string) => string };
+  end_date?: string | { format: (format: string) => string };
+  deposit_amount?: number;
+  electricity_billing_cadence?: CreateLeaseRequest['electricity_billing_cadence'];
+  starting_meter_reading?: number;
+  notes?: string;
+};
 
 const defaultPage = 1;
 const defaultLimit = 20;
@@ -264,6 +309,72 @@ function buildActionQuery(query: Record<string, string | null | undefined>) {
   return result;
 }
 
+function getTextOrUndefined(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function getTextOrNull(value: string | null | undefined) {
+  return getTextOrUndefined(value) ?? null;
+}
+
+function formatDateValue(value: MoveInFormValues['start_date']) {
+  if (!value) {
+    return undefined;
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  return value.format('YYYY-MM-DD');
+}
+
+function getMoveInErrorCopy(error: unknown) {
+  if (error instanceof ApiError && error.errorCode === 'ROOM_NOT_VACANT') {
+    return '房間狀態已變更，無法辦理入住。請重新整理房間與名冊後再確認。';
+  }
+
+  const errorState = classifyApiErrorForUi(error);
+
+  if (errorState.kind === 'conflict') {
+    return '資料已被其他操作更新，請重新整理後再試一次。';
+  }
+
+  if (errorState.kind === 'validation') {
+    return '表單資料未通過檢查，請確認必填欄位與日期、金額、起始電表讀數。';
+  }
+
+  return errorState.description;
+}
+
+function buildCreateTenantRequest(values: MoveInFormValues): CreateTenantRequest {
+  return {
+    name: getTextOrUndefined(values.tenant_name) ?? '',
+    email: getTextOrUndefined(values.tenant_email) ?? '',
+    phone: getTextOrUndefined(values.tenant_phone),
+    birth_date: formatDateValue(values.tenant_birth_date) ?? null,
+    national_id: getTextOrNull(values.tenant_national_id),
+    address: getTextOrNull(values.tenant_address),
+    occupation: getTextOrNull(values.tenant_occupation),
+  };
+}
+
+function buildCreateLeaseRequest(values: MoveInFormValues, roomId: string, tenantId: string): CreateLeaseRequest {
+  return {
+    tenant_id: tenantId,
+    room_id: roomId,
+    rent_amount: values.rent_amount ?? 0,
+    rent_billing_cadence: values.rent_billing_cadence,
+    start_date: formatDateValue(values.start_date) ?? '',
+    end_date: formatDateValue(values.end_date) ?? '',
+    deposit_amount: values.deposit_amount ?? 0,
+    electricity_billing_cadence: values.electricity_billing_cadence,
+    starting_meter_reading: values.starting_meter_reading ?? 0,
+    notes: getTextOrNull(values.notes),
+  };
+}
+
 export default function TenantLeaseRosterPage() {
   const { propertyId } = useParams();
   const navigate = useNavigate();
@@ -277,6 +388,7 @@ export default function TenantLeaseRosterPage() {
   const hubRequestIdRef = useRef(0);
   const [loadState, setLoadState] = useState<TenantRosterLoadState>({ status: 'loading', data: null });
   const [hubState, setHubState] = useState<HubLoadState>({ status: 'idle', data: null });
+  const [messageApi, contextHolder] = message.useMessage();
 
   const includeVacant = getIncludeVacant(searchParams.get('include_vacant'));
   const page = getPositiveInteger(searchParams.get('page'), defaultPage);
@@ -800,6 +912,7 @@ export default function TenantLeaseRosterPage() {
 
   return (
     <Space direction="vertical" size={16} className="page-stack">
+      {contextHolder}
       <div className="page-header">
         <div>
           <Space size={8} wrap>
@@ -818,30 +931,22 @@ export default function TenantLeaseRosterPage() {
           <Button icon={<ReloadOutlined />} onClick={() => loadRoster()}>
             重新整理
           </Button>
+          <Button
+            icon={<TeamOutlined />}
+            onClick={() => setRosterQuery({
+              includeVacant: true,
+              page: defaultPage,
+              limit,
+              roomId: null,
+              view: null,
+              mode: null,
+              leaseId: null,
+            })}
+          >
+            顯示空房
+          </Button>
         </Space>
       </div>
-
-      {shouldShowMoveInPlaceholder && (
-        <Alert
-          type="info"
-          showIcon
-          message="辦理入住入口已保留"
-          description="空房入住流程由 #52 實作；此頁先保留從名冊與房間清冊進入的房間脈絡。"
-          action={
-            <Space wrap>
-              <Button onClick={() => setRosterQuery({
-                roomId: null,
-                mode: null,
-                view: null,
-                leaseId: null,
-              })}
-              >
-                關閉
-              </Button>
-            </Space>
-          }
-        />
-      )}
 
       <Card>
         <Space direction="vertical" size={16} className="page-stack">
@@ -928,6 +1033,27 @@ export default function TenantLeaseRosterPage() {
           onClose={() => setRosterQuery({ roomId: null, view: null, mode: null, leaseId: null })}
         />
       )}
+      {shouldShowMoveInPlaceholder && selectedRoomId && (
+        <MoveInDrawer
+          propertyId={propertyId}
+          roomId={selectedRoomId}
+          getAccessToken={getAccessToken}
+          onClose={() => setRosterQuery({ roomId: null, mode: null, view: null, leaseId: null })}
+          onSuccess={(lease) => {
+            void messageApi.success('入住已建立，正在更新名冊。');
+            loadRoster();
+            setRosterQuery({
+              includeVacant: false,
+              page: defaultPage,
+              limit,
+              roomId: lease.room_id ?? selectedRoomId,
+              view: 'hub',
+              mode: null,
+              leaseId: lease.id ?? null,
+            });
+          }}
+        />
+      )}
     </Space>
   );
 }
@@ -939,6 +1065,366 @@ type OccupiedRoomHubProps = {
   onRetry: () => void;
   onClose: () => void;
 };
+
+type MoveInDrawerProps = {
+  propertyId: string | undefined;
+  roomId: string;
+  getAccessToken: AccessTokenProvider;
+  onClose: () => void;
+  onSuccess: (lease: Lease) => void;
+};
+
+function MoveInDrawer({
+  propertyId,
+  roomId,
+  getAccessToken,
+  onClose,
+  onSuccess,
+}: MoveInDrawerProps) {
+  const [form] = Form.useForm<MoveInFormValues>();
+  const activeRequestRef = useRef<{ id: number; controller: AbortController } | null>(null);
+  const requestIdRef = useRef(0);
+  const [state, setState] = useState<MoveInRoomState>({ status: 'idle', room: null, tenants: [] });
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const tenantMode = Form.useWatch('tenantMode', form) ?? 'existing';
+
+  const loadContext = useCallback(() => {
+    abortRequest(activeRequestRef.current?.controller);
+    const controller = new AbortController();
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    activeRequestRef.current = { id: requestId, controller };
+    setState((previous) => ({ status: 'loading', room: null, tenants: previous.tenants }));
+
+    void getRoom(roomId, getAccessToken, { signal: controller.signal })
+      .then((room) => {
+        if (activeRequestRef.current?.id !== requestId) {
+          return;
+        }
+
+        if (room.status !== 'vacant') {
+          setState({ status: 'stale', room, tenants: [] });
+          return;
+        }
+
+        setState((previous) => ({
+          status: 'ready',
+          room,
+          tenants: previous.tenants,
+          tenantsStatus: 'loading',
+        }));
+
+        return listTenants(
+          getAccessToken,
+          { property_id: propertyId, page: 1, limit: 100 },
+          { signal: controller.signal },
+        )
+          .then((tenants: TenantList) => {
+            if (activeRequestRef.current?.id !== requestId) {
+              return;
+            }
+
+            setState({
+              status: 'ready',
+              room,
+              tenants: tenants.data ?? [],
+              tenantsStatus: 'ready',
+            });
+          })
+          .catch((error: unknown) => {
+            if (activeRequestRef.current?.id !== requestId) {
+              return;
+            }
+
+            const errorState = classifyApiErrorForUi(error);
+
+            if (errorState.kind === 'cancelled') {
+              return;
+            }
+
+            setState({
+              status: 'ready',
+              room,
+              tenants: [],
+              tenantsStatus: 'error',
+            });
+          });
+      })
+      .catch((error: unknown) => {
+        if (activeRequestRef.current?.id !== requestId) {
+          return;
+        }
+
+        const errorState = classifyApiErrorForUi(error);
+
+        if (errorState.kind === 'cancelled') {
+          return;
+        }
+
+        if (errorState.kind === 'forbidden') {
+          setState({ status: 'forbidden', room: null, tenants: [] });
+          return;
+        }
+
+        if (errorState.kind === 'not-found') {
+          setState({ status: 'not-found', room: null, tenants: [] });
+          return;
+        }
+
+        setState({ status: 'error', room: null, tenants: [] });
+      });
+  }, [getAccessToken, propertyId, roomId]);
+
+  useEffect(() => {
+    form.setFieldsValue({
+      tenantMode: 'existing',
+      rent_billing_cadence: 'monthly',
+      electricity_billing_cadence: 'monthly',
+    });
+    loadContext();
+
+    return () => abortRequest(activeRequestRef.current?.controller);
+  }, [form, loadContext]);
+
+  const submitMoveIn = (values: MoveInFormValues) => {
+    if (state.status !== 'ready') {
+      return;
+    }
+
+    const controller = new AbortController();
+    setSubmitting(true);
+    setSubmitError(null);
+
+    const tenantPromise = values.tenantMode === 'new'
+      ? createTenant(buildCreateTenantRequest(values), getAccessToken, { signal: controller.signal })
+      : Promise.resolve({ id: values.tenant_id } as Tenant);
+
+    void tenantPromise
+      .then((tenant) => {
+        if (!tenant.id) {
+          throw new Error('missing tenant id');
+        }
+
+        return createLease(
+          buildCreateLeaseRequest(values, roomId, tenant.id),
+          getAccessToken,
+          { signal: controller.signal },
+        );
+      })
+      .then((lease) => {
+        setSubmitting(false);
+        onSuccess(lease);
+      })
+      .catch((error: unknown) => {
+        const errorState = classifyApiErrorForUi(error);
+
+        if (errorState.kind === 'cancelled') {
+          return;
+        }
+
+        setSubmitting(false);
+        setSubmitError(getMoveInErrorCopy(error));
+
+        if (
+          errorState.kind === 'conflict'
+          || (error instanceof ApiError && error.errorCode === 'ROOM_NOT_VACANT')
+        ) {
+          loadContext();
+        }
+      });
+  };
+
+  return (
+    <Drawer
+      title="空房入住"
+      open
+      onClose={onClose}
+      width={760}
+      extra={<Button icon={<ReloadOutlined />} onClick={loadContext}>重新整理</Button>}
+    >
+      <Space direction="vertical" size={16} className="page-stack">
+        {state.status === 'loading' && <LoadingState />}
+        {state.status === 'forbidden' && <ForbiddenState />}
+        {state.status === 'not-found' && <NotFoundState />}
+        {state.status === 'error' && <RetryableErrorState onRetry={loadContext} />}
+        {state.status === 'stale' && (
+          <Alert
+            type="warning"
+            showIcon
+            message="房間狀態已變更，無法辦理入住"
+            description="此房間目前不是空房。請重新整理名冊後，再從可入住的空房重新進入。"
+            action={<Button onClick={loadContext}>重新整理</Button>}
+          />
+        )}
+        {state.status === 'ready' && (
+          <>
+            <Card size="small" title="入住房間">
+              <Descriptions column={{ xs: 1, md: 2 }} size="small">
+                <Descriptions.Item label="房間">{getOptionalText(state.room.name)}</Descriptions.Item>
+                <Descriptions.Item label="房況">
+                  <Tag color="blue">{getRoomStatusCopy(state.room.status)}</Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label="預設租金">{getMoneyText(state.room.default_rent_amount)}</Descriptions.Item>
+                <Descriptions.Item label="區域">{getOptionalText(state.room.zone)}</Descriptions.Item>
+              </Descriptions>
+            </Card>
+            {state.tenantsStatus === 'error' && (
+              <Alert
+                type="warning"
+                showIcon
+                message="既有租客清單暫時無法讀取"
+                description="仍可改用新增租客完成入住。"
+              />
+            )}
+            {submitError && (
+              <Alert type="error" showIcon message="入住建立失敗" description={submitError} />
+            )}
+            <Form
+              form={form}
+              layout="vertical"
+              requiredMark
+              onFinish={submitMoveIn}
+            >
+              <Card size="small" title="租客">
+                <Form.Item name="tenantMode" label="租客來源">
+                  <Radio.Group>
+                    <Radio.Button value="existing">選擇既有租客</Radio.Button>
+                    <Radio.Button value="new">新增租客</Radio.Button>
+                  </Radio.Group>
+                </Form.Item>
+                {tenantMode === 'existing' ? (
+                  <Form.Item
+                    name="tenant_id"
+                    label="既有租客（必填）"
+                    rules={[{ required: true, message: '請選擇租客，或改用新增租客。' }]}
+                  >
+                    <Select
+                      aria-label="既有租客"
+                      loading={state.tenantsStatus === 'loading'}
+                      placeholder="選擇租客"
+                      options={state.tenants.map((tenant) => ({
+                        value: tenant.id ?? '',
+                        label: `${getOptionalText(tenant.name)}${tenant.phone ? ` / ${tenant.phone}` : ''}`,
+                      })).filter((item) => item.value)}
+                    />
+                  </Form.Item>
+                ) : (
+                  <>
+                    <Form.Item
+                      name="tenant_name"
+                      label="租客姓名（必填）"
+                      rules={[{ required: true, message: '請輸入租客姓名。' }]}
+                    >
+                      <Input />
+                    </Form.Item>
+                    <Form.Item
+                      name="tenant_email"
+                      label="電子信箱（必填）"
+                      rules={[
+                        { required: true, message: '請輸入電子信箱。' },
+                        { type: 'email', message: '請輸入有效的電子信箱。' },
+                      ]}
+                    >
+                      <Input />
+                    </Form.Item>
+                    <Form.Item name="tenant_phone" label="電話">
+                      <Input />
+                    </Form.Item>
+                    <Form.Item name="tenant_birth_date" label="生日">
+                      <DatePicker format="YYYY-MM-DD" inputReadOnly className="form-date-input" />
+                    </Form.Item>
+                    <Form.Item name="tenant_national_id" label="身分證字號">
+                      <Input />
+                    </Form.Item>
+                    <Form.Item name="tenant_address" label="地址">
+                      <Input />
+                    </Form.Item>
+                    <Form.Item name="tenant_occupation" label="職業">
+                      <Input />
+                    </Form.Item>
+                  </>
+                )}
+              </Card>
+              <Card size="small" title="租約條件">
+                <Form.Item
+                  name="rent_amount"
+                  label="租金（必填）"
+                  rules={[{ required: true, message: '請輸入租金。' }]}
+                >
+                  <InputNumber min={0} precision={0} className="form-number-input" />
+                </Form.Item>
+                <Form.Item name="rent_billing_cadence" label="租金週期">
+                  <Select
+                    aria-label="租金週期"
+                    options={[
+                      { value: 'monthly', label: '月繳' },
+                      { value: 'quarterly', label: '季繳' },
+                      { value: 'semiannual', label: '半年繳' },
+                      { value: 'annual', label: '年繳' },
+                    ]}
+                  />
+                </Form.Item>
+                <Form.Item
+                  name="start_date"
+                  label="租約開始（必填）"
+                  rules={[{ required: true, message: '請輸入租約開始日。' }]}
+                >
+                  <DatePicker format="YYYY-MM-DD" inputReadOnly className="form-date-input" />
+                </Form.Item>
+                <Form.Item
+                  name="end_date"
+                  label="租約結束（必填）"
+                  rules={[{ required: true, message: '請輸入租約結束日。' }]}
+                >
+                  <DatePicker format="YYYY-MM-DD" inputReadOnly className="form-date-input" />
+                </Form.Item>
+                <Form.Item
+                  name="deposit_amount"
+                  label="押金（必填）"
+                  rules={[{ required: true, message: '請輸入押金。' }]}
+                >
+                  <InputNumber min={0} precision={0} className="form-number-input" />
+                </Form.Item>
+                <Form.Item name="electricity_billing_cadence" label="電費週期">
+                  <Select
+                    aria-label="電費週期"
+                    options={[
+                      { value: 'monthly', label: '每月' },
+                      { value: 'bimonthly', label: '雙月' },
+                    ]}
+                  />
+                </Form.Item>
+                <Form.Item
+                  name="starting_meter_reading"
+                  label="起始電表讀數（必填）"
+                  rules={[{ required: true, message: '請輸入起始電表讀數；0 也是有效值。' }]}
+                >
+                  <InputNumber min={0} precision={0} className="form-number-input" />
+                </Form.Item>
+                <Form.Item name="notes" label="租約備註">
+                  <Input.TextArea rows={3} />
+                </Form.Item>
+              </Card>
+              <Alert
+                type="info"
+                showIcon
+                message="文件與附件將由 P2 接手"
+                description="入住後的租客與租約附件不在本流程上傳；P2 roadmap #33 會承接 real upload 與文件補齊。"
+              />
+              <Space wrap>
+                <Button onClick={onClose}>取消</Button>
+                <Button type="primary" htmlType="submit" loading={submitting} disabled={submitting}>
+                  建立租約
+                </Button>
+              </Space>
+            </Form>
+          </>
+        )}
+      </Space>
+    </Drawer>
+  );
+}
 
 function OccupiedRoomHub({
   propertyId,

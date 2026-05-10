@@ -6,6 +6,9 @@ export type PropertyTenantLeaseRoster = components['schemas']['PropertyTenantLea
 export type Lease = components['schemas']['LeaseResponse'];
 export type LeaseList = components['schemas']['LeaseListResponse'];
 export type Tenant = components['schemas']['TenantResponse'];
+export type TenantList = components['schemas']['TenantListResponse'];
+export type CreateTenantRequest = components['schemas']['CreateTenantRequest'];
+export type CreateLeaseRequest = components['schemas']['CreateLeaseRequest'];
 export type Bill = components['schemas']['BillResponse'];
 export type BillList = components['schemas']['BillListResponse'];
 
@@ -20,6 +23,13 @@ export type ListLeasesQuery = {
   room_id?: string;
   tenant_id?: string;
   status?: Lease['status'];
+  page?: number;
+  limit?: number;
+};
+
+export type ListTenantsQuery = {
+  property_id?: string;
+  status?: Tenant['status'];
   page?: number;
   limit?: number;
 };
@@ -75,6 +85,50 @@ export function listLeases(
   return apiRequest<LeaseList>({
     path: '/leases',
     query,
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function listTenants(
+  tokenProvider: AccessTokenProvider,
+  query: ListTenantsQuery = {},
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<TenantList>({
+    path: '/tenants',
+    query,
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function createTenant(
+  body: CreateTenantRequest,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<Tenant>({
+    method: 'POST',
+    path: '/tenants',
+    body,
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function createLease(
+  body: CreateLeaseRequest,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<Lease>({
+    method: 'POST',
+    path: '/leases',
+    body,
     tokenProvider,
     signal: options.signal,
     fetcher: options.fetcher,

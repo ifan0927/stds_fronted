@@ -274,7 +274,7 @@ export default function PropertyDashboardPage() {
       icon: <ToolOutlined />,
     },
     {
-      title: '財務報表',
+      title: '報表中心',
       description: '進入報表查詢與匯出入口。',
       path: `/properties/${propertyId}/reports`,
       icon: <FileTextOutlined />,

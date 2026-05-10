@@ -459,6 +459,63 @@ a {
   min-width: 160px;
 }
 
+.journal-room-filter {
+  width: min(420px, 100%);
+}
+
+.journal-room-dropdown {
+  min-width: 420px;
+}
+
+.journal-room-dropdown .ant-select-item-option-content {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.journal-message-list .ant-list-pagination {
+  margin-top: 16px;
+  text-align: right;
+}
+
+.journal-message-item {
+  align-items: flex-start;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 16px;
+  background: #ffffff;
+}
+
+.journal-message-item + .journal-message-item {
+  margin-top: 12px;
+}
+
+.journal-message-item .ant-list-item-meta {
+  min-width: 0;
+  align-items: flex-start;
+}
+
+.journal-message-item .ant-list-item-meta-avatar {
+  margin-inline-end: 12px;
+}
+
+.journal-message-title {
+  width: 100%;
+}
+
+.journal-message-body {
+  width: 100%;
+}
+
+.journal-message-body .ant-typography {
+  margin-bottom: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.journal-message-item .ant-list-item-action {
+  margin-inline-start: 16px;
+}
+
 .property-facilities {
   margin-top: 16px;
   display: grid;
@@ -594,6 +651,22 @@ a {
 
   .billing-context-controls,
   .billing-context-select {
+    width: 100%;
+  }
+
+  .journal-room-filter,
+  .journal-room-dropdown {
+    min-width: min(100vw - 24px, 420px);
+    width: 100%;
+  }
+
+  .journal-message-item {
+    display: grid;
+    gap: 12px;
+  }
+
+  .journal-message-item .ant-list-item-action {
+    margin-inline-start: 0;
     width: 100%;
   }
 

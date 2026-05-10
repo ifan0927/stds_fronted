@@ -3,6 +3,7 @@ import AppShell from './app/AppShell';
 import BillingMeterPage from './app/BillingMeterPage';
 import CurrentUserProfilePage from './app/CurrentUserProfilePage';
 import HomeDashboardPage from './app/HomeDashboardPage';
+import JournalPage from './app/JournalPage';
 import LeaseDetailPage from './app/LeaseDetailPage';
 import MeterHistoryPage from './app/MeterHistoryPage';
 import PropertyDashboardPage from './app/PropertyDashboardPage';
@@ -36,7 +37,7 @@ export default function App() {
           <Route path="properties/:propertyId/checkout" element={<PlaceholderPage pageKey="checkout" />} />
           <Route path="properties/:propertyId/billing" element={<BillingMeterPage />} />
           <Route path="properties/:propertyId/billing/meter-history" element={<MeterHistoryPage />} />
-          <Route path="properties/:propertyId/journal" element={<PlaceholderPage pageKey="journal" />} />
+          <Route path="properties/:propertyId/journal" element={<JournalPage />} />
           <Route path="properties/:propertyId/reports" element={<PropertyReportsPage />} />
           <Route path="admin/members" element={<Navigate to="/forbidden" replace />} />
         </Route>

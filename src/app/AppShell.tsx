@@ -104,7 +104,7 @@ function createMenuItems(propertyId: string | undefined): ItemType[] {
         createPropertyMenuItem(propertyId, '/tenants', '租客與租約', <TeamOutlined />),
         createPropertyMenuItem(propertyId, '/billing', '帳單與抄表', <AuditOutlined />),
         createPropertyMenuItem(propertyId, '/journal', '日誌與維修', <ToolOutlined />),
-        createPropertyMenuItem(propertyId, '/reports', '財務報表', <FileTextOutlined />),
+        createPropertyMenuItem(propertyId, '/reports', '報表中心', <FileTextOutlined />),
       ],
     },
     {

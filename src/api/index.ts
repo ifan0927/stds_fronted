@@ -12,6 +12,13 @@ export {
   submitBillMeter,
 } from './billing';
 export {
+  exportPropertyFinancialReportCashflow,
+  exportPropertyFinancialReportProfitLoss,
+  exportPropertyOperationReport,
+  getPropertyFinancialReport,
+  getPropertyFinancialReportSummary,
+} from './reports';
+export {
   createPropertyRoom,
   createRoomMaintenance,
   deleteRoom,
@@ -43,6 +50,13 @@ export type {
   PropertyMeterHistoryRow,
   RecordMeterRequest,
 } from './billing';
+export type {
+  FinancialReport,
+  FinancialReportEntry,
+  FinancialReportList,
+  FinancialReportSummaryItem,
+  FinancialReportSummaryQuery,
+} from './reports';
 export type {
   CreateRoomRequest,
   ListPropertyRoomsQuery,

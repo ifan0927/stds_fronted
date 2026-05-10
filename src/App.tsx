@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import AppShell from './app/AppShell';
+import BillingMeterPage from './app/BillingMeterPage';
 import CurrentUserProfilePage from './app/CurrentUserProfilePage';
 import HomeDashboardPage from './app/HomeDashboardPage';
 import LeaseDetailPage from './app/LeaseDetailPage';
@@ -31,7 +32,7 @@ export default function App() {
           <Route path="properties/:propertyId/tenants/:tenantId" element={<TenantDetailPage />} />
           <Route path="properties/:propertyId/leases/:leaseId" element={<LeaseDetailPage />} />
           <Route path="properties/:propertyId/checkout" element={<PlaceholderPage pageKey="checkout" />} />
-          <Route path="properties/:propertyId/billing" element={<PlaceholderPage pageKey="billing" />} />
+          <Route path="properties/:propertyId/billing" element={<BillingMeterPage />} />
           <Route path="properties/:propertyId/journal" element={<PlaceholderPage pageKey="journal" />} />
           <Route path="properties/:propertyId/reports" element={<PlaceholderPage pageKey="reports" />} />
           <Route path="admin/members" element={<Navigate to="/forbidden" replace />} />

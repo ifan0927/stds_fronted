@@ -5,6 +5,11 @@ export type { CurrentUser, UpdateCurrentUserRequest } from './auth';
 export { getDashboard } from './dashboard';
 export type { HomeDashboard } from './dashboard';
 export {
+  getBill,
+  listPropertyPendingMeters,
+  submitBillMeter,
+} from './billing';
+export {
   createPropertyRoom,
   createRoomMaintenance,
   deleteRoom,
@@ -28,6 +33,11 @@ export {
   updateLease,
   updateTenant,
 } from './tenants';
+export type {
+  Bill as BillingBill,
+  BillList as BillingBillList,
+  RecordMeterRequest,
+} from './billing';
 export type {
   CreateRoomRequest,
   ListPropertyRoomsQuery,

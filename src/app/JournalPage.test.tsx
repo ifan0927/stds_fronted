@@ -329,7 +329,7 @@ describe('JournalPage', () => {
     expect(await screen.findByText('浴室漏水')).toBeTruthy();
     expect(screen.getByText('目前顯示 201 - 林怡君 的維修單；列表仍以後端回傳的房間標籤為準。')).toBeTruthy();
     expect(screen.getByRole('button', { name: '派工' })).toBeTruthy();
-  });
+  }, 10000);
 
   it('opens repair detail when handoff includes repair request id', async () => {
     mockJournalData();

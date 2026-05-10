@@ -523,6 +523,44 @@ describe('BillingMeterPage', () => {
     });
   });
 
+  it('does not replace an unrelated open bill detail after queue meter submit succeeds', async () => {
+    mockPendingMeters({
+      data: [
+        createBill({ id: 'bill-1', room_label: 'A-101' }),
+        createBill({ id: 'bill-2', room_label: 'A-102', tenant_label: '林佳蓉' }),
+      ],
+    });
+    vi.mocked(getBill).mockResolvedValue(createBill({
+      id: 'bill-1',
+      room_label: 'A-101',
+      tenant_label: '王小明',
+      amount: null,
+    }));
+    vi.mocked(submitBillMeter).mockResolvedValue(createBill({
+      id: 'bill-2',
+      room_label: 'A-102',
+      tenant_label: '林佳蓉',
+      status: 'pending_payment',
+      amount: 585,
+      meter_current_reading: 1380,
+    }));
+
+    renderBillingPage('/properties/property-1/billing?flow=meter&billId=bill-1');
+
+    expect(await screen.findByLabelText('帳單詳情')).toBeTruthy();
+    await waitFor(() => expect(getBill).toHaveBeenCalledTimes(1));
+    const rows = await screen.findAllByRole('row');
+    fireEvent.click(within(rows[1]).getByRole('button', { name: '抄表' }));
+    fireEvent.change(await screen.findByLabelText('本期電表度數（必填）'), { target: { value: '1380' } });
+    fireEvent.click(screen.getByRole('button', { name: '送出抄表' }));
+
+    await waitFor(() => expect(screen.queryByLabelText('送出抄表')).toBeNull());
+    expect(getBill).toHaveBeenCalledTimes(1);
+    const detailDrawer = screen.getByLabelText('帳單詳情');
+    expect(within(detailDrawer).getByText('A-101')).toBeTruthy();
+    expect(within(detailDrawer).queryByText('林佳蓉')).toBeNull();
+  });
+
   it('keeps meter validation errors visible in the submit drawer', async () => {
     mockPendingMeters({ data: [createBill()] });
     vi.mocked(getBill).mockResolvedValue(createBill());
@@ -572,6 +610,36 @@ describe('BillingMeterPage', () => {
       expect(screen.queryByLabelText('送出抄表')).toBeNull();
       expect(listPropertyPendingMeters).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it('keeps an unrelated open bill detail when queue meter submit returns not found', async () => {
+    mockPendingMeters({
+      data: [
+        createBill({ id: 'bill-1', room_label: 'A-101' }),
+        createBill({ id: 'bill-2', room_label: 'A-102', tenant_label: '林佳蓉' }),
+      ],
+    });
+    vi.mocked(getBill).mockResolvedValue(createBill({
+      id: 'bill-1',
+      room_label: 'A-101',
+      tenant_label: '王小明',
+      amount: null,
+    }));
+    vi.mocked(submitBillMeter).mockRejectedValue(createApiError(404, 'BILL_NOT_FOUND'));
+
+    renderBillingPage('/properties/property-1/billing?flow=meter&billId=bill-1');
+
+    expect(await screen.findByLabelText('帳單詳情')).toBeTruthy();
+    const rows = await screen.findAllByRole('row');
+    fireEvent.click(within(rows[1]).getByRole('button', { name: '抄表' }));
+    fireEvent.change(await screen.findByLabelText('本期電表度數（必填）'), { target: { value: '1380' } });
+    fireEvent.click(screen.getByRole('button', { name: '送出抄表' }));
+
+    expect(await screen.findByText('找不到這張帳單')).toBeTruthy();
+    await waitFor(() => expect(screen.queryByLabelText('送出抄表')).toBeNull());
+    const detailDrawer = screen.getByLabelText('帳單詳情');
+    expect(within(detailDrawer).queryByText('找不到頁面或資料')).toBeNull();
+    expect(within(detailDrawer).getByText('A-101')).toBeTruthy();
   });
 
   it('closes stale pending-row meter drawer and refreshes the queue on conflict', async () => {

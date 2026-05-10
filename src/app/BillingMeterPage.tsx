@@ -262,6 +262,7 @@ export default function BillingMeterPage() {
     abortRequest(pendingRequestRef.current?.controller);
 
     if (!canOperateMeter) {
+      pendingRequestRef.current = null;
       setPendingState({ status: 'ready', data: { data: [] } });
       return;
     }
@@ -528,7 +529,7 @@ export default function BillingMeterPage() {
       getAccessToken,
     )
       .then((response) => {
-        if (selectedBillId) {
+        if (selectedBillId === meterBillId) {
           setDetailState({ status: 'ready', data: response });
         }
         setMeterDrawerOpen(false);
@@ -537,9 +538,6 @@ export default function BillingMeterPage() {
         setOperationNotice(null);
         messageApi.success('抄表已送出，帳單狀態已重新讀取。');
         loadPendingMeters();
-        if (selectedBillId && response.id) {
-          loadBillDetail(response.id);
-        }
         loadBillList();
       })
       .catch((error: unknown) => {
@@ -562,7 +560,7 @@ export default function BillingMeterPage() {
           form.resetFields();
           loadPendingMeters();
           loadBillList();
-          if (selectedBillId) {
+          if (selectedBillId === meterBillId) {
             loadBillDetail(meterBillId);
           }
           return;
@@ -591,7 +589,7 @@ export default function BillingMeterPage() {
           form.resetFields();
           loadPendingMeters();
           loadBillList();
-          if (selectedBillId) {
+          if (selectedBillId === meterBillId) {
             setDetailState({ status: 'not-found', data: null });
           }
           return;
@@ -1199,11 +1197,16 @@ export default function BillingMeterPage() {
                 { required: true, message: '請輸入本期電表度數。' },
                 {
                   type: 'number',
-                  min: meterBill.meter_previous_reading ?? 0,
-                  message: meterBill.meter_previous_reading === null || meterBill.meter_previous_reading === undefined
-                    ? '請輸入有效的電表度數。'
-                    : `不可小於上期度數 ${meterBill.meter_previous_reading}。`,
+                  min: 0,
+                  message: '請輸入非負的電表度數。',
                 },
+                ...(meterBill.meter_previous_reading === null || meterBill.meter_previous_reading === undefined
+                  ? []
+                  : [{
+                    type: 'number' as const,
+                    min: meterBill.meter_previous_reading,
+                    message: `不可小於上期度數 ${meterBill.meter_previous_reading}。`,
+                  }]),
               ]}
             >
               <InputNumber className="full-width-control" min={0} precision={0} />

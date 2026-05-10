@@ -100,6 +100,8 @@ function getPlaceholderLinks(propertyId: string | undefined, room: Room) {
     return [];
   }
 
+  const defaultHistoryPeriod = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1);
+
   return [
     {
       title: room.status === 'vacant' ? '搬入租客' : '租客與租約',
@@ -118,7 +120,7 @@ function getPlaceholderLinks(propertyId: string | undefined, room: Room) {
     {
       title: '抄表歷史',
       description: '前往房間抄表歷史入口，內容由抄表歷史 issue 承接。',
-      path: `/properties/${propertyId}/billing?roomId=${encodeURIComponent(roomId)}&view=meter-history`,
+      path: `/properties/${propertyId}/billing/meter-history?roomId=${encodeURIComponent(roomId)}&year=${defaultHistoryPeriod.getFullYear()}&month=${defaultHistoryPeriod.getMonth() + 1}`,
       icon: <FileSearchOutlined />,
     },
     {

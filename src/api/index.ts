@@ -27,6 +27,17 @@ export {
   updateJournalLog,
 } from './journal';
 export {
+  assignRepairRequest,
+  cancelRepairRequest,
+  completeRepairRequest,
+  createRepairRequest,
+  getRepairRequest,
+  listRepairRequests,
+  progressRepairRequest,
+  updateRepairRequest,
+} from './repairs';
+export { listUsers } from './users';
+export {
   createPropertyRoom,
   createRoomMaintenance,
   deleteRoom,
@@ -74,6 +85,22 @@ export type {
   ListJournalLogsQuery,
   UpdateJournalLogRequest,
 } from './journal';
+export type {
+  AssignRepairRequest,
+  CancelRepairRequest,
+  CreateRepairRequest,
+  ListRepairRequestsQuery,
+  RepairRequest,
+  RepairRequestList,
+  RepairRequestStatus,
+  UpdateRepairRequest,
+} from './repairs';
+export type {
+  ListUsersQuery,
+  User,
+  UserList,
+  UserRole,
+} from './users';
 export type {
   CreateRoomRequest,
   ListPropertyRoomsQuery,

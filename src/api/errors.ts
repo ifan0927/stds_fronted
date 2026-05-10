@@ -137,7 +137,7 @@ function getUiErrorKind(error: unknown): UiErrorKind {
     return 'conflict';
   }
 
-  if (error.status === 422) {
+  if (error.status === 400 || error.status === 422) {
     return 'validation';
   }
 

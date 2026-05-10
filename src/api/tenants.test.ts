@@ -7,7 +7,10 @@ import {
   listBills,
   listLeases,
   listPropertyTenantLeaseRoster,
+  listTenantLeases,
   listTenants,
+  updateLease,
+  updateTenant,
 } from './tenants';
 
 function jsonResponse(body: unknown, init?: ResponseInit) {
@@ -153,5 +156,75 @@ describe('tenant and lease API helpers', () => {
     expect(fetcher.mock.calls[1][0]).toBe('/api/v1/tenants/tenant%2Fwith%2Fslash');
     expect(fetcher.mock.calls[2][0]).toBe('/api/v1/bills?lease_id=lease%2Fwith%2Fslash&type=rent&page=1&limit=5');
     expect(bills.data?.[0]?.id).toBe('bill-1');
+  });
+
+  it('updates tenant using only backend-supported profile fields', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({ id: 'tenant/with/slash', name: '林家妤', phone: '0987-654-321' }),
+    );
+
+    await updateTenant(
+      'tenant/with/slash',
+      {
+        name: '林家妤',
+        email: 'tenant@example.com',
+        phone: '0987-654-321',
+        contacts: [{ name: '林媽媽', phone: '0911-222-333', relation: '母親' }],
+        birth_date: null,
+        national_id: null,
+        address: '台北市',
+        occupation: '設計師',
+      },
+      () => 'firebase-id-token',
+      { fetcher },
+    );
+
+    expect(fetcher.mock.calls[0][0]).toBe('/api/v1/tenants/tenant%2Fwith%2Fslash');
+    expect(fetcher.mock.calls[0][1]?.method).toBe('PATCH');
+    expect(fetcher.mock.calls[0][1]?.body).toBe(JSON.stringify({
+      name: '林家妤',
+      email: 'tenant@example.com',
+      phone: '0987-654-321',
+      contacts: [{ name: '林媽媽', phone: '0911-222-333', relation: '母親' }],
+      birth_date: null,
+      national_id: null,
+      address: '台北市',
+      occupation: '設計師',
+    }));
+  });
+
+  it('loads tenant lease history by encoded tenant id', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({ data: [{ id: 'lease-1', tenant_id: 'tenant/with/slash' }] }),
+    );
+
+    const result = await listTenantLeases(
+      'tenant/with/slash',
+      () => 'firebase-id-token',
+      { status: 'active' },
+      { fetcher },
+    );
+
+    expect(fetcher.mock.calls[0][0]).toBe('/api/v1/tenants/tenant%2Fwith%2Fslash/leases?status=active');
+    expect(result.data?.[0]?.id).toBe('lease-1');
+  });
+
+  it('updates lease with rent adjustment payload only', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({ id: 'lease/with/slash', rent_amount: 20000 }),
+    );
+
+    await updateLease(
+      'lease/with/slash',
+      { rent_amount: 20000 },
+      () => 'firebase-id-token',
+      { fetcher },
+    );
+
+    expect(fetcher.mock.calls[0][0]).toBe('/api/v1/leases/lease%2Fwith%2Fslash');
+    expect(fetcher.mock.calls[0][1]?.method).toBe('PATCH');
+    expect(fetcher.mock.calls[0][1]?.body).toBe(JSON.stringify({
+      rent_amount: 20000,
+    }));
   });
 });

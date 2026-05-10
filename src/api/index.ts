@@ -23,7 +23,10 @@ export {
   listBills,
   listLeases,
   listPropertyTenantLeaseRoster,
+  listTenantLeases,
   listTenants,
+  updateLease,
+  updateTenant,
 } from './tenants';
 export type {
   CreateRoomRequest,
@@ -48,11 +51,14 @@ export type {
   ListBillsQuery,
   ListLeasesQuery,
   ListPropertyTenantLeaseRosterQuery,
+  ListTenantLeasesQuery,
   ListTenantsQuery,
   PropertyTenantLeaseRoster,
   PropertyTenantLeaseRosterRow,
   Tenant,
   TenantList,
+  UpdateLeaseRequest,
+  UpdateTenantRequest,
 } from './tenants';
 export { ApiError } from './errors';
 export { classifyApiErrorForUi, getFormErrorState } from './errors';

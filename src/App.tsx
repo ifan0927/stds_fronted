@@ -2,10 +2,12 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import AppShell from './app/AppShell';
 import CurrentUserProfilePage from './app/CurrentUserProfilePage';
 import HomeDashboardPage from './app/HomeDashboardPage';
+import LeaseDetailPage from './app/LeaseDetailPage';
 import PropertyDashboardPage from './app/PropertyDashboardPage';
 import PropertyListPage from './app/PropertyListPage';
 import RoomCreatePage from './app/RoomCreatePage';
 import RoomDetailPage from './app/RoomDetailPage';
+import TenantDetailPage from './app/TenantDetailPage';
 import RoomInventoryPage from './app/RoomInventoryPage';
 import TenantLeaseRosterPage from './app/TenantLeaseRosterPage';
 import { ForbiddenPage, LoginPage, NotFoundPage, PlaceholderPage } from './app/pages';
@@ -26,8 +28,8 @@ export default function App() {
           <Route path="properties/:propertyId/rooms/new" element={<RoomCreatePage />} />
           <Route path="properties/:propertyId/rooms/:roomId" element={<RoomDetailPage />} />
           <Route path="properties/:propertyId/tenants" element={<TenantLeaseRosterPage />} />
-          <Route path="properties/:propertyId/tenants/:tenantId" element={<PlaceholderPage pageKey="tenantDetail" />} />
-          <Route path="properties/:propertyId/leases/:leaseId" element={<PlaceholderPage pageKey="leaseDetail" />} />
+          <Route path="properties/:propertyId/tenants/:tenantId" element={<TenantDetailPage />} />
+          <Route path="properties/:propertyId/leases/:leaseId" element={<LeaseDetailPage />} />
           <Route path="properties/:propertyId/checkout" element={<PlaceholderPage pageKey="checkout" />} />
           <Route path="properties/:propertyId/billing" element={<PlaceholderPage pageKey="billing" />} />
           <Route path="properties/:propertyId/journal" element={<PlaceholderPage pageKey="journal" />} />

@@ -581,8 +581,7 @@ describe('TenantLeaseRosterPage', () => {
 
     renderTenantLeaseRosterPage('/properties/property-1/tenants?include_vacant=true&roomId=room-2&mode=move-in');
 
-    await screen.findByText('空房入住');
-    fireEvent.change(screen.getByLabelText('既有租客'), { target: { value: 'tenant-1' } });
+    fireEvent.change(await screen.findByLabelText('既有租客'), { target: { value: 'tenant-1' } });
     fireEvent.change(screen.getByLabelText('rent_amount'), { target: { value: '18000' } });
     fireEvent.change(screen.getByLabelText('start_date'), { target: { value: '2026-06-01' } });
     fireEvent.change(screen.getByLabelText('end_date'), { target: { value: '2027-05-31' } });

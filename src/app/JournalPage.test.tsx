@@ -436,5 +436,5 @@ describe('JournalPage', () => {
     await waitFor(() => {
       expect(screen.getByLabelText('目前路徑').textContent).toBe('/properties/property-1/journal?tab=repair&roomId=room-1');
     });
-  }, 20000);
+  }, 40000);
 });

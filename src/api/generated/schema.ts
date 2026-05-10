@@ -2002,8 +2002,6 @@ export type components = {
         };
         UpdateLeaseRequest: {
             rent_amount?: number;
-            /** Format: date */
-            end_date?: string;
         };
         LeaseReplaceRequest: {
             /** @enum {string} */

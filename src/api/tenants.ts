@@ -9,6 +9,8 @@ export type Tenant = components['schemas']['TenantResponse'];
 export type TenantList = components['schemas']['TenantListResponse'];
 export type CreateTenantRequest = components['schemas']['CreateTenantRequest'];
 export type CreateLeaseRequest = components['schemas']['CreateLeaseRequest'];
+export type UpdateTenantRequest = components['schemas']['UpdateTenantRequest'];
+export type UpdateLeaseRequest = components['schemas']['UpdateLeaseRequest'];
 export type Bill = components['schemas']['BillResponse'];
 export type BillList = components['schemas']['BillListResponse'];
 
@@ -32,6 +34,10 @@ export type ListTenantsQuery = {
   status?: Tenant['status'];
   page?: number;
   limit?: number;
+};
+
+export type ListTenantLeasesQuery = {
+  status?: Lease['status'];
 };
 
 export type ListBillsQuery = {
@@ -135,6 +141,38 @@ export function createLease(
   });
 }
 
+export function updateTenant(
+  tenantId: string,
+  body: UpdateTenantRequest,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<Tenant>({
+    method: 'PATCH',
+    path: tenantPath(tenantId),
+    body,
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function updateLease(
+  leaseId: string,
+  body: UpdateLeaseRequest,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<Lease>({
+    method: 'PATCH',
+    path: leasePath(leaseId),
+    body,
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
 export function getLease(
   leaseId: string,
   tokenProvider: AccessTokenProvider,
@@ -155,6 +193,21 @@ export function getTenant(
 ) {
   return apiRequest<Tenant>({
     path: tenantPath(tenantId),
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function listTenantLeases(
+  tenantId: string,
+  tokenProvider: AccessTokenProvider,
+  query: ListTenantLeasesQuery = {},
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<LeaseList>({
+    path: `${tenantPath(tenantId)}/leases`,
+    query,
     tokenProvider,
     signal: options.signal,
     fetcher: options.fetcher,

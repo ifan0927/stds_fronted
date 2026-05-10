@@ -16,6 +16,7 @@ describe('classifyApiErrorForUi', () => {
     [401, 'unauthorized'],
     [403, 'forbidden'],
     [404, 'not-found'],
+    [400, 'validation'],
     [409, 'conflict'],
     [422, 'validation'],
     [500, 'retryable'],

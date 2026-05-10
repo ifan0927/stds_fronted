@@ -475,6 +475,26 @@ describe('BillingMeterPage', () => {
       .toBe(`/properties/property-1/billing/meter-history?year=${defaultHistoryYear}`);
   });
 
+  it('routes bill detail room history to the selected bill period', async () => {
+    mockPendingMeters({ data: [createBill()] });
+    vi.mocked(getBill).mockResolvedValue(createBill({
+      period_start: '2026-03-01',
+      period_end: '2026-03-31',
+      due_date: '2026-04-05',
+    }));
+
+    renderBillingPage('/properties/property-1/billing?flow=meter');
+
+    await screen.findByText('A-101');
+    fireEvent.click(screen.getByRole('button', { name: '詳情' }));
+    await screen.findByLabelText('帳單詳情');
+
+    fireEvent.click(screen.getByRole('button', { name: '查看此房間歷史' }));
+
+    expect(screen.getByLabelText('目前路徑').textContent)
+      .toBe('/properties/property-1/billing/meter-history?year=2026&roomId=room-1&month=3');
+  });
+
   it('selects a lease without refetching the whole property meter queue', async () => {
     mockPendingMeters({ data: [] });
     mockBills({ data: [createBill({ id: 'electricity-bill-1' })] });

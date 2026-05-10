@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import {
+  ApiError,
   getBill,
   listPropertyMeterHistory,
   listRoomMeterHistory,
@@ -217,6 +218,16 @@ function createBill(overrides: Partial<BillingBill> = {}): BillingBill {
   };
 }
 
+function createApiError(status: number, errorCode: string | null = null) {
+  return new ApiError({
+    status,
+    errorCode,
+    message: 'backend error',
+    details: null,
+    response: new Response(null, { status }),
+  });
+}
+
 function mockPropertyHistory(response: PropertyMeterHistory = {
   data: [{
     bill_id: 'bill-1',
@@ -327,6 +338,20 @@ describe('MeterHistoryPage', () => {
     expect(screen.getAllByText('A-101').length).toBeGreaterThan(0);
   });
 
+  it('redirects to login when opening bill detail with an expired session', async () => {
+    vi.mocked(getBill).mockRejectedValue(createApiError(401, 'INVALID_FIREBASE_TOKEN'));
+
+    renderMeterHistoryPage('/properties/property-1/billing/meter-history?year=2026');
+
+    await screen.findAllByText('A-101');
+    fireEvent.click(screen.getByRole('button', { name: '帳單詳情' }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('目前路徑').textContent)
+        .toBe('/login?reason=session-expired&returnTo=%2Fproperties%2Fproperty-1%2Fbilling%2Fmeter-history%3Fyear%3D2026%26billId%3Dbill-1');
+    });
+  });
+
   it('filters property history rows by selected month in the UI', async () => {
     renderMeterHistoryPage('/properties/property-1/billing/meter-history?year=2026&month=5');
 
@@ -413,11 +438,11 @@ describe('MeterHistoryPage', () => {
       expect(getCurrentSearchParams().get('roomId')).toBe('room-1');
     });
     expect(getCurrentSearchParams().get('year')).toBe('2026');
-    expect(getCurrentSearchParams().get('month')).toBe(String(defaultHistoryMonth));
+    expect(getCurrentSearchParams().get('month')).toBe('4');
     await waitFor(() => {
       expect(listRoomMeterHistory).toHaveBeenCalledWith(
         'room-1',
-        { year: 2026, month: defaultHistoryMonth },
+        { year: 2026, month: 4 },
         expect.any(Function),
         expect.objectContaining({ signal: expect.any(AbortSignal) }),
       );

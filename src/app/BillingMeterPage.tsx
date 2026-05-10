@@ -105,19 +105,46 @@ function getBillingReturnTo(returnTo: string) {
   return `/login?reason=session-expired&returnTo=${encodeURIComponent(returnTo)}`;
 }
 
-function getMeterHistoryPath(propertyId: string | undefined, roomId?: string | null) {
+function getHistoryPeriod(periodSource?: string | Date | null) {
+  if (periodSource instanceof Date) {
+    return {
+      year: periodSource.getFullYear(),
+      month: periodSource.getMonth() + 1,
+    };
+  }
+
+  if (periodSource) {
+    const match = periodSource.match(/^(\d{4})-(\d{2})/);
+
+    if (match) {
+      return {
+        year: Number(match[1]),
+        month: Number(match[2]),
+      };
+    }
+  }
+
+  const defaultPeriod = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1);
+
+  return {
+    year: defaultPeriod.getFullYear(),
+    month: defaultPeriod.getMonth() + 1,
+  };
+}
+
+function getMeterHistoryPath(propertyId: string | undefined, roomId?: string | null, periodSource?: string | Date | null) {
   if (!propertyId) {
     return '/properties';
   }
 
-  const defaultPeriod = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1);
+  const period = getHistoryPeriod(periodSource);
   const params = new URLSearchParams({
-    year: String(defaultPeriod.getFullYear()),
+    year: String(period.year),
   });
 
   if (roomId) {
     params.set('roomId', roomId);
-    params.set('month', String(defaultPeriod.getMonth() + 1));
+    params.set('month', String(period.month));
   }
 
   return `/properties/${propertyId}/billing/meter-history?${params.toString()}`;
@@ -1104,7 +1131,11 @@ export default function BillingMeterPage() {
             <Button
               disabled={!selectedBill?.room_id}
               icon={<HistoryOutlined />}
-              onClick={() => navigate(getMeterHistoryPath(propertyId, selectedBill?.room_id))}
+              onClick={() => navigate(getMeterHistoryPath(
+                propertyId,
+                selectedBill?.room_id,
+                selectedBill?.period_start ?? selectedBill?.due_date ?? null,
+              ))}
             >
               查看此房間歷史
             </Button>

@@ -631,6 +631,14 @@ export default function MeterHistoryPage() {
           return;
         }
 
+        if (errorState.kind === 'unauthorized') {
+          navigate(
+            getMeterHistoryReturnTo(latestLocationRef.current.pathname, latestLocationRef.current.search),
+            { replace: true },
+          );
+          return;
+        }
+
         if (errorState.kind === 'forbidden') {
           setDetailState({ status: 'forbidden', data: null });
           return;
@@ -643,7 +651,7 @@ export default function MeterHistoryPage() {
 
         setDetailState({ status: 'error', data: null });
       });
-  }, [getAccessToken]);
+  }, [getAccessToken, navigate]);
 
   useEffect(() => {
     if (normalizeHistoryQuery()) {
@@ -681,7 +689,20 @@ export default function MeterHistoryPage() {
           <Typography.Text strong>{getOptionalText(value ?? record.room_id)}</Typography.Text>
           <Typography.Text type="secondary">{getOptionalText(record.tenant_label)}</Typography.Text>
           {record.room_id && (
-            <Button size="small" type="link" onClick={() => setHistoryQuery({ roomId: record.room_id, month: defaultMonth, billId: null })}>
+            <Button
+              size="small"
+              type="link"
+              onClick={() => {
+                const rowMonth = getHistoryRowMonth(record);
+
+                setHistoryQuery({
+                  roomId: record.room_id,
+                  year: rowMonth?.year ?? year,
+                  month: month ?? rowMonth?.month ?? defaultMonth,
+                  billId: null,
+                });
+              }}
+            >
               房間歷史
             </Button>
           )}
@@ -749,7 +770,7 @@ export default function MeterHistoryPage() {
         </Button>
       ),
     },
-  ], [setHistoryQuery]);
+  ], [month, setHistoryQuery, year]);
 
   if (historyState.status === 'loading') {
     return <LoadingState />;

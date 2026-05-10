@@ -110,7 +110,8 @@ Tables are the default for list and operational review pages.
 ### Forms
 
 - Use Ant Design `Form` patterns.
-- Required fields must be visible.
+- Required fields must be visible in both validation rules and labels. Add a Traditional Chinese required hint such as `（必填）` to the label when the field must be completed before submission.
+- Date fields must use an Ant Design date picker or date-range picker. Do not use freeform text inputs for dates unless the issue explicitly requires manual date entry.
 - Backend validation errors should map to fields when possible.
 - Submit buttons must show loading and prevent duplicate submission.
 - Cancel/back behavior must be clear.

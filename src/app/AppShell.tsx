@@ -137,6 +137,11 @@ function getSelectedKey(pathname: string) {
     return '/';
   }
 
+  const billingMatch = pathname.match(/^\/properties\/([^/]+)\/billing(?:\/.*)?$/);
+  if (billingMatch) {
+    return `/properties/${billingMatch[1]}/billing`;
+  }
+
   return pathname;
 }
 

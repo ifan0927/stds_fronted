@@ -1,6 +1,7 @@
 import {
   AuditOutlined,
   FileTextOutlined,
+  HistoryOutlined,
   ReloadOutlined,
   TeamOutlined,
   ToolOutlined,
@@ -1484,6 +1485,7 @@ function OccupiedRoomHub({
 
   const { lease, tenant, bills, billsStatus } = state.data;
   const rentBills = bills?.data ?? [];
+  const defaultHistoryPeriod = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1);
 
   return (
     <Drawer
@@ -1628,6 +1630,24 @@ function OccupiedRoomHub({
                   <span>
                     <Typography.Text strong>抄表與帳單</Typography.Text>
                     <Typography.Text type="secondary">前往帳務工作區，實際抄表/帳單流程由 #54/#55 承接。</Typography.Text>
+                  </span>
+                </Space>
+              </Link>
+            )}
+            {propertyId && lease.room_id && (
+              <Link
+                className="property-link-row"
+                to={buildPropertyPath(propertyId, '/billing/meter-history', buildActionQuery({
+                  roomId: lease.room_id,
+                  year: String(defaultHistoryPeriod.getFullYear()),
+                  month: String(defaultHistoryPeriod.getMonth() + 1),
+                }))}
+              >
+                <Space size={12} align="start">
+                  <span className="property-link-icon"><HistoryOutlined /></span>
+                  <span>
+                    <Typography.Text strong>抄表歷史</Typography.Text>
+                    <Typography.Text type="secondary">前往此房間的電表歷史，內容由 #55 承接。</Typography.Text>
                   </span>
                 </Space>
               </Link>

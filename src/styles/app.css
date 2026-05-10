@@ -307,6 +307,147 @@ a {
   margin-bottom: 16px;
 }
 
+.meter-summary-heading {
+  margin-bottom: 12px;
+}
+
+.meter-summary-heading h2.ant-typography {
+  margin: 0 0 4px;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.meter-summary-heading .ant-typography {
+  margin-bottom: 0;
+}
+
+.meter-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.meter-summary-card {
+  min-width: 0;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 12px;
+  background: #fafafa;
+  display: grid;
+  gap: 4px;
+}
+
+.meter-summary-card h3.ant-typography {
+  margin: 0;
+  font-size: 22px;
+  line-height: 30px;
+}
+
+.meter-summary-lower {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr);
+  gap: 12px;
+}
+
+.meter-status-panel {
+  min-width: 0;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 12px;
+  background: #ffffff;
+  display: grid;
+  gap: 8px;
+}
+
+.meter-panel-title {
+  font-weight: 600;
+}
+
+.meter-status-bar {
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #f0f0f0;
+  display: flex;
+}
+
+.meter-status-segment {
+  min-width: 6px;
+}
+
+.meter-status-paid {
+  background: #52c41a;
+}
+
+.meter-status-pending_payment,
+.meter-status-pending_meter {
+  background: #faad14;
+}
+
+.meter-status-overdue {
+  background: #ff4d4f;
+}
+
+.meter-status-voided,
+.meter-status-written_off {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.meter-reading-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meter-history-list {
+  display: grid;
+  gap: 12px;
+}
+
+.meter-history-item {
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 12px;
+  background: #ffffff;
+  display: grid;
+  gap: 10px;
+}
+
+.meter-history-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.meter-history-main .ant-typography {
+  margin-bottom: 0;
+}
+
+.meter-reading-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 26px;
+}
+
+.meter-reading-arrow {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.meter-history-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 12px;
+  line-height: 20px;
+}
+
 .form-inline-panel {
   border: 1px solid #d9d9d9;
   border-radius: 6px;
@@ -454,5 +595,14 @@ a {
   .billing-context-controls,
   .billing-context-select {
     width: 100%;
+  }
+
+  .meter-summary-grid,
+  .meter-summary-lower {
+    grid-template-columns: 1fr;
+  }
+
+  .meter-history-main {
+    display: grid;
   }
 }

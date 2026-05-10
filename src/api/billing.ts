@@ -3,7 +3,14 @@ import type { components } from './generated/schema';
 
 export type Bill = components['schemas']['BillResponse'];
 export type BillList = components['schemas']['BillListResponse'];
+export type PropertyMeterHistory = components['schemas']['PropertyMeterHistoryResponse'];
+export type PropertyMeterHistoryRow = components['schemas']['PropertyMeterHistoryRow'];
 export type RecordMeterRequest = components['schemas']['RecordMeterRequest'];
+
+export type MeterHistoryQuery = {
+  year?: number;
+  month?: number;
+};
 
 type ApiHelperOptions = {
   signal?: AbortSignal;
@@ -18,6 +25,10 @@ function propertyPath(propertyId: string, suffix = '') {
   return `/properties/${encodeURIComponent(propertyId)}${suffix}`;
 }
 
+function roomPath(roomId: string, suffix = '') {
+  return `/rooms/${encodeURIComponent(roomId)}${suffix}`;
+}
+
 export function listPropertyPendingMeters(
   propertyId: string,
   tokenProvider: AccessTokenProvider,
@@ -25,6 +36,36 @@ export function listPropertyPendingMeters(
 ) {
   return apiRequest<BillList>({
     path: propertyPath(propertyId, '/pending-meter'),
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function listPropertyMeterHistory(
+  propertyId: string,
+  query: Pick<MeterHistoryQuery, 'year'>,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<PropertyMeterHistory>({
+    path: propertyPath(propertyId, '/meter-history'),
+    query,
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function listRoomMeterHistory(
+  roomId: string,
+  query: MeterHistoryQuery,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<BillList>({
+    path: roomPath(roomId, '/meter-history'),
+    query,
     tokenProvider,
     signal: options.signal,
     fetcher: options.fetcher,

@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { getBill, listPropertyPendingMeters, submitBillMeter } from './billing';
+import {
+  getBill,
+  listPropertyMeterHistory,
+  listPropertyPendingMeters,
+  listRoomMeterHistory,
+  submitBillMeter,
+} from './billing';
 
 function jsonResponse(body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -32,6 +38,28 @@ describe('billing API helpers', () => {
 
     expect(fetcher).toHaveBeenCalledWith(
       expect.stringContaining('/bills/bill-1'),
+      expect.objectContaining({ method: 'GET' }),
+    );
+  });
+
+  it('loads property meter history with the backend year query', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ data: [] }));
+
+    await listPropertyMeterHistory('property/1', { year: 2026 }, () => 'token', { fetcher });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      expect.stringContaining('/properties/property%2F1/meter-history?year=2026'),
+      expect.objectContaining({ method: 'GET' }),
+    );
+  });
+
+  it('loads room meter history with backend year and month queries', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ data: [] }));
+
+    await listRoomMeterHistory('room/1', { year: 2026, month: 5 }, () => 'token', { fetcher });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      expect.stringContaining('/rooms/room%2F1/meter-history?year=2026&month=5'),
       expect.objectContaining({ method: 'GET' }),
     );
   });

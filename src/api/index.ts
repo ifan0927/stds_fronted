@@ -6,7 +6,9 @@ export { getDashboard } from './dashboard';
 export type { HomeDashboard } from './dashboard';
 export {
   getBill,
+  listPropertyMeterHistory,
   listPropertyPendingMeters,
+  listRoomMeterHistory,
   submitBillMeter,
 } from './billing';
 export {
@@ -36,6 +38,9 @@ export {
 export type {
   Bill as BillingBill,
   BillList as BillingBillList,
+  MeterHistoryQuery,
+  PropertyMeterHistory,
+  PropertyMeterHistoryRow,
   RecordMeterRequest,
 } from './billing';
 export type {

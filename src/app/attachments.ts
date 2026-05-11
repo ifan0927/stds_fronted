@@ -5,4 +5,4 @@ export {
   validateAttachmentFile,
   type AttachmentValidationResult,
 } from './attachmentRules';
-export { RoomAttachmentManager } from './AttachmentManager';
+export { RepairAttachmentManager, RoomAttachmentManager } from './AttachmentManager';

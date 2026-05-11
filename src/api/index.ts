@@ -7,10 +7,13 @@ export type { HomeDashboard } from './dashboard';
 export {
   createAttachmentUploadURL,
   createAttachmentUploadUrl,
+  createRepairRequestAttachment,
   createRoomAttachment,
   deleteAttachment,
   directUploadAttachmentFile,
+  listRepairRequestAttachments,
   listRoomAttachments,
+  registerRepairRequestAttachment,
   registerRoomAttachment,
   uploadAttachmentFile,
 } from './attachments';
@@ -92,6 +95,8 @@ export type {
   AttachmentUploadUrlRequest,
   AttachmentUploadUrlResponse,
   RegisterAttachmentRequest,
+  RegisterRepairAttachmentRequest,
+  RegisterRepairRequestAttachmentRequest,
 } from './attachments';
 export type {
   Bill as BillingBill,

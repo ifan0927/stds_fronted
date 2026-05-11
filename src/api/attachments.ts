@@ -9,6 +9,14 @@ export type AttachmentUploadURLResponse = components['schemas']['AttachmentUploa
 export type AttachmentUploadUrlRequest = AttachmentUploadURLRequest;
 export type AttachmentUploadUrlResponse = AttachmentUploadURLResponse;
 export type RegisterAttachmentRequest = components['schemas']['RegisterAttachmentRequest'];
+type GeneratedRegisterRepairRequestAttachmentRequest = components['schemas']['RegisterRepairRequestAttachmentRequest'];
+export type RegisterRepairRequestAttachmentRequest = Omit<
+  GeneratedRegisterRepairRequestAttachmentRequest,
+  'sort_order'
+> & {
+  sort_order?: GeneratedRegisterRepairRequestAttachmentRequest['sort_order'];
+};
+export type RegisterRepairAttachmentRequest = RegisterRepairRequestAttachmentRequest;
 export type AttachmentResourceType = AttachmentUploadURLRequest['resource_type'];
 export type AttachmentContentType = AttachmentUploadURLRequest['content_type'];
 
@@ -28,6 +36,10 @@ function attachmentPath(attachmentId: string) {
 
 function roomAttachmentPath(roomId: string) {
   return `/rooms/${encodeURIComponent(roomId)}/attachments`;
+}
+
+function repairRequestAttachmentPath(repairRequestId: string) {
+  return `/repair-requests/${encodeURIComponent(repairRequestId)}/attachments`;
 }
 
 export function createAttachmentUploadURL(
@@ -121,3 +133,34 @@ export function createRoomAttachment(
 }
 
 export const registerRoomAttachment = createRoomAttachment;
+
+export function listRepairRequestAttachments(
+  repairRequestId: string,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<AttachmentList>({
+    path: repairRequestAttachmentPath(repairRequestId),
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function createRepairRequestAttachment(
+  repairRequestId: string,
+  body: RegisterRepairAttachmentRequest,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<Attachment>({
+    method: 'POST',
+    path: repairRequestAttachmentPath(repairRequestId),
+    body,
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export const registerRepairRequestAttachment = createRepairRequestAttachment;

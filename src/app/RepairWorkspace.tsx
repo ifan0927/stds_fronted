@@ -47,6 +47,7 @@ import {
   type User,
 } from '../api';
 import { useAuth } from '../auth';
+import { RepairAttachmentManager } from './attachments';
 import { formatDashboardDateTime } from './format';
 import { getMutationSuccessFeedback } from './operation';
 import { abortRequest } from './requestAbort';
@@ -245,14 +246,17 @@ export default function RepairWorkspace({
   const [formMode, setFormMode] = useState<FormMode>({ type: 'closed', record: null });
   const [assignTarget, setAssignTarget] = useState<RepairRequest | null>(null);
   const [cancelTarget, setCancelTarget] = useState<RepairRequest | null>(null);
+  const [completeTarget, setCompleteTarget] = useState<RepairRequest | null>(null);
   const [selectedDetailId, setSelectedDetailId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [assignError, setAssignError] = useState<string | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [completeError, setCompleteError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<UiErrorState | null>(null);
   const [detailRefreshing, setDetailRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [actionId, setActionId] = useState<string | null>(null);
+  const [completeAttachmentBusy, setCompleteAttachmentBusy] = useState(false);
   const status = getValidStatus(searchParams.get('repair_status'));
   const assignedTo = searchParams.get('assignedTo')?.trim() || undefined;
   const page = getPositiveInteger(searchParams.get('repairPage'), defaultPage);
@@ -585,12 +589,18 @@ export default function RepairWorkspace({
         void messageApi.success(getMutationSuccessFeedback('維修單建立').content);
       }
 
-      setFormMode({ type: 'closed', record: null });
       repairForm.resetFields();
       if (response.id) {
-        setRepairQuery({ repairRequestId: response.id, page: defaultPage });
+        setFormMode({ type: 'edit', record: response });
+        repairForm.setFieldsValue({
+          room_id: response.room_id ?? undefined,
+          title: response.title ?? '',
+          description: response.description ?? '',
+        });
+      } else {
+        setFormMode({ type: 'closed', record: null });
       }
-      refreshAfterMutation(response.id, true);
+      refreshAfterMutation(formMode.type === 'edit' ? response.id : null, true);
     } catch (error: unknown) {
       const errorState = classifyApiErrorForUi(error);
 
@@ -633,6 +643,13 @@ export default function RepairWorkspace({
     cancelForm.resetFields();
   };
 
+  const openCompleteModal = (record: RepairRequest) => {
+    setCompleteTarget(record);
+    setCompleteError(null);
+    setActionError(null);
+    setCompleteAttachmentBusy(false);
+  };
+
   const runWorkflowAction = async (
     record: RepairRequest,
     action: 'progress' | 'complete',
@@ -665,6 +682,37 @@ export default function RepairWorkspace({
       });
       if (errorState.kind === 'validation' || errorState.retryable) {
         refreshAfterMutation(record.id, true);
+      }
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const handleComplete = async () => {
+    if (!completeTarget?.id || actionId || completeAttachmentBusy) {
+      return;
+    }
+
+    setActionId(completeTarget.id);
+    setCompleteError(null);
+    setActionError(null);
+
+    try {
+      const response = await completeRepairRequest(completeTarget.id, getAccessToken);
+      void messageApi.success(getMutationSuccessFeedback('維修完成').content);
+      setCompleteTarget(null);
+      refreshAfterMutation(response.id ?? completeTarget.id, true);
+    } catch (error: unknown) {
+      const errorState = classifyApiErrorForUi(error);
+
+      if (errorState.kind === 'unauthorized') {
+        navigate(getRepairReturnTo(location.pathname, location.search), { replace: true });
+        return;
+      }
+
+      setCompleteError(getWorkflowErrorCopy(error, errorState));
+      if (errorState.kind === 'validation' || errorState.retryable) {
+        refreshAfterMutation(completeTarget.id, true);
       }
     } finally {
       setActionId(null);
@@ -798,7 +846,7 @@ export default function RepairWorkspace({
             icon={<CheckOutlined />}
             loading={actionId === record.id}
             disabled={disabled}
-            onClick={() => void runWorkflowAction(record, 'complete')}
+            onClick={() => openCompleteModal(record)}
           >
             完成
           </Button>
@@ -1052,12 +1100,7 @@ export default function RepairWorkspace({
                 {detailRecord.updated_at ? formatDashboardDateTime(detailRecord.updated_at) : '未提供'}
               </Descriptions.Item>
             </Descriptions>
-            <Alert
-              type="info"
-              showIcon
-              message="附件功能尚未開放"
-              description="此階段不提供維修附件上傳、登記或刪除。"
-            />
+            {detailRecord.id && <RepairAttachmentManager repairRequestId={detailRecord.id} />}
             <Space wrap>
               <Button icon={<EditOutlined />} onClick={() => openEditDrawer(detailRecord)}>
                 編輯
@@ -1123,6 +1166,18 @@ export default function RepairWorkspace({
               <Input.TextArea rows={5} placeholder="描述目前看到的問題與需要處理的狀況。" />
             </Form.Item>
           </Form>
+          {formMode.type === 'create' ? (
+            <Alert
+              type="info"
+              showIcon
+              message="建立後可立即上傳附件"
+              description="維修附件需要先建立維修單取得系統編號；儲存成功後此 drawer 會保留在畫面上，並顯示施工照片與其他文件上傳入口。"
+            />
+          ) : formMode.type === 'edit' && formMode.record.id ? (
+            formMode.record.id && <RepairAttachmentManager repairRequestId={formMode.record.id} />
+          ) : (
+            null
+          )}
         </Space>
       </Drawer>
 
@@ -1195,6 +1250,43 @@ export default function RepairWorkspace({
               <Input.TextArea rows={3} placeholder="可留空" />
             </Form.Item>
           </Form>
+        </Space>
+      </Modal>
+
+      <Modal
+        title="完成維修"
+        open={Boolean(completeTarget)}
+        onCancel={() => {
+          if (!actionId) {
+            setCompleteTarget(null);
+            setCompleteError(null);
+          }
+        }}
+        okText="確認完成"
+        okButtonProps={{
+          loading: Boolean(completeTarget?.id && actionId === completeTarget.id),
+          disabled: completeAttachmentBusy,
+        }}
+        cancelText="返回"
+        width={720}
+        onOk={() => void handleComplete()}
+      >
+        <Space direction="vertical" size={16} className="page-stack">
+          <Alert
+            type="info"
+            showIcon
+            message="完工前可先補齊施工照片"
+            description="若有施工後照片或完工文件，請先在下方上傳；確認完成後會重新讀取維修與房間狀態。"
+          />
+          {completeError && (
+            <Alert type="error" showIcon message="無法完成維修" description={completeError} />
+          )}
+          {completeTarget?.id && (
+            <RepairAttachmentManager
+              repairRequestId={completeTarget.id}
+              onMutationBusyChange={setCompleteAttachmentBusy}
+            />
+          )}
         </Space>
       </Modal>
     </Space>

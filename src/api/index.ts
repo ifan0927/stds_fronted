@@ -15,6 +15,7 @@ export {
   exportPropertyFinancialReportCashflow,
   exportPropertyFinancialReportProfitLoss,
   exportPropertyOperationReport,
+  exportPropertyTenantRoster,
   getPropertyFinancialReport,
   getPropertyFinancialReportSummary,
 } from './reports';
@@ -75,6 +76,7 @@ export type {
   FinancialReportList,
   FinancialReportSummaryItem,
   FinancialReportSummaryQuery,
+  TenantRosterExportQuery,
 } from './reports';
 export type {
   AccountingTitleOption,

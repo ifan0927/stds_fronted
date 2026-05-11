@@ -9,6 +9,7 @@ const apiMocks = vi.hoisted(() => ({
   exportPropertyFinancialReportCashflow: vi.fn(),
   exportPropertyFinancialReportProfitLoss: vi.fn(),
   exportPropertyOperationReport: vi.fn(),
+  exportPropertyTenantRoster: vi.fn(),
   getPropertyFinancialReport: vi.fn(),
   getPropertyFinancialReportSummary: vi.fn(),
   openHtmlDocumentPreview: vi.fn(),
@@ -38,6 +39,7 @@ vi.mock('../api', () => ({
   exportPropertyFinancialReportCashflow: apiMocks.exportPropertyFinancialReportCashflow,
   exportPropertyFinancialReportProfitLoss: apiMocks.exportPropertyFinancialReportProfitLoss,
   exportPropertyOperationReport: apiMocks.exportPropertyOperationReport,
+  exportPropertyTenantRoster: apiMocks.exportPropertyTenantRoster,
   getPropertyFinancialReport: apiMocks.getPropertyFinancialReport,
   getPropertyFinancialReportSummary: apiMocks.getPropertyFinancialReportSummary,
   openHtmlDocumentPreview: apiMocks.openHtmlDocumentPreview,
@@ -108,6 +110,19 @@ vi.mock('antd', async () => {
         {children}
       </section>
     ),
+    DatePicker: ({
+      'aria-label': ariaLabel,
+      onChange,
+    }: {
+      'aria-label'?: string;
+      onChange?: (value: { format: () => string }) => void;
+    }) => (
+      <input
+        aria-label={ariaLabel}
+        type="date"
+        onChange={(event) => onChange?.({ format: () => event.target.value })}
+      />
+    ),
     Col: ({ children }: React.PropsWithChildren) => <div>{children}</div>,
     Empty: ({ description }: { description?: React.ReactNode }) => <div>{description}</div>,
     message: {
@@ -121,14 +136,17 @@ vi.mock('antd', async () => {
       value,
     }: {
       'aria-label'?: string;
-      onChange?: (value: number) => void;
-      options?: Array<{ value: number; label: string }>;
-      value?: number;
+      onChange?: (value: number | string) => void;
+      options?: Array<{ value: number | string; label: string }>;
+      value?: number | string;
     }) => (
       <select
         aria-label={ariaLabel}
         value={value}
-        onChange={(event) => onChange?.(Number(event.target.value))}
+        onChange={(event) => {
+          const selected = options?.find((option) => String(option.value) === event.target.value);
+          onChange?.(selected?.value ?? event.target.value);
+        }}
       >
         {options?.map((option) => (
           <option key={option.value} value={option.value}>{option.label}</option>
@@ -329,6 +347,40 @@ describe('PropertyReportsPage', () => {
         'property-1',
         2026,
         5,
+        authMocks.getAccessToken,
+      );
+      expect(apiMocks.openHtmlDocumentPreview).toHaveBeenCalled();
+    });
+  });
+
+  it('opens the tenant roster export from the report center entry', async () => {
+    mockReportData();
+    apiMocks.exportPropertyTenantRoster.mockResolvedValue({
+      html: '<!doctype html>',
+      contentType: 'text/html; charset=utf-8',
+      contentDisposition: null,
+      filename: null,
+    });
+    apiMocks.openHtmlDocumentPreview.mockReturnValue({ ok: true });
+    vi.spyOn(window, 'open').mockReturnValue({
+      close: vi.fn(),
+      document: {
+        close: vi.fn(),
+        open: vi.fn(),
+        write: vi.fn(),
+      },
+      focus: vi.fn(),
+    } as unknown as Window);
+
+    renderReportsPage();
+    await screen.findByText('五月租金');
+
+    fireEvent.click(screen.getByRole('button', { name: '開啟名冊' }));
+
+    await waitFor(() => {
+      expect(apiMocks.exportPropertyTenantRoster).toHaveBeenCalledWith(
+        'property-1',
+        expect.objectContaining({ include_vacant: true, format: 'html' }),
         authMocks.getAccessToken,
       );
       expect(apiMocks.openHtmlDocumentPreview).toHaveBeenCalled();

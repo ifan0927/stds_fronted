@@ -7,6 +7,7 @@ import {
   ApiError,
   createLease,
   createTenant,
+  exportPropertyTenantRoster,
   getLease,
   getRoom,
   getTenant,
@@ -14,6 +15,7 @@ import {
   listLeases,
   listPropertyTenantLeaseRoster,
   listTenants,
+  openHtmlDocumentPreview,
   type PropertyTenantLeaseRoster,
 } from '../api';
 import TenantLeaseRosterPage from './TenantLeaseRosterPage';
@@ -100,9 +102,17 @@ vi.mock('antd', async () => {
         {children}
       </section>
     ),
-    DatePicker: ({ name, onChange }: { name?: string; onChange?: (value: { format: () => string }) => void }) => (
+    DatePicker: ({
+      'aria-label': ariaLabel,
+      name,
+      onChange,
+    }: {
+      'aria-label'?: string;
+      name?: string;
+      onChange?: (value: { format: () => string }) => void;
+    }) => (
       <input
-        aria-label={name}
+        aria-label={ariaLabel ?? name}
         name={name}
         type="date"
         onChange={(event) => onChange?.({ format: () => event.target.value })}
@@ -341,6 +351,7 @@ vi.mock('../api', async () => {
     ...actual,
     createLease: vi.fn(),
     createTenant: vi.fn(),
+    exportPropertyTenantRoster: vi.fn(),
     getLease: vi.fn(),
     getRoom: vi.fn(),
     getTenant: vi.fn(),
@@ -348,6 +359,7 @@ vi.mock('../api', async () => {
     listLeases: vi.fn(),
     listPropertyTenantLeaseRoster: vi.fn(),
     listTenants: vi.fn(),
+    openHtmlDocumentPreview: vi.fn(),
   };
 });
 
@@ -726,5 +738,68 @@ describe('TenantLeaseRosterPage', () => {
 
     fireEvent.click(within(row).getByRole('button', { name: '帳單' }));
     expect(screen.getByLabelText('目前路徑').textContent).toBe('/properties/property-1/billing?roomId=room-1&leaseId=lease-1');
+  });
+
+  it('opens tenant roster HTML export with explicit params from the roster toolbar', async () => {
+    mockRosterResponse({
+      data: [{ room_id: 'room-1', room_label: '101 室', room_status: 'occupied', lease_id: 'lease-1' }],
+      pagination: { page: 1, limit: 20, total: 1, total_pages: 1, has_next: false },
+    });
+    vi.mocked(exportPropertyTenantRoster).mockResolvedValue({
+      html: '<!doctype html>',
+      contentType: 'text/html; charset=utf-8',
+      contentDisposition: null,
+      filename: null,
+    });
+    vi.mocked(openHtmlDocumentPreview).mockReturnValue({ ok: true });
+    vi.spyOn(window, 'open').mockReturnValue({
+      close: vi.fn(),
+      document: {
+        close: vi.fn(),
+        open: vi.fn(),
+        write: vi.fn(),
+      },
+      focus: vi.fn(),
+    } as unknown as Window);
+
+    renderTenantLeaseRosterPage('/properties/property-1/tenants');
+
+    await screen.findByText('101 室');
+    fireEvent.click(screen.getByRole('button', { name: '匯出房客名冊' }));
+
+    await waitFor(() => {
+      expect(exportPropertyTenantRoster).toHaveBeenCalledWith(
+        'property-1',
+        expect.objectContaining({ include_vacant: true, format: 'html' }),
+        authMocks.getAccessToken,
+      );
+      expect(openHtmlDocumentPreview).toHaveBeenCalled();
+    });
+  });
+
+  it('shows a retryable tenant roster export error without exposing backend internals', async () => {
+    mockRosterResponse({
+      data: [{ room_id: 'room-1', room_label: '101 室', room_status: 'occupied', lease_id: 'lease-1' }],
+      pagination: { page: 1, limit: 20, total: 1, total_pages: 1, has_next: false },
+    });
+    vi.mocked(exportPropertyTenantRoster).mockRejectedValue(createApiError(500, 'HTML_RENDER_FAILED'));
+    vi.spyOn(window, 'open').mockReturnValue({
+      close: vi.fn(),
+      document: {
+        close: vi.fn(),
+        open: vi.fn(),
+        write: vi.fn(),
+      },
+      focus: vi.fn(),
+    } as unknown as Window);
+
+    renderTenantLeaseRosterPage('/properties/property-1/tenants');
+
+    await screen.findByText('101 室');
+    fireEvent.click(screen.getByRole('button', { name: '匯出房客名冊' }));
+
+    expect(await screen.findByText('房客名冊無法開啟')).toBeTruthy();
+    expect(screen.getByText('系統暫時無法回應，請稍後重試。')).toBeTruthy();
+    expect(screen.queryByText('HTML_RENDER_FAILED')).toBeNull();
   });
 });

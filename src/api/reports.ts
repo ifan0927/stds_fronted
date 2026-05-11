@@ -10,6 +10,12 @@ export type FinancialReportSummaryQuery = {
   year?: number;
 };
 
+export type TenantRosterExportQuery = {
+  as_of: string;
+  include_vacant: boolean;
+  format: 'html';
+};
+
 type ApiHelperOptions = {
   signal?: AbortSignal;
   fetcher?: typeof fetch;
@@ -97,6 +103,22 @@ export function exportPropertyOperationReport(
   return apiRequest({
     path: propertyPath(propertyId, `/operation-report/${year}/${month}`),
     query: { format: 'html' },
+    responseType: 'html',
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function exportPropertyTenantRoster(
+  propertyId: string,
+  query: TenantRosterExportQuery,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest({
+    path: propertyPath(propertyId, '/tenant-roster'),
+    query,
     responseType: 'html',
     tokenProvider,
     signal: options.signal,

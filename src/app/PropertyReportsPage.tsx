@@ -8,6 +8,7 @@ import {
   Button,
   Card,
   Col,
+  DatePicker,
   Empty,
   message,
   Row,
@@ -19,6 +20,7 @@ import {
   Typography,
 } from 'antd';
 import type { TableColumnsType } from 'antd';
+import dayjs, { type Dayjs } from 'dayjs';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
@@ -26,6 +28,7 @@ import {
   exportPropertyFinancialReportCashflow,
   exportPropertyFinancialReportProfitLoss,
   exportPropertyOperationReport,
+  exportPropertyTenantRoster,
   getPropertyFinancialReport,
   getPropertyFinancialReportSummary,
   openHtmlDocumentPreview,
@@ -60,7 +63,7 @@ type DetailLoadState =
   | { status: 'not-found'; data: null }
   | { status: 'error'; data: null };
 
-type ExportKind = 'cashflow' | 'profit-loss' | 'operation';
+type ExportKind = 'cashflow' | 'profit-loss' | 'operation' | 'tenant-roster';
 
 type ExportErrorState = {
   kind: ExportKind;
@@ -71,7 +74,10 @@ const exportLabels: Record<ExportKind, string> = {
   cashflow: '收支表',
   'profit-loss': '損益表',
   operation: '營運報告',
+  'tenant-roster': '房客名冊',
 };
+
+const dateFormat = 'YYYY-MM-DD';
 
 const categoryLabels: Record<NonNullable<FinancialReportEntry['category']>, string> = {
   rent_payment: '租金收入',
@@ -92,6 +98,10 @@ function getDefaultReportPeriod(now = new Date()) {
     year: now.getFullYear(),
     month: now.getMonth() + 1,
   };
+}
+
+function getDefaultAsOfDate(now = new Date()) {
+  return dayjs(now).format(dateFormat);
 }
 
 const defaultPeriod = getDefaultReportPeriod();
@@ -193,6 +203,8 @@ export default function PropertyReportsPage() {
   const [detailState, setDetailState] = useState<DetailLoadState>({ status: 'loading', data: null });
   const [exporting, setExporting] = useState<ExportKind | null>(null);
   const [exportError, setExportError] = useState<ExportErrorState>(null);
+  const [tenantRosterAsOf, setTenantRosterAsOf] = useState(() => getDefaultAsOfDate());
+  const [tenantRosterIncludeVacant, setTenantRosterIncludeVacant] = useState(true);
   const rawYear = searchParams.get('year');
   const rawMonth = searchParams.get('month');
   const selectedYear = getValidYear(rawYear);
@@ -382,11 +394,17 @@ export default function PropertyReportsPage() {
     setExportError(null);
 
     try {
-      const response = kind === 'cashflow'
-        ? await exportPropertyFinancialReportCashflow(propertyId, period.year, period.month, getAccessToken)
-        : kind === 'profit-loss'
-          ? await exportPropertyFinancialReportProfitLoss(propertyId, period.year, period.month, getAccessToken)
-          : await exportPropertyOperationReport(propertyId, period.year, period.month, getAccessToken);
+      const response = kind === 'tenant-roster'
+        ? await exportPropertyTenantRoster(
+          propertyId,
+          { as_of: tenantRosterAsOf, include_vacant: tenantRosterIncludeVacant, format: 'html' },
+          getAccessToken,
+        )
+        : kind === 'cashflow'
+          ? await exportPropertyFinancialReportCashflow(propertyId, period.year, period.month, getAccessToken)
+          : kind === 'profit-loss'
+            ? await exportPropertyFinancialReportProfitLoss(propertyId, period.year, period.month, getAccessToken)
+            : await exportPropertyOperationReport(propertyId, period.year, period.month, getAccessToken);
       const result = openHtmlDocumentPreview(response, previewWindow as HtmlPreviewWindow | null);
 
       if (!result.ok) {
@@ -421,7 +439,13 @@ export default function PropertyReportsPage() {
     propertyId,
     selectedMonth,
     selectedYear,
+    tenantRosterAsOf,
+    tenantRosterIncludeVacant,
   ]);
+
+  const updateTenantRosterAsOf = useCallback((value: Dayjs | null) => {
+    setTenantRosterAsOf((previous) => value?.format(dateFormat) ?? previous);
+  }, []);
 
   const summaryRows = summaryState.status === 'ready' ? summaryState.data.data ?? [] : [];
   const selectedReport = detailState.status === 'ready' ? detailState.data : null;
@@ -715,15 +739,40 @@ export default function PropertyReportsPage() {
 
       <Card title="其他報表入口">
         <div className="property-link-grid">
-          <span className="property-link-row disabled-link-row" aria-disabled="true">
+          <div className="property-link-row">
             <Space size={12} align="start">
               <span className="property-link-icon"><FileTextOutlined /></span>
-              <span>
+              <span className="property-link-content">
                 <Typography.Text strong>房客名冊匯出</Typography.Text>
-                <Typography.Text type="secondary">此入口由租客與租約/物業脈絡承接，本輪只保留報表中心位置。</Typography.Text>
+                <Typography.Text type="secondary">開啟後端產生的物業房客名冊 HTML 文件。</Typography.Text>
+                <Space size={8} wrap className="inline-action-controls">
+                  <DatePicker
+                    aria-label="房客名冊基準日"
+                    value={dayjs(tenantRosterAsOf, dateFormat)}
+                    format={dateFormat}
+                    inputReadOnly
+                    onChange={updateTenantRosterAsOf}
+                  />
+                  <Select
+                    aria-label="房客名冊空房設定"
+                    className="tenant-roster-export-select"
+                    value={tenantRosterIncludeVacant ? 'true' : 'false'}
+                    options={[
+                      { value: 'true', label: '包含空房' },
+                      { value: 'false', label: '只列出租中' },
+                    ]}
+                    onChange={(value) => setTenantRosterIncludeVacant(value === 'true')}
+                  />
+                  <Button
+                    loading={exporting === 'tenant-roster'}
+                    onClick={() => void openReportExport('tenant-roster')}
+                  >
+                    開啟名冊
+                  </Button>
+                </Space>
               </span>
             </Space>
-          </span>
+          </div>
           <span className="property-link-row disabled-link-row" aria-disabled="true">
             <Space size={12} align="start">
               <span className="property-link-icon"><FileTextOutlined /></span>

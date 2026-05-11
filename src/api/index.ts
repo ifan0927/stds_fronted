@@ -5,6 +5,16 @@ export type { CurrentUser, UpdateCurrentUserRequest } from './auth';
 export { getDashboard } from './dashboard';
 export type { HomeDashboard } from './dashboard';
 export {
+  createAttachmentUploadURL,
+  createAttachmentUploadUrl,
+  createRoomAttachment,
+  deleteAttachment,
+  directUploadAttachmentFile,
+  listRoomAttachments,
+  registerRoomAttachment,
+  uploadAttachmentFile,
+} from './attachments';
+export {
   getBill,
   listPropertyMeterHistory,
   listPropertyPendingMeters,
@@ -72,6 +82,17 @@ export {
   updateLease,
   updateTenant,
 } from './tenants';
+export type {
+  Attachment,
+  AttachmentContentType,
+  AttachmentList,
+  AttachmentResourceType,
+  AttachmentUploadURLRequest,
+  AttachmentUploadURLResponse,
+  AttachmentUploadUrlRequest,
+  AttachmentUploadUrlResponse,
+  RegisterAttachmentRequest,
+} from './attachments';
 export type {
   Bill as BillingBill,
   BillList as BillingBillList,

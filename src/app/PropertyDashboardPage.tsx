@@ -1,6 +1,8 @@
 import {
   AuditOutlined,
   BankOutlined,
+  DeleteOutlined,
+  EditOutlined,
   FileTextOutlined,
   ReloadOutlined,
   TeamOutlined,
@@ -8,11 +10,13 @@ import {
 } from '@ant-design/icons';
 import {
   Alert,
+  App as AntdApp,
   Button,
   Card,
   Col,
   Descriptions,
   Empty,
+  Modal,
   Progress,
   Row,
   Space,
@@ -24,7 +28,9 @@ import type { TableColumnsType } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
+  ApiError,
   classifyApiErrorForUi,
+  deleteProperty,
   getProperty,
   getPropertyDashboard,
   type Property,
@@ -127,11 +133,26 @@ function getPropertyReturnTo(pathname: string) {
   return `/login?reason=session-expired&returnTo=${encodeURIComponent(pathname)}`;
 }
 
+function getDeleteFailureMessage(error: unknown) {
+  const errorState = classifyApiErrorForUi(error);
+
+  if (errorState.kind === 'forbidden') {
+    return '目前角色沒有權限刪除此物業。';
+  }
+
+  if (error instanceof ApiError && error.status === 422) {
+    return '此物業仍有出租中房間或關聯資料，暫時無法刪除。請先確認房間與租約狀態後再試。';
+  }
+
+  return errorState.description;
+}
+
 export default function PropertyDashboardPage() {
   const { propertyId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { getAccessToken } = useAuth();
+  const { message } = AntdApp.useApp();
+  const { currentUser, getAccessToken } = useAuth();
   const activeRequestRef = useRef<{
     id: number;
     controller: AbortController;
@@ -141,6 +162,13 @@ export default function PropertyDashboardPage() {
     status: 'loading',
     data: null,
   });
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const canWriteProperty = currentUser?.role === 'admin'
+    || currentUser?.role === 'organizer'
+    || currentUser?.role === 'staff';
+  const canDeleteProperty = currentUser?.role === 'admin' || currentUser?.role === 'organizer';
 
   const loadPropertyDashboard = useCallback(() => {
     if (!propertyId) {
@@ -202,6 +230,32 @@ export default function PropertyDashboardPage() {
 
     return () => abortRequest(activeRequestRef.current?.controller);
   }, [loadPropertyDashboard]);
+
+  const handleDeleteProperty = useCallback(async () => {
+    if (!propertyId) {
+      return;
+    }
+
+    setDeleteLoading(true);
+    setDeleteError(null);
+
+    try {
+      await deleteProperty(propertyId, getAccessToken);
+      void message.success('物業已刪除，正在返回物業列表。');
+      navigate('/properties');
+    } catch (error) {
+      const errorState = classifyApiErrorForUi(error);
+
+      if (errorState.kind === 'unauthorized') {
+        navigate(getPropertyReturnTo(location.pathname), { replace: true });
+        return;
+      }
+
+      setDeleteError(getDeleteFailureMessage(error));
+    } finally {
+      setDeleteLoading(false);
+    }
+  }, [getAccessToken, location.pathname, message, navigate, propertyId]);
 
   if (loadState.status === 'loading') {
     return <LoadingState />;
@@ -300,6 +354,20 @@ export default function PropertyDashboardPage() {
           <Button icon={<ReloadOutlined />} onClick={() => loadPropertyDashboard()}>
             重新整理
           </Button>
+          <Button icon={<EditOutlined />} disabled={!canWriteProperty}>
+            {canWriteProperty ? <Link to={`/properties/${propertyId}/edit`}>編輯主檔</Link> : '編輯主檔'}
+          </Button>
+          <Button
+            danger
+            icon={<DeleteOutlined />}
+            disabled={!canDeleteProperty}
+            onClick={() => {
+              setDeleteError(null);
+              setDeleteOpen(true);
+            }}
+          >
+            刪除
+          </Button>
         </Space>
       </div>
 
@@ -359,7 +427,28 @@ export default function PropertyDashboardPage() {
       <Row gutter={[16, 16]} align="top">
         <Col xs={24} xl={15}>
           <Space direction="vertical" size={16} className="page-stack">
-            <Card title="物業基本資料">
+            <Card
+              title="物業基本資料"
+              extra={(
+                <Space size={8} wrap>
+                  <Button size="small" icon={<EditOutlined />} disabled={!canWriteProperty}>
+                    {canWriteProperty ? <Link to={`/properties/${propertyId}/edit`}>編輯</Link> : '編輯'}
+                  </Button>
+                  <Button
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                    disabled={!canDeleteProperty}
+                    onClick={() => {
+                      setDeleteError(null);
+                      setDeleteOpen(true);
+                    }}
+                  >
+                    刪除
+                  </Button>
+                </Space>
+              )}
+            >
               <Descriptions column={{ xs: 1, md: 2 }} size="small">
                 <Descriptions.Item label="物業名稱">{propertyName}</Descriptions.Item>
                 <Descriptions.Item label="副標">{getOptionalText(property.subtitle)}</Descriptions.Item>
@@ -469,6 +558,45 @@ export default function PropertyDashboardPage() {
           description="後端回應缺少可識別的物業資料，請重新整理後再試。"
         />
       )}
+
+      {!canDeleteProperty && (
+        <Alert
+          type="info"
+          showIcon
+          message={canWriteProperty ? '刪除功能需要較高權限' : '此角色只能查看物業資料'}
+          description={canWriteProperty
+            ? '目前角色可以查看或編輯允許的資料，但不能刪除物業。'
+            : '目前角色不能編輯或刪除物業；如需異動請聯絡工作室成員。'}
+        />
+      )}
+
+      <Modal
+        title="確認刪除物業"
+        open={deleteOpen}
+        okText="刪除物業"
+        okButtonProps={{ danger: true, loading: deleteLoading }}
+        cancelText="取消"
+        onCancel={() => {
+          setDeleteOpen(false);
+          setDeleteError(null);
+        }}
+        onOk={() => void handleDeleteProperty()}
+      >
+        <Space direction="vertical" size={12} className="page-stack">
+          <Typography.Text>
+            刪除後此物業會從一般管理列表移除；若仍有房間或其他關聯資料，系統可能拒絕刪除。
+          </Typography.Text>
+          <Typography.Text strong>{propertyName}</Typography.Text>
+          {deleteError && (
+            <Alert
+              type="error"
+              showIcon
+              message="刪除物業失敗"
+              description={deleteError}
+            />
+          )}
+        </Space>
+      </Modal>
     </Space>
   );
 }

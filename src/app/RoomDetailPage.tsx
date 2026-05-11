@@ -4,7 +4,6 @@ import {
   DeleteOutlined,
   EditOutlined,
   FileSearchOutlined,
-  PaperClipOutlined,
   ReloadOutlined,
   SaveOutlined,
   TeamOutlined,
@@ -36,6 +35,7 @@ import {
 } from '../api';
 import { useAuth } from '../auth';
 import { formatDashboardDateTime, formatTwd, getRoomStatusLabel } from './format';
+import { AttachmentManager } from './AttachmentManager';
 import { getMutationFailureFeedback, getMutationSuccessFeedback } from './operation';
 import { getCanonicalRoomDetailPath, getRoomMutationErrorCopy } from './roomDetail';
 import {
@@ -331,17 +331,14 @@ export default function RoomDetailPage() {
               </Space>
             </Link>
           ))}
-          <div className="property-link-row disabled-link-row">
-            <Space size={12} align="start">
-              <span className="property-link-icon"><PaperClipOutlined /></span>
-              <span>
-                <Typography.Text strong>附件管理</Typography.Text>
-                <Typography.Text type="secondary">附件上傳與管理已排入 P2，這裡先保留入口位置。</Typography.Text>
-              </span>
-            </Space>
-          </div>
         </div>
       </Card>
+
+      {room.id && (
+        <Card>
+          <AttachmentManager resourceType="room" resourceId={room.id} />
+        </Card>
+      )}
 
       <RoomEditModal
         open={editOpen}

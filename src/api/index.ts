@@ -37,7 +37,14 @@ export {
   progressRepairRequest,
   updateRepairRequest,
 } from './repairs';
-export { listUsers } from './users';
+export {
+  assignUserProperties,
+  createUser,
+  getUser,
+  listUsers,
+  triggerUserPasswordReset,
+  updateUser,
+} from './users';
 export {
   createPropertyRoom,
   createRoomMaintenance,
@@ -99,6 +106,9 @@ export type {
 } from './repairs';
 export type {
   ListUsersQuery,
+  CreateUserRequest,
+  PropertyAssignmentRequest,
+  UpdateUserRequest,
   User,
   UserList,
   UserRole,

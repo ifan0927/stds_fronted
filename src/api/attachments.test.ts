@@ -2,10 +2,13 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createAttachmentUploadUrl,
   deleteAttachment,
+  listRepairRequestAttachments,
   listRoomAttachments,
+  registerRepairRequestAttachment,
   registerRoomAttachment,
   uploadAttachmentFile,
   type AttachmentUploadUrlRequest,
+  type RegisterRepairRequestAttachmentRequest,
   type RegisterAttachmentRequest,
 } from './attachments';
 
@@ -97,6 +100,90 @@ describe('attachment API helpers', () => {
     expect(await new Response(init?.body).json()).toEqual({
       nonce: 'nonce-1',
       file_name: '合約.pdf',
+    });
+  });
+
+  it('lists repair request attachments by encoded repair request id', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        data: [
+          {
+            id: 'attachment-1',
+            object_path: 'attachments/repairs/repair-1/before.jpg',
+            file_name: '施工前.jpg',
+            uploaded_by: 'user-1',
+            created_at: '2026-05-11T10:00:00Z',
+            sort_order: 1,
+            photo_stage: 'before',
+          },
+        ],
+      }),
+    );
+
+    const result = await listRepairRequestAttachments('repair/with/slash', () => 'firebase-id-token', { fetcher });
+
+    const [url, init] = fetcher.mock.calls[0];
+    expect(url).toBe('/api/v1/repair-requests/repair%2Fwith%2Fslash/attachments');
+    expect(init?.method).toBe('GET');
+    expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer firebase-id-token');
+    expect(result.data?.[0]?.photo_stage).toBe('before');
+  });
+
+  it('registers repair photo attachments with nonce, file name, photo stage, and sort order', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        id: 'attachment-1',
+        object_path: 'attachments/repairs/repair-1/before.jpg',
+        file_name: '施工前.jpg',
+        uploaded_by: 'user-1',
+        created_at: '2026-05-11T10:00:00Z',
+        sort_order: 1,
+        photo_stage: 'before',
+      }, { status: 201 }),
+    );
+    const body = {
+      nonce: 'nonce-1',
+      file_name: '施工前.jpg',
+      photo_stage: 'before',
+      sort_order: 1,
+    } satisfies RegisterRepairRequestAttachmentRequest;
+
+    await registerRepairRequestAttachment('repair/with/slash', body, () => 'firebase-id-token', { fetcher });
+
+    const [url, init] = fetcher.mock.calls[0];
+    expect(url).toBe('/api/v1/repair-requests/repair%2Fwith%2Fslash/attachments');
+    expect(init?.method).toBe('POST');
+    expect(await new Response(init?.body).json()).toEqual({
+      nonce: 'nonce-1',
+      file_name: '施工前.jpg',
+      photo_stage: 'before',
+      sort_order: 1,
+    });
+  });
+
+  it('registers repair document attachments without photo stage or sort order metadata', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        id: 'attachment-1',
+        object_path: 'attachments/repairs/repair-1/quote.pdf',
+        file_name: '估價單.pdf',
+        uploaded_by: 'user-1',
+        created_at: '2026-05-11T10:00:00Z',
+        sort_order: null,
+        photo_stage: null,
+      }, { status: 201 }),
+    );
+    const body = {
+      nonce: 'nonce-1',
+      file_name: '估價單.pdf',
+    } satisfies RegisterRepairRequestAttachmentRequest;
+
+    await registerRepairRequestAttachment('repair/with/slash', body, () => 'firebase-id-token', { fetcher });
+
+    const [, init] = fetcher.mock.calls[0];
+    expect(await new Response(init?.body).json()).toEqual({
+      nonce: 'nonce-1',
+      file_name: '估價單.pdf',
     });
   });
 

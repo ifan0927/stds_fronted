@@ -11,19 +11,23 @@ const apiMocks = vi.hoisted(() => ({
   assignRepairRequest: vi.fn(),
   cancelRepairRequest: vi.fn(),
   completeRepairRequest: vi.fn(),
+  createAttachmentUploadUrl: vi.fn(),
   createJournalLog: vi.fn(),
   createRepairRequest: vi.fn(),
   deleteJournalLog: vi.fn(),
   getRepairRequest: vi.fn(),
   getJournalLog: vi.fn(),
+  listRepairRequestAttachments: vi.fn(),
   listRepairRequests: vi.fn(),
   listUsers: vi.fn(),
   listJournalExpenseAccountingTitles: vi.fn(),
   listJournalLogs: vi.fn(),
   listPropertyTenantLeaseRoster: vi.fn(),
   progressRepairRequest: vi.fn(),
+  registerRepairRequestAttachment: vi.fn(),
   updateRepairRequest: vi.fn(),
   updateJournalLog: vi.fn(),
+  uploadAttachmentFile: vi.fn(),
 }));
 
 const authMocks = vi.hoisted(() => ({
@@ -35,11 +39,13 @@ vi.mock('@ant-design/icons', () => ({
   CheckOutlined: () => null,
   DeleteOutlined: () => null,
   EditOutlined: () => null,
+  PaperClipOutlined: () => null,
   PlayCircleOutlined: () => null,
   PlusOutlined: () => null,
   ReloadOutlined: () => null,
   StopOutlined: () => null,
   ToolOutlined: () => null,
+  UploadOutlined: () => null,
   UserSwitchOutlined: () => null,
 }));
 
@@ -55,19 +61,23 @@ vi.mock('../api', async () => {
     assignRepairRequest: apiMocks.assignRepairRequest,
     cancelRepairRequest: apiMocks.cancelRepairRequest,
     completeRepairRequest: apiMocks.completeRepairRequest,
+    createAttachmentUploadUrl: apiMocks.createAttachmentUploadUrl,
     createJournalLog: apiMocks.createJournalLog,
     createRepairRequest: apiMocks.createRepairRequest,
     deleteJournalLog: apiMocks.deleteJournalLog,
     getRepairRequest: apiMocks.getRepairRequest,
     getJournalLog: apiMocks.getJournalLog,
+    listRepairRequestAttachments: apiMocks.listRepairRequestAttachments,
     listRepairRequests: apiMocks.listRepairRequests,
     listUsers: apiMocks.listUsers,
     listJournalExpenseAccountingTitles: apiMocks.listJournalExpenseAccountingTitles,
     listJournalLogs: apiMocks.listJournalLogs,
     listPropertyTenantLeaseRoster: apiMocks.listPropertyTenantLeaseRoster,
     progressRepairRequest: apiMocks.progressRepairRequest,
+    registerRepairRequestAttachment: apiMocks.registerRepairRequestAttachment,
     updateRepairRequest: apiMocks.updateRepairRequest,
     updateJournalLog: apiMocks.updateJournalLog,
+    uploadAttachmentFile: apiMocks.uploadAttachmentFile,
   };
 });
 
@@ -202,6 +212,78 @@ function mockRepairData() {
     data: [{ id: 'staff-1', name: '陳美芳', email: 'staff@example.com', role: 'staff' }],
     pagination: { page: 1, limit: 100, total: 1, total_pages: 1 },
   });
+  apiMocks.listRepairRequestAttachments.mockResolvedValue({
+    data: [
+      {
+        id: 'attachment-1',
+        object_path: 'gs://private-bucket/attachments/repairs/repair-1/before.jpg',
+        file_name: '施工前.jpg',
+        uploaded_by: 'user-1',
+        created_at: '2026-05-11T10:00:00Z',
+        sort_order: 1,
+        photo_stage: 'before',
+      },
+    ],
+  });
+}
+
+function mockInProgressRepairData() {
+  apiMocks.listRepairRequests.mockResolvedValue({
+    data: [
+      {
+        id: 'repair-1',
+        property_id: 'property-1',
+        room_id: 'room-1',
+        property_label: '台北大安物業',
+        room_label: '201',
+        submitted_by_label: '王小明',
+        assigned_to_label: '陳美芳',
+        title: '浴室漏水',
+        description: '天花板持續漏水',
+        status: 'in_progress',
+        submitted_at: '2026-05-08T06:30:00Z',
+        assigned_at: '2026-05-08T07:00:00Z',
+        updated_at: '2026-05-08T07:30:00Z',
+      },
+    ],
+    pagination: { page: 1, limit: 20, total: 1, total_pages: 1 },
+  });
+  apiMocks.getRepairRequest.mockResolvedValue({
+    id: 'repair-1',
+    property_id: 'property-1',
+    room_id: 'room-1',
+    property_label: '台北大安物業',
+    room_label: '201',
+    submitted_by_label: '王小明',
+    assigned_to_label: '陳美芳',
+    title: '浴室漏水',
+    description: '天花板持續漏水',
+    status: 'in_progress',
+    submitted_at: '2026-05-08T06:30:00Z',
+    assigned_at: '2026-05-08T07:00:00Z',
+    updated_at: '2026-05-08T07:30:00Z',
+  });
+  apiMocks.completeRepairRequest.mockResolvedValue({
+    id: 'repair-1',
+    property_id: 'property-1',
+    room_id: 'room-1',
+    property_label: '台北大安物業',
+    room_label: '201',
+    submitted_by_label: '王小明',
+    assigned_to_label: '陳美芳',
+    title: '浴室漏水',
+    description: '天花板持續漏水',
+    status: 'completed',
+    submitted_at: '2026-05-08T06:30:00Z',
+    assigned_at: '2026-05-08T07:00:00Z',
+    completed_at: '2026-05-08T08:00:00Z',
+    updated_at: '2026-05-08T08:00:00Z',
+  });
+  apiMocks.listUsers.mockResolvedValue({
+    data: [{ id: 'staff-1', name: '陳美芳', email: 'staff@example.com', role: 'staff' }],
+    pagination: { page: 1, limit: 100, total: 1, total_pages: 1 },
+  });
+  apiMocks.listRepairRequestAttachments.mockResolvedValue({ data: [] });
 }
 
 afterEach(() => {
@@ -331,6 +413,119 @@ describe('JournalPage', () => {
     expect(screen.getByRole('button', { name: '派工' })).toBeTruthy();
   }, 10000);
 
+  it('keeps attachment upload entry in the create flow after the repair is created', async () => {
+    mockJournalData();
+    mockRepairData();
+    apiMocks.createRepairRequest.mockResolvedValue({
+      id: 'repair-new',
+      property_id: 'property-1',
+      room_id: 'room-1',
+      property_label: '台北大安物業',
+      room_label: '201',
+      submitted_by_label: '王小明',
+      assigned_to_label: null,
+      title: '新增漏水',
+      description: '新增維修描述',
+      status: 'submitted',
+      submitted_at: '2026-05-11T10:00:00Z',
+      updated_at: '2026-05-11T10:00:00Z',
+    });
+
+    renderJournalPage('/properties/property-1/journal?tab=repair&roomId=room-1');
+
+    await screen.findByText('浴室漏水');
+    fireEvent.click(screen.getByRole('button', { name: '新增維修' }));
+    expect(await screen.findByText('建立後可立即上傳附件')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('維修標題（必填）'), { target: { value: '新增漏水' } });
+    fireEvent.change(screen.getByLabelText('問題描述（必填）'), { target: { value: '新增維修描述' } });
+    fireEvent.click(screen.getByRole('button', { name: '儲存並重新載入' }));
+
+    await waitFor(() => {
+      expect(apiMocks.createRepairRequest).toHaveBeenCalled();
+    });
+    expect(await screen.findByText('維修附件')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /選擇施工照片/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /選擇其他文件/ })).toBeTruthy();
+    expect(screen.getByLabelText('目前路徑').textContent).toBe('/properties/property-1/journal?tab=repair&roomId=room-1');
+    expect(screen.queryByRole('dialog', { name: '維修詳情' })).toBeNull();
+    expect(apiMocks.listRepairRequestAttachments).toHaveBeenCalledWith(
+      'repair-new',
+      authMocks.getAccessToken,
+      expect.any(Object),
+    );
+  }, 20000);
+
+  it('shows attachment upload entry in the repair edit drawer', async () => {
+    mockJournalData();
+    mockRepairData();
+
+    renderJournalPage('/properties/property-1/journal?tab=repair&roomId=room-1');
+
+    await screen.findByText('浴室漏水');
+    fireEvent.click(screen.getByRole('button', { name: '編輯' }));
+
+    expect(await screen.findByText('維修附件')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /選擇施工照片/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /選擇其他文件/ })).toBeTruthy();
+    expect(apiMocks.listRepairRequestAttachments).toHaveBeenCalledWith(
+      'repair-1',
+      authMocks.getAccessToken,
+      expect.any(Object),
+    );
+  });
+
+  it('opens completion confirmation with attachment upload before completing repair', async () => {
+    mockJournalData();
+    mockInProgressRepairData();
+
+    renderJournalPage('/properties/property-1/journal?tab=repair&roomId=room-1');
+
+    await screen.findByText('浴室漏水');
+    fireEvent.click(screen.getByRole('button', { name: '完成' }));
+
+    expect(await screen.findByText('完工前可先補齊施工照片')).toBeTruthy();
+    expect(screen.getByText('維修附件')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /選擇施工照片/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '確認完成' }));
+
+    await waitFor(() => {
+      expect(apiMocks.completeRepairRequest).toHaveBeenCalledWith(
+        'repair-1',
+        authMocks.getAccessToken,
+      );
+    });
+  }, 20000);
+
+  it('keeps completion disabled while repair attachment upload is in progress', async () => {
+    mockJournalData();
+    mockInProgressRepairData();
+    apiMocks.createAttachmentUploadUrl.mockResolvedValue({
+      upload_url: 'https://storage.example/upload-photo?signature=masked',
+      nonce: 'nonce-photo',
+      expires_at: '2026-05-11T10:00:00Z',
+    });
+    apiMocks.uploadAttachmentFile.mockReturnValue(new Promise(() => undefined));
+
+    renderJournalPage('/properties/property-1/journal?tab=repair&roomId=room-1');
+
+    await screen.findByText('浴室漏水');
+    fireEvent.click(screen.getByRole('button', { name: '完成' }));
+
+    expect(await screen.findByText('完工前可先補齊施工照片')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /選擇施工照片/ }));
+    fireEvent.change(screen.getByLabelText('選擇施工照片'), {
+      target: { files: [new File(['image bytes'], '施工後.jpg', { type: 'image/jpeg' })] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /確認上傳施工照片/ }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '確認完成' }).hasAttribute('disabled')).toBe(true);
+    });
+    fireEvent.click(screen.getByRole('button', { name: '確認完成' }));
+
+    expect(apiMocks.completeRepairRequest).not.toHaveBeenCalled();
+  }, 20000);
+
   it('opens repair detail when handoff includes repair request id', async () => {
     mockJournalData();
     mockRepairData();
@@ -346,7 +541,13 @@ describe('JournalPage', () => {
     });
 
     expect(await screen.findByText('維修詳情')).toBeTruthy();
-    expect(screen.getByText('附件功能尚未開放')).toBeTruthy();
+    expect(screen.queryByText('附件功能尚未開放')).toBeNull();
+    expect(await screen.findByText('施工前.jpg')).toBeTruthy();
+    expect(apiMocks.listRepairRequestAttachments).toHaveBeenCalledWith(
+      'repair-1',
+      authMocks.getAccessToken,
+      expect.any(Object),
+    );
   });
 
   it('keeps repair detail drawer synchronized with repair request id changes in the URL', async () => {
@@ -415,6 +616,7 @@ describe('JournalPage', () => {
           updated_at: '2026-05-08T06:30:00Z',
         },
     ));
+    apiMocks.listRepairRequestAttachments.mockResolvedValue({ data: [] });
 
     renderJournalPage('/properties/property-1/journal?tab=repair&roomId=room-1&repairRequestId=repair-1');
 

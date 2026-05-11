@@ -5,7 +5,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createAttachmentUploadUrl,
   deleteAttachment,
+  listRepairRequestAttachments,
   listRoomAttachments,
+  registerRepairRequestAttachment,
   registerRoomAttachment,
   uploadAttachmentFile,
 } from '../api';
@@ -38,7 +40,9 @@ vi.mock('../api', async () => {
     ...actual,
     createAttachmentUploadUrl: vi.fn(),
     deleteAttachment: vi.fn(),
+    listRepairRequestAttachments: vi.fn(),
     listRoomAttachments: vi.fn(),
+    registerRepairRequestAttachment: vi.fn(),
     registerRoomAttachment: vi.fn(),
     uploadAttachmentFile: vi.fn(),
   };
@@ -80,6 +84,59 @@ function renderRoomAttachmentManager() {
   return render(<AttachmentManager resourceType="room" resourceId="room/with/slash" />);
 }
 
+function mockRepairAttachmentList() {
+  vi.mocked(listRepairRequestAttachments).mockResolvedValue({
+    data: [
+      {
+        id: 'attachment-before',
+        object_path: 'gs://private-bucket/attachments/repairs/repair-1/before.jpg',
+        file_name: '施工前.jpg',
+        uploaded_by: 'user-1',
+        created_at: '2026-05-11T10:00:00Z',
+        sort_order: 1,
+        photo_stage: 'before',
+      },
+      {
+        id: 'attachment-doc',
+        object_path: 'gs://private-bucket/attachments/repairs/repair-1/quote.pdf',
+        file_name: '估價單.pdf',
+        uploaded_by: 'user-1',
+        created_at: '2026-05-11T10:01:00Z',
+        sort_order: null,
+        photo_stage: null,
+      },
+      {
+        id: 'attachment-after',
+        object_path: 'gs://private-bucket/attachments/repairs/repair-1/after.png',
+        file_name: '施工後.png',
+        uploaded_by: 'user-1',
+        created_at: '2026-05-11T10:02:00Z',
+        sort_order: 2,
+        photo_stage: 'after',
+      },
+    ],
+  });
+}
+
+function renderRepairAttachmentManager() {
+  return render(<AttachmentManager resourceType="repair-request" resourceId="repair/with/slash" />);
+}
+
+function getModeFileInput(label: string) {
+  const input = screen.getByLabelText(label);
+
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error('Expected repair attachment file input');
+  }
+
+  return input;
+}
+
+function clickLastButton(name: RegExp) {
+  const buttons = screen.getAllByRole('button', { name });
+  fireEvent.click(buttons[buttons.length - 1]);
+}
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -106,10 +163,12 @@ describe('RoomAttachmentManager', () => {
 
     const { container } = renderRoomAttachmentManager();
     await screen.findByText('合約.pdf');
+    expect(screen.getByText('已上傳附件（1）')).toBeTruthy();
 
     const file = new File(['raw file bytes'], '新附件.pdf', { type: 'application/pdf' });
     fireEvent.change(getFileInput(container), { target: { files: [file] } });
-    fireEvent.click(screen.getByRole('button', { name: /上傳附件/ }));
+    expect(screen.getByText('已選擇附件')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /確認上傳附件/ }));
 
     await waitFor(() => {
       expect(registerRoomAttachment).toHaveBeenCalledWith(
@@ -183,14 +242,14 @@ describe('RoomAttachmentManager', () => {
 
     const firstFile = new File(['first bytes'], '重試附件.pdf', { type: 'application/pdf' });
     fireEvent.change(getFileInput(container), { target: { files: [firstFile] } });
-    fireEvent.click(screen.getByRole('button', { name: /上傳附件/ }));
+    fireEvent.click(screen.getByRole('button', { name: /確認上傳附件/ }));
 
     await screen.findAllByText(/附件上傳失敗/);
     expect(registerRoomAttachment).not.toHaveBeenCalled();
 
     const retryFile = new File(['retry bytes'], '重試附件.pdf', { type: 'application/pdf' });
     fireEvent.change(getFileInput(container), { target: { files: [retryFile] } });
-    fireEvent.click(screen.getByRole('button', { name: /上傳附件/ }));
+    fireEvent.click(screen.getByRole('button', { name: /確認上傳附件/ }));
 
     await waitFor(() => {
       expect(registerRoomAttachment).toHaveBeenCalledWith(
@@ -230,7 +289,7 @@ describe('RoomAttachmentManager', () => {
 
     const file = new File(['raw file bytes'], '登記失敗.pdf', { type: 'application/pdf' });
     fireEvent.change(getFileInput(container), { target: { files: [file] } });
-    fireEvent.click(screen.getByRole('button', { name: /上傳附件/ }));
+    fireEvent.click(screen.getByRole('button', { name: /確認上傳附件/ }));
 
     await screen.findAllByText(/附件上傳失敗/);
     expect(uploadAttachmentFile).toHaveBeenCalledTimes(1);
@@ -278,5 +337,161 @@ describe('RoomAttachmentManager', () => {
     expect(visibleText).not.toMatch(/upload_url|nonce|object_path|bucket|GCS|signed URL|service account|storage/i);
     expect(visibleText).not.toContain('gs://private-bucket');
     expect(visibleText).not.toContain('https://storage.example/upload-1');
+  });
+});
+
+describe('RepairAttachmentManager', () => {
+  it('shows staged photos and documents in the backend order with separate upload entries', async () => {
+    mockRepairAttachmentList();
+
+    renderRepairAttachmentManager();
+
+    const beforePhoto = await screen.findByText('施工前.jpg');
+    const documentAttachment = screen.getByText('估價單.pdf');
+    const afterPhoto = screen.getByText('施工後.png');
+    expect(beforePhoto.compareDocumentPosition(documentAttachment))
+      .toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(documentAttachment.compareDocumentPosition(afterPhoto))
+      .toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(screen.getByText('施工前')).toBeTruthy();
+    expect(screen.getByText('排序：1')).toBeTruthy();
+    expect(screen.getByText('施工後')).toBeTruthy();
+    expect(screen.getByText('排序：2')).toBeTruthy();
+    expect(screen.getByText('文件')).toBeTruthy();
+    expect(screen.queryByText('排序：0')).toBeNull();
+    expect(screen.getByText('已上傳附件（3）')).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: /選擇施工照片/ }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /選擇其他文件/ }).length).toBeGreaterThan(0);
+  });
+
+  it('registers repair photo uploads with stage metadata and rejects PDFs in photo mode', async () => {
+    mockRepairAttachmentList();
+    vi.mocked(createAttachmentUploadUrl).mockResolvedValue({
+      upload_url: 'https://storage.example/upload-photo?signature=masked',
+      nonce: 'nonce-photo',
+      expires_at: '2026-05-11T10:00:00Z',
+    });
+    vi.mocked(uploadAttachmentFile).mockResolvedValue(undefined);
+    vi.mocked(registerRepairRequestAttachment).mockResolvedValue({
+      id: 'attachment-photo',
+      object_path: 'gs://private-bucket/attachments/repairs/repair-1/before.jpg',
+      file_name: '施工前.jpg',
+      uploaded_by: 'user-1',
+      created_at: '2026-05-11T10:03:00Z',
+      sort_order: 3,
+      photo_stage: 'before',
+    });
+
+    renderRepairAttachmentManager();
+    await screen.findByText('施工前.jpg');
+
+    const pdfFile = new File(['pdf bytes'], '錯誤.pdf', { type: 'application/pdf' });
+    fireEvent.click(screen.getAllByRole('button', { name: /選擇施工照片/ })[0]);
+    fireEvent.change(getModeFileInput('選擇施工照片'), { target: { files: [pdfFile] } });
+    expect(screen.getByText('已選擇施工照片')).toBeTruthy();
+    clickLastButton(/確認上傳施工照片/);
+
+    expect(await screen.findAllByText('施工照片僅支援 JPG、PNG 或 HEIC。')).not.toHaveLength(0);
+    expect(createAttachmentUploadUrl).not.toHaveBeenCalled();
+
+    const imageFile = new File(['image bytes'], '施工前.jpg', { type: 'image/jpeg' });
+    fireEvent.click(screen.getAllByRole('button', { name: /選擇施工照片/ })[0]);
+    fireEvent.change(getModeFileInput('選擇施工照片'), { target: { files: [imageFile] } });
+    fireEvent.change(screen.getByLabelText('施工照片排序'), { target: { value: '3' } });
+    clickLastButton(/確認上傳施工照片/);
+
+    await waitFor(() => {
+      expect(registerRepairRequestAttachment).toHaveBeenCalledWith(
+        'repair/with/slash',
+        {
+          nonce: 'nonce-photo',
+          file_name: '施工前.jpg',
+          photo_stage: 'before',
+          sort_order: 3,
+        },
+        expect.any(Function),
+      );
+    });
+    expect(createAttachmentUploadUrl).toHaveBeenCalledWith(
+      {
+        resource_type: 'repair_request',
+        resource_id: 'repair/with/slash',
+        file_name: '施工前.jpg',
+        content_type: 'image/jpeg',
+        file_size: imageFile.size,
+      },
+      expect.any(Function),
+    );
+    expect(uploadAttachmentFile).toHaveBeenCalledWith(
+      'https://storage.example/upload-photo?signature=masked',
+      imageFile,
+      'image/jpeg',
+      {},
+    );
+    expect(listRepairRequestAttachments).toHaveBeenCalledTimes(2);
+  });
+
+  it('registers repair document uploads without photo metadata and rejects images in document mode', async () => {
+    mockRepairAttachmentList();
+    vi.mocked(createAttachmentUploadUrl).mockResolvedValue({
+      upload_url: 'https://storage.example/upload-document?signature=masked',
+      nonce: 'nonce-document',
+      expires_at: '2026-05-11T10:00:00Z',
+    });
+    vi.mocked(uploadAttachmentFile).mockResolvedValue(undefined);
+    vi.mocked(registerRepairRequestAttachment).mockResolvedValue({
+      id: 'attachment-document',
+      object_path: 'gs://private-bucket/attachments/repairs/repair-1/quote.pdf',
+      file_name: '估價單.pdf',
+      uploaded_by: 'user-1',
+      created_at: '2026-05-11T10:03:00Z',
+      sort_order: null,
+      photo_stage: null,
+    });
+
+    renderRepairAttachmentManager();
+    await screen.findByText('施工前.jpg');
+
+    const imageFile = new File(['image bytes'], '錯誤.png', { type: 'image/png' });
+    fireEvent.click(screen.getAllByRole('button', { name: /選擇其他文件/ })[0]);
+    fireEvent.change(getModeFileInput('選擇其他文件'), { target: { files: [imageFile] } });
+    expect(screen.getByText('已選擇其他文件')).toBeTruthy();
+    clickLastButton(/確認上傳其他文件/);
+
+    expect(await screen.findAllByText('其他文件僅支援 PDF。')).not.toHaveLength(0);
+    expect(createAttachmentUploadUrl).not.toHaveBeenCalled();
+
+    const pdfFile = new File(['pdf bytes'], '估價單.pdf', { type: 'application/pdf' });
+    fireEvent.click(screen.getAllByRole('button', { name: /選擇其他文件/ })[0]);
+    fireEvent.change(getModeFileInput('選擇其他文件'), { target: { files: [pdfFile] } });
+    clickLastButton(/確認上傳其他文件/);
+
+    await waitFor(() => {
+      expect(registerRepairRequestAttachment).toHaveBeenCalledWith(
+        'repair/with/slash',
+        {
+          nonce: 'nonce-document',
+          file_name: '估價單.pdf',
+        },
+        expect.any(Function),
+      );
+    });
+    expect(createAttachmentUploadUrl).toHaveBeenCalledWith(
+      {
+        resource_type: 'repair_request',
+        resource_id: 'repair/with/slash',
+        file_name: '估價單.pdf',
+        content_type: 'application/pdf',
+        file_size: pdfFile.size,
+      },
+      expect.any(Function),
+    );
+    expect(uploadAttachmentFile).toHaveBeenCalledWith(
+      'https://storage.example/upload-document?signature=masked',
+      pdfFile,
+      'application/pdf',
+      {},
+    );
+    expect(listRepairRequestAttachments).toHaveBeenCalledTimes(2);
   });
 });

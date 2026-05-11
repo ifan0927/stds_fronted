@@ -4,6 +4,8 @@ import type { components } from './generated/schema';
 export type Property = components['schemas']['PropertyResponse'];
 export type PropertyList = components['schemas']['PropertyListResponse'];
 export type PropertyDashboard = components['schemas']['DashboardResponse'];
+export type CreatePropertyRequest = components['schemas']['CreatePropertyRequest'];
+export type UpdatePropertyRequest = components['schemas']['UpdatePropertyRequest'];
 export type Room = components['schemas']['RoomResponse'];
 export type RoomList = components['schemas']['RoomListResponse'];
 export type RoomStatus = NonNullable<Room['status']>;
@@ -63,6 +65,52 @@ export function getPropertyDashboard(
 ) {
   return apiRequest<PropertyDashboard>({
     path: propertyPath(propertyId, '/dashboard'),
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function createProperty(
+  body: CreatePropertyRequest,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<Property>({
+    method: 'POST',
+    path: '/properties',
+    body,
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function updateProperty(
+  propertyId: string,
+  body: UpdatePropertyRequest,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<Property>({
+    method: 'PATCH',
+    path: propertyPath(propertyId),
+    body,
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function deleteProperty(
+  propertyId: string,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest({
+    method: 'DELETE',
+    path: propertyPath(propertyId),
+    responseType: 'void',
     tokenProvider,
     signal: options.signal,
     fetcher: options.fetcher,

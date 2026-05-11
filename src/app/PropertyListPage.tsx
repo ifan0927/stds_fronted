@@ -6,11 +6,11 @@ import {
   ReloadOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
-import { Alert, Button, Card, Progress, Space, Table, Tag, Typography } from 'antd';
+import { Alert, App as AntdApp, Button, Card, Modal, Progress, Space, Table, Tag, Tooltip, Typography } from 'antd';
 import type { TableColumnsType } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { classifyApiErrorForUi, listProperties, type Property } from '../api';
+import { ApiError, classifyApiErrorForUi, deleteProperty, listProperties, type Property } from '../api';
 import { useAuth } from '../auth';
 import {
   EmptyState,
@@ -76,10 +76,25 @@ function getPropertyReturnTo(pathname: string) {
   return `/login?reason=session-expired&returnTo=${encodeURIComponent(pathname)}`;
 }
 
+function getDeleteFailureMessage(error: unknown) {
+  const errorState = classifyApiErrorForUi(error);
+
+  if (errorState.kind === 'forbidden') {
+    return '目前角色沒有權限刪除此物業。';
+  }
+
+  if (error instanceof ApiError && error.status === 422) {
+    return '此物業仍有出租中房間或關聯資料，暫時無法刪除。請先確認房間與租約狀態後再試。';
+  }
+
+  return errorState.description;
+}
+
 export default function PropertyListPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { getAccessToken } = useAuth();
+  const { message } = AntdApp.useApp();
+  const { currentUser, getAccessToken } = useAuth();
   const activeRequestRef = useRef<{
     id: number;
     controller: AbortController;
@@ -89,6 +104,13 @@ export default function PropertyListPage() {
     status: 'loading',
     data: null,
   });
+  const [deleteTarget, setDeleteTarget] = useState<Property | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const canWriteProperty = currentUser?.role === 'admin'
+    || currentUser?.role === 'organizer'
+    || currentUser?.role === 'staff';
+  const canDeleteProperty = currentUser?.role === 'admin' || currentUser?.role === 'organizer';
 
   const loadProperties = useCallback(() => {
     abortRequest(activeRequestRef.current?.controller);
@@ -138,6 +160,33 @@ export default function PropertyListPage() {
     return () => abortRequest(activeRequestRef.current?.controller);
   }, [loadProperties]);
 
+  const handleDeleteProperty = useCallback(async () => {
+    if (!deleteTarget?.id) {
+      return;
+    }
+
+    setDeleteLoading(true);
+    setDeleteError(null);
+
+    try {
+      await deleteProperty(deleteTarget.id, getAccessToken);
+      void message.success('物業已刪除，正在更新列表。');
+      setDeleteTarget(null);
+      loadProperties();
+    } catch (error) {
+      const errorState = classifyApiErrorForUi(error);
+
+      if (errorState.kind === 'unauthorized') {
+        navigate(getPropertyReturnTo(location.pathname), { replace: true });
+        return;
+      }
+
+      setDeleteError(getDeleteFailureMessage(error));
+    } finally {
+      setDeleteLoading(false);
+    }
+  }, [deleteTarget?.id, getAccessToken, loadProperties, location.pathname, message, navigate]);
+
   if (loadState.status === 'loading') {
     return <LoadingState />;
   }
@@ -155,7 +204,16 @@ export default function PropertyListPage() {
       <EmptyState
         title="目前沒有可顯示的物業"
         description="此帳號的授權範圍內尚未提供物業資料，或系統目前沒有可列出的資料。"
-        action={<Button onClick={() => loadProperties()}>重新整理</Button>}
+        action={(
+          <Space wrap>
+            <Button onClick={() => loadProperties()}>重新整理</Button>
+            <Tooltip title={canWriteProperty ? undefined : '目前角色沒有新增物業權限。'}>
+              <Button type="primary" icon={<PlusOutlined />} disabled={!canWriteProperty}>
+                {canWriteProperty ? <Link to="/properties/new">新增物業</Link> : '新增物業'}
+              </Button>
+            </Tooltip>
+          </Space>
+        )}
       />
     );
   }
@@ -241,12 +299,24 @@ export default function PropertyListPage() {
             <Button type="primary" icon={<EyeOutlined />}>
               <Link to={`/properties/${record.id}`}>進入工作台</Link>
             </Button>
-            <Button icon={<EditOutlined />}>
-              <Link to={`/properties/${record.id}/edit`}>編輯</Link>
-            </Button>
-            <Button danger icon={<DeleteOutlined />}>
-              <Link to={`/properties/${record.id}/delete`}>刪除</Link>
-            </Button>
+            <Tooltip title={canWriteProperty ? undefined : '目前角色沒有編輯物業權限。'}>
+              <Button icon={<EditOutlined />} disabled={!canWriteProperty}>
+                {canWriteProperty ? <Link to={`/properties/${record.id}/edit`}>編輯</Link> : '編輯'}
+              </Button>
+            </Tooltip>
+            <Tooltip title={canDeleteProperty ? undefined : '目前角色沒有刪除物業權限。'}>
+              <Button
+                danger
+                icon={<DeleteOutlined />}
+                disabled={!canDeleteProperty}
+                onClick={() => {
+                  setDeleteError(null);
+                  setDeleteTarget(record);
+                }}
+              >
+                刪除
+              </Button>
+            </Tooltip>
           </Space>
         );
       },
@@ -270,12 +340,16 @@ export default function PropertyListPage() {
           <Button icon={<ReloadOutlined />} onClick={() => loadProperties()}>
             重新整理
           </Button>
-          <Button icon={<UploadOutlined />}>
-            <Link to="/properties/attachments">匯入附件</Link>
-          </Button>
-          <Button type="primary" icon={<PlusOutlined />}>
-            <Link to="/properties/new">新增物業</Link>
-          </Button>
+          <Tooltip title="附件管理尚未開放，後續會提供物業附件工作流。">
+            <Button icon={<UploadOutlined />} disabled>
+              附件入口
+            </Button>
+          </Tooltip>
+          <Tooltip title={canWriteProperty ? undefined : '目前角色沒有新增物業權限。'}>
+            <Button type="primary" icon={<PlusOutlined />} disabled={!canWriteProperty}>
+              {canWriteProperty ? <Link to="/properties/new">新增物業</Link> : '新增物業'}
+            </Button>
+          </Tooltip>
         </Space>
       </div>
 
@@ -301,6 +375,34 @@ export default function PropertyListPage() {
           }}
         />
       </Card>
+
+      <Modal
+        title="確認刪除物業"
+        open={Boolean(deleteTarget)}
+        okText="刪除物業"
+        okButtonProps={{ danger: true, loading: deleteLoading }}
+        cancelText="取消"
+        onCancel={() => {
+          setDeleteTarget(null);
+          setDeleteError(null);
+        }}
+        onOk={() => void handleDeleteProperty()}
+      >
+        <Space direction="vertical" size={12} className="page-stack">
+          <Typography.Text>
+            刪除後此物業會從一般管理列表移除；若仍有房間或其他關聯資料，系統可能拒絕刪除。
+          </Typography.Text>
+          <Typography.Text strong>{deleteTarget ? getPropertyDisplayName(deleteTarget) : ''}</Typography.Text>
+          {deleteError && (
+            <Alert
+              type="error"
+              showIcon
+              message="刪除物業失敗"
+              description={deleteError}
+            />
+          )}
+        </Space>
+      </Modal>
     </Space>
   );
 }

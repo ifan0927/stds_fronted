@@ -46,14 +46,17 @@ export {
   updateUser,
 } from './users';
 export {
+  createProperty,
   createPropertyRoom,
   createRoomMaintenance,
+  deleteProperty,
   deleteRoom,
   getProperty,
   getPropertyDashboard,
   getRoom,
   listProperties,
   listPropertyRooms,
+  updateProperty,
   updateRoom,
 } from './properties';
 export {
@@ -114,6 +117,7 @@ export type {
   UserRole,
 } from './users';
 export type {
+  CreatePropertyRequest,
   CreateRoomRequest,
   ListPropertyRoomsQuery,
   Property,
@@ -124,6 +128,7 @@ export type {
   RoomStatus,
   SetMaintenanceRequest,
   SetMaintenanceResponse,
+  UpdatePropertyRequest,
   UpdateRoomRequest,
 } from './properties';
 export type {

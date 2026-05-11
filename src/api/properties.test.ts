@@ -1,14 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError } from './errors';
 import {
+  createProperty,
   createPropertyRoom,
   createRoomMaintenance,
+  deleteProperty,
   deleteRoom,
   getProperty,
   getPropertyDashboard,
   getRoom,
   listProperties,
   listPropertyRooms,
+  updateProperty,
   updateRoom,
 } from './properties';
 
@@ -104,6 +107,96 @@ describe('property API helpers', () => {
     expect(init?.method).toBe('GET');
     expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer firebase-id-token');
     expect(result.monthly_summary?.overdue_bill_count).toBe(3);
+  });
+
+  it('creates a property through the shared API boundary', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        id: 'property-1',
+        name: '台北大安物業',
+        address: '台北市大安區復興南路一段100號',
+        electricity_unit_price: 4.5,
+        default_electricity_billing_cadence: 'monthly',
+        owner_id: 'owner-1',
+      }, { status: 201 }),
+    );
+
+    const result = await createProperty(
+      {
+        name: '台北大安物業',
+        subtitle: null,
+        address: '台北市大安區復興南路一段100號',
+        electricity_unit_price: 4.5,
+        default_electricity_billing_cadence: 'monthly',
+        owner_id: 'owner-1',
+        contact_phone: null,
+        contact_email: null,
+        notes: null,
+        facilities: { 電梯: true },
+      },
+      () => 'firebase-id-token',
+      { fetcher },
+    );
+
+    const [url, init] = fetcher.mock.calls[0];
+    expect(url).toBe('/api/v1/properties');
+    expect(init?.method).toBe('POST');
+    expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer firebase-id-token');
+    expect(await new Response(init?.body).json()).toEqual({
+      name: '台北大安物業',
+      subtitle: null,
+      address: '台北市大安區復興南路一段100號',
+      electricity_unit_price: 4.5,
+      default_electricity_billing_cadence: 'monthly',
+      owner_id: 'owner-1',
+      contact_phone: null,
+      contact_email: null,
+      notes: null,
+      facilities: { 電梯: true },
+    });
+    expect(result.id).toBe('property-1');
+  });
+
+  it('updates a property by encoded route id', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        id: 'property/with/slash',
+        name: '台北大安新名',
+        address: '台北市',
+        contact_phone: null,
+      }),
+    );
+
+    const result = await updateProperty(
+      'property/with/slash',
+      {
+        name: '台北大安新名',
+        contact_phone: null,
+      },
+      () => 'firebase-id-token',
+      { fetcher },
+    );
+
+    const [url, init] = fetcher.mock.calls[0];
+    expect(url).toBe('/api/v1/properties/property%2Fwith%2Fslash');
+    expect(init?.method).toBe('PATCH');
+    expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer firebase-id-token');
+    expect(await new Response(init?.body).json()).toEqual({
+      name: '台北大安新名',
+      contact_phone: null,
+    });
+    expect(result.name).toBe('台北大安新名');
+  });
+
+  it('deletes a property with a void response', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 204 }));
+
+    await expect(deleteProperty('property/with/slash', () => 'firebase-id-token', { fetcher })).resolves.toBeUndefined();
+
+    const [url, init] = fetcher.mock.calls[0];
+    expect(url).toBe('/api/v1/properties/property%2Fwith%2Fslash');
+    expect(init?.method).toBe('DELETE');
+    expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer firebase-id-token');
   });
 
   it('lists property rooms with backend-supported query params', async () => {

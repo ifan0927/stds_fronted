@@ -8,6 +8,7 @@ import LeaseDetailPage from './app/LeaseDetailPage';
 import MeterHistoryPage from './app/MeterHistoryPage';
 import PropertyDashboardPage from './app/PropertyDashboardPage';
 import PropertyListPage from './app/PropertyListPage';
+import PropertyMasterDataPage from './app/PropertyMasterDataPage';
 import PropertyReportsPage from './app/PropertyReportsPage';
 import RoomCreatePage from './app/RoomCreatePage';
 import RoomDetailPage from './app/RoomDetailPage';
@@ -29,7 +30,9 @@ export default function App() {
           <Route index element={<HomeDashboardPage />} />
           <Route path="account" element={<CurrentUserProfilePage />} />
           <Route path="properties" element={<PropertyListPage />} />
+          <Route path="properties/new" element={<PropertyMasterDataPage />} />
           <Route path="properties/:propertyId" element={<PropertyDashboardPage />} />
+          <Route path="properties/:propertyId/edit" element={<PropertyMasterDataPage />} />
           <Route path="properties/:propertyId/rooms" element={<RoomInventoryPage />} />
           <Route path="properties/:propertyId/rooms/new" element={<RoomCreatePage />} />
           <Route path="properties/:propertyId/rooms/:roomId" element={<RoomDetailPage />} />

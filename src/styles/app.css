@@ -562,6 +562,18 @@ a {
   display: block;
 }
 
+.property-link-content {
+  min-width: 0;
+}
+
+.inline-action-controls {
+  margin-top: 10px;
+}
+
+.tenant-roster-export-select {
+  min-width: 136px;
+}
+
 .property-link-icon {
   width: 32px;
   height: 32px;

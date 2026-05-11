@@ -3,6 +3,7 @@ import {
   exportPropertyFinancialReportCashflow,
   exportPropertyFinancialReportProfitLoss,
   exportPropertyOperationReport,
+  exportPropertyTenantRoster,
   getPropertyFinancialReport,
   getPropertyFinancialReportSummary,
 } from './reports';
@@ -80,5 +81,23 @@ describe('reports API helpers', () => {
       expect.stringContaining('/properties/property%2F1/operation-report/2026/5?format=html'),
       expect.objectContaining({ method: 'GET' }),
     );
+  });
+
+  it('opens the tenant roster export with explicit HTML query params', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(htmlResponse('<!doctype html>'));
+
+    const result = await exportPropertyTenantRoster(
+      'property/1',
+      { as_of: '2026-05-10', include_vacant: true, format: 'html' },
+      () => 'token',
+      { fetcher },
+    );
+
+    expect(fetcher).toHaveBeenCalledWith(
+      expect.stringContaining('/properties/property%2F1/tenant-roster?as_of=2026-05-10&include_vacant=true&format=html'),
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(result.contentType).toBe('text/html; charset=utf-8');
+    expect(result.filename).toBe('report.html');
   });
 });

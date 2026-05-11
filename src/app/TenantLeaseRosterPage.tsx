@@ -26,6 +26,7 @@ import {
   message,
 } from 'antd';
 import type { TableColumnsType, TablePaginationConfig } from 'antd';
+import dayjs, { type Dayjs } from 'dayjs';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
@@ -33,6 +34,7 @@ import {
   classifyApiErrorForUi,
   createLease,
   createTenant,
+  exportPropertyTenantRoster,
   getLease,
   getRoom,
   getTenant,
@@ -40,16 +42,19 @@ import {
   listLeases,
   listPropertyTenantLeaseRoster,
   listTenants,
+  openHtmlDocumentPreview,
   type BillList,
   type CreateLeaseRequest,
   type CreateTenantRequest,
   type AccessTokenProvider,
+  type HtmlPreviewWindow,
   type Lease,
   type PropertyTenantLeaseRoster,
   type PropertyTenantLeaseRosterRow,
   type Room,
   type Tenant,
   type TenantList,
+  type UiErrorState,
 } from '../api';
 import { useAuth } from '../auth';
 import { formatTwd, getRoomStatusLabel } from './format';
@@ -116,9 +121,16 @@ type MoveInFormValues = {
 const defaultPage = 1;
 const defaultLimit = 20;
 const limitOptions = [20, 50, 100] as const;
+const dateFormat = 'YYYY-MM-DD';
+
+type TenantRosterExportErrorState = UiErrorState | null;
 
 function getTenantReturnTo(pathname: string, search: string) {
   return `/login?reason=session-expired&returnTo=${encodeURIComponent(`${pathname}${search}`)}`;
+}
+
+function getDefaultAsOfDate(now = new Date()) {
+  return dayjs(now).format(dateFormat);
 }
 
 function getOptionalText(value: string | null | undefined) {
@@ -328,7 +340,23 @@ function formatDateValue(value: MoveInFormValues['start_date']) {
     return value;
   }
 
-  return value.format('YYYY-MM-DD');
+  return value.format(dateFormat);
+}
+
+function getTenantRosterExportFailureDescription(state: UiErrorState) {
+  if (state.kind === 'not-found') {
+    return '找不到此物業，請返回物業列表重新確認。';
+  }
+
+  if (state.kind === 'forbidden') {
+    return '目前帳號沒有此物業房客名冊的存取權限。';
+  }
+
+  if (state.kind === 'validation') {
+    return '名冊基準日或空房設定未通過檢查，請調整後再試一次。';
+  }
+
+  return state.description;
 }
 
 function getMoveInErrorCopy(error: unknown) {
@@ -389,6 +417,10 @@ export default function TenantLeaseRosterPage() {
   const hubRequestIdRef = useRef(0);
   const [loadState, setLoadState] = useState<TenantRosterLoadState>({ status: 'loading', data: null });
   const [hubState, setHubState] = useState<HubLoadState>({ status: 'idle', data: null });
+  const [exportingTenantRoster, setExportingTenantRoster] = useState(false);
+  const [tenantRosterExportError, setTenantRosterExportError] = useState<TenantRosterExportErrorState>(null);
+  const [tenantRosterAsOf, setTenantRosterAsOf] = useState(() => getDefaultAsOfDate());
+  const [tenantRosterIncludeVacant, setTenantRosterIncludeVacant] = useState(true);
   const [messageApi, contextHolder] = message.useMessage();
 
   const includeVacant = getIncludeVacant(searchParams.get('include_vacant'));
@@ -471,6 +503,60 @@ export default function TenantLeaseRosterPage() {
       return updated;
     });
   }, [includeVacant, limit, setSearchParams]);
+
+  const openTenantRosterExport = useCallback(async () => {
+    if (!propertyId) {
+      return;
+    }
+
+    const previewWindow = window.open('', '_blank');
+    setExportingTenantRoster(true);
+    setTenantRosterExportError(null);
+
+    try {
+      const response = await exportPropertyTenantRoster(
+        propertyId,
+        { as_of: tenantRosterAsOf, include_vacant: tenantRosterIncludeVacant, format: 'html' },
+        getAccessToken,
+      );
+      const result = openHtmlDocumentPreview(response, previewWindow as HtmlPreviewWindow | null);
+
+      if (!result.ok) {
+        void messageApi.warning(
+          result.reason === 'popup-blocked'
+            ? '瀏覽器阻擋了名冊預覽視窗，請允許彈出視窗後再試一次。'
+            : '名冊預覽格式無法開啟。',
+        );
+        return;
+      }
+
+      void messageApi.success('房客名冊已開啟。');
+    } catch (error: unknown) {
+      previewWindow?.close();
+      const errorState = classifyApiErrorForUi(error);
+
+      if (errorState.kind === 'unauthorized') {
+        navigate(getTenantReturnTo(location.pathname, locationSearchRef.current), { replace: true });
+        return;
+      }
+
+      setTenantRosterExportError(errorState);
+    } finally {
+      setExportingTenantRoster(false);
+    }
+  }, [
+    getAccessToken,
+    location.pathname,
+    messageApi,
+    navigate,
+    propertyId,
+    tenantRosterAsOf,
+    tenantRosterIncludeVacant,
+  ]);
+
+  const updateTenantRosterAsOf = useCallback((value: Dayjs | null) => {
+    setTenantRosterAsOf((previous) => value?.format(dateFormat) ?? previous);
+  }, []);
 
   const loadRoster = useCallback(() => {
     if (!propertyId) {
@@ -948,6 +1034,57 @@ export default function TenantLeaseRosterPage() {
           </Button>
         </Space>
       </div>
+
+      <Card>
+        <Space direction="vertical" size={12} className="page-stack">
+          <Space size={12} wrap>
+            <div className="filter-field">
+              <Typography.Text type="secondary">名冊基準日</Typography.Text>
+              <DatePicker
+                aria-label="名冊基準日"
+                value={dayjs(tenantRosterAsOf, dateFormat)}
+                format={dateFormat}
+                inputReadOnly
+                onChange={updateTenantRosterAsOf}
+              />
+            </div>
+            <div className="filter-field">
+              <Typography.Text type="secondary">名冊內容</Typography.Text>
+              <Select
+                aria-label="名冊內容"
+                className="tenant-roster-export-select"
+                value={tenantRosterIncludeVacant ? 'true' : 'false'}
+                options={[
+                  { value: 'true', label: '包含空房' },
+                  { value: 'false', label: '只列出租中' },
+                ]}
+                onChange={(value) => setTenantRosterIncludeVacant(value === 'true')}
+              />
+            </div>
+            <Button
+              type="primary"
+              icon={<FileTextOutlined />}
+              loading={exportingTenantRoster}
+              onClick={() => void openTenantRosterExport()}
+            >
+              匯出房客名冊
+            </Button>
+          </Space>
+          {tenantRosterExportError && (
+            <Alert
+              type="error"
+              showIcon
+              message="房客名冊無法開啟"
+              description={getTenantRosterExportFailureDescription(tenantRosterExportError)}
+              action={
+                tenantRosterExportError.retryable
+                  ? <Button size="small" onClick={() => void openTenantRosterExport()}>重試</Button>
+                  : undefined
+              }
+            />
+          )}
+        </Space>
+      </Card>
 
       <Card>
         <Space direction="vertical" size={16} className="page-stack">

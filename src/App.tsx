@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import AppShell from './app/AppShell';
 import BillingMeterPage from './app/BillingMeterPage';
 import CurrentUserProfilePage from './app/CurrentUserProfilePage';
@@ -14,6 +14,8 @@ import RoomDetailPage from './app/RoomDetailPage';
 import TenantDetailPage from './app/TenantDetailPage';
 import RoomInventoryPage from './app/RoomInventoryPage';
 import TenantLeaseRosterPage from './app/TenantLeaseRosterPage';
+import UserDetailPage from './app/UserDetailPage';
+import UserManagementPage from './app/UserManagementPage';
 import { ForbiddenPage, LoginPage, NotFoundPage, PlaceholderPage } from './app/pages';
 import { ProtectedRoute } from './auth';
 
@@ -39,7 +41,8 @@ export default function App() {
           <Route path="properties/:propertyId/billing/meter-history" element={<MeterHistoryPage />} />
           <Route path="properties/:propertyId/journal" element={<JournalPage />} />
           <Route path="properties/:propertyId/reports" element={<PropertyReportsPage />} />
-          <Route path="admin/members" element={<Navigate to="/forbidden" replace />} />
+          <Route path="admin/members" element={<UserManagementPage />} />
+          <Route path="admin/members/:userId" element={<UserDetailPage />} />
         </Route>
       </Route>
       <Route path="*" element={<NotFoundPage />} />

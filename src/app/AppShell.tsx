@@ -87,7 +87,28 @@ function createPropertyMenuItem(
   };
 }
 
-function createMenuItems(propertyId: string | undefined): ItemType[] {
+function createMenuItems(propertyId: string | undefined, role: string | undefined): ItemType[] {
+  const managementChildren: ItemType[] = [
+    {
+      key: '/account',
+      icon: <UserOutlined />,
+      label: <Link to="/account">我的帳號</Link>,
+    },
+    {
+      key: '/properties',
+      icon: <AppstoreOutlined />,
+      label: <Link to="/properties">物業管理</Link>,
+    },
+  ];
+
+  if (role !== 'owner') {
+    managementChildren.push({
+      key: '/admin/members',
+      icon: <ReadOutlined />,
+      label: <Link to="/admin/members">成員與權限</Link>,
+    });
+  }
+
   return [
     {
       key: '/',
@@ -111,23 +132,7 @@ function createMenuItems(propertyId: string | undefined): ItemType[] {
       key: 'management',
       label: '管理',
       type: 'group',
-      children: [
-        {
-          key: '/account',
-          icon: <UserOutlined />,
-          label: <Link to="/account">我的帳號</Link>,
-        },
-        {
-          key: '/properties',
-          icon: <AppstoreOutlined />,
-          label: <Link to="/properties">物業管理</Link>,
-        },
-        {
-          key: '/admin/members',
-          icon: <ReadOutlined />,
-          label: <Link to="/admin/members">成員與權限</Link>,
-        },
-      ],
+      children: managementChildren,
     },
   ];
 }
@@ -140,6 +145,10 @@ function getSelectedKey(pathname: string) {
   const billingMatch = pathname.match(/^\/properties\/([^/]+)\/billing(?:\/.*)?$/);
   if (billingMatch) {
     return `/properties/${billingMatch[1]}/billing`;
+  }
+
+  if (pathname.startsWith('/admin/members')) {
+    return '/admin/members';
   }
 
   return pathname;
@@ -163,7 +172,7 @@ export default function AppShell() {
     propertyOptions,
     propertyOptionsState.status === 'loading',
   );
-  const menuItems = useMemo(() => createMenuItems(propertyId), [propertyId]);
+  const menuItems = useMemo(() => createMenuItems(propertyId, currentUser?.role), [currentUser?.role, propertyId]);
   const selectedKeys = [getSelectedKey(location.pathname)];
   const isMobile = !screens.md;
   const roleLabel = getRoleLabel(currentUser?.role);

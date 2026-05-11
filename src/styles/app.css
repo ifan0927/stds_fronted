@@ -241,6 +241,14 @@ a {
   width: 150px;
 }
 
+.member-role-filter {
+  width: 180px;
+}
+
+.member-limit-filter {
+  width: 120px;
+}
+
 .row-action-stack {
   min-width: 0;
 }
@@ -260,6 +268,12 @@ a {
 }
 
 .room-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+
+.member-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 16px;

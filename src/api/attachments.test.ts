@@ -4,12 +4,14 @@ import {
   createAttachmentUploadUrl,
   createPropertyAttachment,
   deleteAttachment,
+  listJournalLogAttachments,
   listLeaseAttachments,
   listPropertyAttachments,
   listRepairRequestAttachments,
   listRoomAttachments,
   listTenantAttachments,
   registerLeaseAttachment,
+  registerJournalLogAttachment,
   registerRepairRequestAttachment,
   registerRoomAttachment,
   registerTenantAttachment,
@@ -290,6 +292,60 @@ describe('attachment API helpers', () => {
     expect(await new Response(init?.body).json()).toEqual({
       nonce: 'nonce-1',
       file_name: '租約.pdf',
+    });
+  });
+
+  it('lists journal log attachments by encoded journal log id', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        data: [
+          {
+            id: 'attachment-1',
+            object_path: 'attachments/journal-logs/journal-1/file.pdf',
+            file_name: '日誌附件.pdf',
+            uploaded_by: 'user-1',
+            created_at: '2026-05-11T10:00:00Z',
+            sort_order: null,
+            photo_stage: null,
+          },
+        ],
+      }),
+    );
+
+    const result = await listJournalLogAttachments('journal/with/slash', () => 'firebase-id-token', { fetcher });
+
+    const [url, init] = fetcher.mock.calls[0];
+    expect(url).toBe('/api/v1/journal-logs/journal%2Fwith%2Fslash/attachments');
+    expect(init?.method).toBe('GET');
+    expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer firebase-id-token');
+    expect(result.data?.[0]?.file_name).toBe('日誌附件.pdf');
+  });
+
+  it('registers journal log attachments with nonce and file name only', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        id: 'attachment-1',
+        object_path: 'attachments/journal-logs/journal-1/file.pdf',
+        file_name: '日誌附件.pdf',
+        uploaded_by: 'user-1',
+        created_at: '2026-05-11T10:00:00Z',
+        sort_order: null,
+        photo_stage: null,
+      }, { status: 201 }),
+    );
+    const body = {
+      nonce: 'nonce-1',
+      file_name: '日誌附件.pdf',
+    } satisfies RegisterAttachmentRequest;
+
+    await registerJournalLogAttachment('journal/with/slash', body, () => 'firebase-id-token', { fetcher });
+
+    const [url, init] = fetcher.mock.calls[0];
+    expect(url).toBe('/api/v1/journal-logs/journal%2Fwith%2Fslash/attachments');
+    expect(init?.method).toBe('POST');
+    expect(await new Response(init?.body).json()).toEqual({
+      nonce: 'nonce-1',
+      file_name: '日誌附件.pdf',
     });
   });
 

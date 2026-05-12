@@ -50,6 +50,7 @@ import {
 } from '../api';
 import { useAuth } from '../auth';
 import { formatDashboardDateTime, formatTwd } from './format';
+import { JournalAttachmentManager } from './attachments';
 import RepairWorkspace from './RepairWorkspace';
 import { abortRequest } from './requestAbort';
 import {
@@ -983,12 +984,7 @@ export default function JournalPage() {
                 {getOptionalText(detailRecord.expense_description)}
               </Descriptions.Item>
             </Descriptions>
-            <Alert
-              type="info"
-              showIcon
-              message="附件功能尚未開放"
-              description="此階段不提供日誌附件上傳、登記或刪除。"
-            />
+            {detailRecord.id && <JournalAttachmentManager journalLogId={detailRecord.id} />}
             <Space wrap>
               <Button icon={<EditOutlined />} onClick={() => openEditDrawer(detailRecord)}>
                 編輯

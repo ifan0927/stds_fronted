@@ -26,17 +26,20 @@ import {
   createAttachmentUploadUrl,
   deleteAttachment,
   listLeaseAttachments,
+  listJournalLogAttachments,
   listPropertyAttachments,
   listRepairRequestAttachments,
   listRoomAttachments,
   listTenantAttachments,
   registerLeaseAttachment,
+  registerJournalLogAttachment,
   registerPropertyAttachment,
   registerRepairRequestAttachment,
   registerRoomAttachment,
   registerTenantAttachment,
   type Attachment,
   type AttachmentContentType,
+  type AttachmentResourceType,
   uploadAttachmentFile,
 } from '../api';
 import { useAuth } from '../auth';
@@ -57,7 +60,15 @@ type AttachmentListState =
   | { status: 'error'; data: Attachment[] };
 
 type AttachmentManagerProps = {
-  resourceType: 'property' | 'room' | 'tenant' | 'lease' | 'repair_request' | 'repair-request';
+  resourceType:
+    | 'property'
+    | 'room'
+    | 'tenant'
+    | 'lease'
+    | 'journal_log'
+    | 'journal-log'
+    | 'repair_request'
+    | 'repair-request';
   resourceId: string;
   title?: string;
   canMutate?: boolean;
@@ -180,6 +191,10 @@ function getAttachmentResourceLabel(resourceType: AttachmentManagerProps['resour
     return '租約';
   }
 
+  if (resourceType === 'journal_log' || resourceType === 'journal-log') {
+    return '日誌';
+  }
+
   if (resourceType === 'repair_request' || resourceType === 'repair-request') {
     return '維修單';
   }
@@ -226,7 +241,12 @@ export function AttachmentManager({
   });
   const [operationError, setOperationError] = useState<string | null>(null);
   const isRepairAttachment = resourceType === 'repair_request' || resourceType === 'repair-request';
-  const apiResourceType = isRepairAttachment ? 'repair_request' : resourceType;
+  const isJournalAttachment = resourceType === 'journal_log' || resourceType === 'journal-log';
+  const apiResourceType: AttachmentResourceType = isRepairAttachment
+    ? 'repair_request'
+    : isJournalAttachment
+      ? 'journal_log'
+      : resourceType as AttachmentResourceType;
   const resourceLabel = getAttachmentResourceLabel(resourceType);
 
   const loadAttachments = useCallback(() => {
@@ -248,6 +268,10 @@ export function AttachmentManager({
 
       if (resourceType === 'lease') {
         return listLeaseAttachments;
+      }
+
+      if (isJournalAttachment) {
+        return listJournalLogAttachments;
       }
 
       if (resourceType === 'property') {
@@ -288,7 +312,7 @@ export function AttachmentManager({
 
         setListState({ status: 'error', data: [] });
       });
-  }, [getAccessToken, isRepairAttachment, resourceId, resourceType]);
+  }, [getAccessToken, isJournalAttachment, isRepairAttachment, resourceId, resourceType]);
 
   useEffect(() => {
     loadAttachments();
@@ -363,6 +387,10 @@ export function AttachmentManager({
             return registerLeaseAttachment;
           }
 
+          if (isJournalAttachment) {
+            return registerJournalLogAttachment;
+          }
+
           if (resourceType === 'property') {
             return registerPropertyAttachment;
           }
@@ -397,6 +425,7 @@ export function AttachmentManager({
       .finally(() => setUploading(false));
   }, [
     getAccessToken,
+    isJournalAttachment,
     isRepairAttachment,
     loadAttachments,
     messageApi,
@@ -938,6 +967,14 @@ type LeaseAttachmentManagerProps = {
 
 export function LeaseAttachmentManager({ leaseId }: LeaseAttachmentManagerProps) {
   return <AttachmentManager resourceType="lease" resourceId={leaseId} title="租約附件" />;
+}
+
+type JournalAttachmentManagerProps = {
+  journalLogId: string;
+};
+
+export function JournalAttachmentManager({ journalLogId }: JournalAttachmentManagerProps) {
+  return <AttachmentManager resourceType="journal_log" resourceId={journalLogId} title="日誌附件" />;
 }
 
 type RepairAttachmentManagerProps = {

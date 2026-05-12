@@ -52,6 +52,10 @@ function leaseAttachmentPath(leaseId: string) {
   return `/leases/${encodeURIComponent(leaseId)}/attachments`;
 }
 
+function journalLogAttachmentPath(journalLogId: string) {
+  return `/journal-logs/${encodeURIComponent(journalLogId)}/attachments`;
+}
+
 function repairRequestAttachmentPath(repairRequestId: string) {
   return `/repair-requests/${encodeURIComponent(repairRequestId)}/attachments`;
 }
@@ -256,6 +260,37 @@ export function createLeaseAttachment(
 }
 
 export const registerLeaseAttachment = createLeaseAttachment;
+
+export function listJournalLogAttachments(
+  journalLogId: string,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<AttachmentList>({
+    path: journalLogAttachmentPath(journalLogId),
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function createJournalLogAttachment(
+  journalLogId: string,
+  body: RegisterAttachmentRequest,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<Attachment>({
+    method: 'POST',
+    path: journalLogAttachmentPath(journalLogId),
+    body,
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export const registerJournalLogAttachment = createJournalLogAttachment;
 
 export function listRepairRequestAttachments(
   repairRequestId: string,

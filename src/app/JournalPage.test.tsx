@@ -17,6 +17,7 @@ const apiMocks = vi.hoisted(() => ({
   deleteJournalLog: vi.fn(),
   getRepairRequest: vi.fn(),
   getJournalLog: vi.fn(),
+  listJournalLogAttachments: vi.fn(),
   listRepairRequestAttachments: vi.fn(),
   listRepairRequests: vi.fn(),
   listUsers: vi.fn(),
@@ -24,6 +25,7 @@ const apiMocks = vi.hoisted(() => ({
   listJournalLogs: vi.fn(),
   listPropertyTenantLeaseRoster: vi.fn(),
   progressRepairRequest: vi.fn(),
+  registerJournalLogAttachment: vi.fn(),
   registerRepairRequestAttachment: vi.fn(),
   updateRepairRequest: vi.fn(),
   updateJournalLog: vi.fn(),
@@ -69,6 +71,7 @@ vi.mock('../api', async () => {
     deleteJournalLog: apiMocks.deleteJournalLog,
     getRepairRequest: apiMocks.getRepairRequest,
     getJournalLog: apiMocks.getJournalLog,
+    listJournalLogAttachments: apiMocks.listJournalLogAttachments,
     listRepairRequestAttachments: apiMocks.listRepairRequestAttachments,
     listRepairRequests: apiMocks.listRepairRequests,
     listUsers: apiMocks.listUsers,
@@ -76,6 +79,7 @@ vi.mock('../api', async () => {
     listJournalLogs: apiMocks.listJournalLogs,
     listPropertyTenantLeaseRoster: apiMocks.listPropertyTenantLeaseRoster,
     progressRepairRequest: apiMocks.progressRepairRequest,
+    registerJournalLogAttachment: apiMocks.registerJournalLogAttachment,
     registerRepairRequestAttachment: apiMocks.registerRepairRequestAttachment,
     updateRepairRequest: apiMocks.updateRepairRequest,
     updateJournalLog: apiMocks.updateJournalLog,
@@ -387,6 +391,53 @@ describe('JournalPage', () => {
     expect(await screen.findByText('既有費用日誌可調整金額與科目，但不能在此清除費用。')).toBeTruthy();
     expect(screen.getByText('費用金額（必填）')).toBeTruthy();
     expect(screen.getByText('會計科目（必填）')).toBeTruthy();
+  });
+
+  it('shows real journal attachments in the journal detail drawer', async () => {
+    mockJournalData();
+    apiMocks.getJournalLog.mockResolvedValue({
+      id: 'journal-1',
+      property_id: 'property-1',
+      room_id: 'room-1',
+      property_label: '台北大安物業',
+      room_label: '201',
+      author_label: '王小明',
+      content: '浴室漏水修繕',
+      expense_amount: 3500,
+      expense_accounting_title_id: 'title-1',
+      expense_accounting_title_code: '6681',
+      expense_accounting_title_name: '其他支出',
+      expense_description: '修繕材料',
+      created_at: '2026-05-08T06:30:00Z',
+      updated_at: '2026-05-08T06:30:00Z',
+    });
+    apiMocks.listJournalLogAttachments.mockResolvedValue({
+      data: [
+        {
+          id: 'attachment-journal',
+          object_path: 'gs://private-bucket/attachments/journal-logs/journal-1/receipt.pdf',
+          file_name: '日誌收據.pdf',
+          uploaded_by: 'user-1',
+          created_at: '2026-05-11T10:00:00Z',
+          sort_order: null,
+          photo_stage: null,
+        },
+      ],
+    });
+
+    renderJournalPage();
+
+    await screen.findByText('浴室漏水修繕');
+    fireEvent.click(screen.getAllByRole('button', { name: /詳\s*情/ })[1]);
+
+    expect(await screen.findByText('日誌附件')).toBeTruthy();
+    expect(await screen.findByText('日誌收據.pdf')).toBeTruthy();
+    expect(screen.queryByText('附件功能尚未開放')).toBeNull();
+    expect(apiMocks.listJournalLogAttachments).toHaveBeenCalledWith(
+      'journal-1',
+      authMocks.getAccessToken,
+      expect.any(Object),
+    );
   });
 
   it('loads repair workspace from URL tab and keeps room context', async () => {

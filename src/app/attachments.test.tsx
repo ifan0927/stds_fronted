@@ -6,12 +6,14 @@ import {
   createAttachmentDownloadUrl,
   createAttachmentUploadUrl,
   deleteAttachment,
+  listJournalLogAttachments,
   listLeaseAttachments,
   listPropertyAttachments,
   listRepairRequestAttachments,
   listRoomAttachments,
   listTenantAttachments,
   registerLeaseAttachment,
+  registerJournalLogAttachment,
   registerPropertyAttachment,
   registerRepairRequestAttachment,
   registerRoomAttachment,
@@ -48,12 +50,14 @@ vi.mock('../api', async () => {
     createAttachmentUploadUrl: vi.fn(),
     createAttachmentDownloadUrl: vi.fn(),
     deleteAttachment: vi.fn(),
+    listJournalLogAttachments: vi.fn(),
     listLeaseAttachments: vi.fn(),
     listPropertyAttachments: vi.fn(),
     listRepairRequestAttachments: vi.fn(),
     listRoomAttachments: vi.fn(),
     listTenantAttachments: vi.fn(),
     registerLeaseAttachment: vi.fn(),
+    registerJournalLogAttachment: vi.fn(),
     registerPropertyAttachment: vi.fn(),
     registerRepairRequestAttachment: vi.fn(),
     registerRoomAttachment: vi.fn(),
@@ -164,6 +168,26 @@ function mockLeaseAttachmentList() {
 
 function renderLeaseAttachmentManager() {
   return render(<AttachmentManager resourceType="lease" resourceId="lease/with/slash" title="租約附件" />);
+}
+
+function mockJournalLogAttachmentList() {
+  vi.mocked(listJournalLogAttachments).mockResolvedValue({
+    data: [
+      {
+        id: 'attachment-journal',
+        object_path: 'gs://private-bucket/attachments/journal-logs/journal-1/file.pdf',
+        file_name: '日誌附件.pdf',
+        uploaded_by: 'user-1',
+        created_at: '2026-05-11T10:00:00Z',
+        sort_order: null,
+        photo_stage: null,
+      },
+    ],
+  });
+}
+
+function renderJournalLogAttachmentManager() {
+  return render(<AttachmentManager resourceType="journal-log" resourceId="journal/with/slash" title="日誌附件" />);
 }
 
 function mockRepairAttachmentList() {
@@ -693,6 +717,59 @@ describe('Tenant and lease AttachmentManager adoption', () => {
       {},
     );
     expect(listLeaseAttachments).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('JournalAttachmentManager adoption', () => {
+  it('uploads and registers journal log attachments through the shared primitive', async () => {
+    mockJournalLogAttachmentList();
+    vi.mocked(createAttachmentUploadUrl).mockResolvedValue({
+      upload_url: 'https://storage.example/upload-journal?signature=masked',
+      nonce: 'nonce-journal',
+      expires_at: '2026-05-11T10:00:00Z',
+    });
+    vi.mocked(uploadAttachmentFile).mockResolvedValue(undefined);
+    vi.mocked(registerJournalLogAttachment).mockResolvedValue({
+      id: 'attachment-new',
+      object_path: 'gs://private-bucket/attachments/journal-logs/journal-1/new.pdf',
+      file_name: '日誌新附件.pdf',
+      uploaded_by: 'user-1',
+      created_at: '2026-05-11T10:01:00Z',
+      sort_order: null,
+      photo_stage: null,
+    });
+
+    const { container } = renderJournalLogAttachmentManager();
+    await screen.findByText('日誌附件.pdf');
+
+    const file = new File(['journal bytes'], '日誌新附件.pdf', { type: 'application/pdf' });
+    fireEvent.change(getFileInput(container), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: /確認上傳附件/ }));
+
+    await waitFor(() => {
+      expect(registerJournalLogAttachment).toHaveBeenCalledWith(
+        'journal/with/slash',
+        { nonce: 'nonce-journal', file_name: '日誌新附件.pdf' },
+        expect.any(Function),
+      );
+    });
+    expect(createAttachmentUploadUrl).toHaveBeenCalledWith(
+      {
+        resource_type: 'journal_log',
+        resource_id: 'journal/with/slash',
+        file_name: '日誌新附件.pdf',
+        content_type: 'application/pdf',
+        file_size: file.size,
+      },
+      expect.any(Function),
+    );
+    expect(uploadAttachmentFile).toHaveBeenCalledWith(
+      'https://storage.example/upload-journal?signature=masked',
+      file,
+      'application/pdf',
+      {},
+    );
+    expect(listJournalLogAttachments).toHaveBeenCalledTimes(2);
   });
 });
 

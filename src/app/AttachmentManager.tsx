@@ -1,5 +1,7 @@
 import {
   DeleteOutlined,
+  DownloadOutlined,
+  EyeOutlined,
   PaperClipOutlined,
   ReloadOutlined,
   UploadOutlined,
@@ -20,6 +22,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   classifyApiErrorForUi,
+  createAttachmentDownloadUrl,
   createAttachmentUploadUrl,
   deleteAttachment,
   listRepairRequestAttachments,
@@ -33,6 +36,7 @@ import {
 import { useAuth } from '../auth';
 import {
   getAttachmentDeleteErrorCopy,
+  getAttachmentDownloadErrorCopy,
   getAttachmentUploadErrorCopy,
   validateAttachmentFile,
 } from './attachmentRules';
@@ -55,6 +59,10 @@ type AttachmentManagerProps = {
 
 type RepairUploadMode = 'photo' | 'document';
 type RepairPhotoStage = NonNullable<Attachment['photo_stage']>;
+type PreviewState =
+  | { status: 'closed'; name: string; url: string | null }
+  | { status: 'loading'; name: string; url: string | null }
+  | { status: 'ready'; name: string; url: string };
 
 const repairPhotoStageOptions: Array<{ value: RepairPhotoStage; label: string }> = [
   { value: 'before', label: '施工前' },
@@ -68,8 +76,21 @@ const repairPhotoContentTypes = new Set<AttachmentContentType>([
   'image/heic',
 ]);
 
+const previewableImageExtensions = new Set(['jpg', 'jpeg', 'png']);
+
 function getAttachmentName(attachment: Attachment) {
   return attachment.file_name?.trim() || '未命名附件';
+}
+
+function getAttachmentFileExtension(attachment: Attachment) {
+  const fileName = attachment.file_name?.trim() ?? '';
+  const match = fileName.match(/\.([^.]+)$/);
+
+  return match?.[1]?.toLowerCase() ?? '';
+}
+
+function isPreviewableImageAttachment(attachment: Attachment) {
+  return previewableImageExtensions.has(getAttachmentFileExtension(attachment));
 }
 
 function getAttachmentCreatedAt(attachment: Attachment) {
@@ -167,6 +188,12 @@ export function AttachmentManager({
   const [repairPhotoStage, setRepairPhotoStage] = useState<RepairPhotoStage>('before');
   const [repairSortOrder, setRepairSortOrder] = useState(0);
   const [deletingAttachmentId, setDeletingAttachmentId] = useState<string | null>(null);
+  const [openingAttachmentId, setOpeningAttachmentId] = useState<string | null>(null);
+  const [previewState, setPreviewState] = useState<PreviewState>({
+    status: 'closed',
+    name: '',
+    url: null,
+  });
   const [operationError, setOperationError] = useState<string | null>(null);
   const isRepairAttachment = resourceType === 'repair_request' || resourceType === 'repair-request';
   const apiResourceType = isRepairAttachment ? 'repair_request' : resourceType;
@@ -350,6 +377,64 @@ export function AttachmentManager({
     });
   }, [getAccessToken, loadAttachments, messageApi, modalApi]);
 
+  const handlePreview = useCallback((attachment: Attachment) => {
+    if (!attachment.id) {
+      setOperationError('附件資料不完整，請重新整理後再試。');
+      return;
+    }
+
+    const name = getAttachmentName(attachment);
+    setOpeningAttachmentId(attachment.id);
+    setOperationError(null);
+    setPreviewState({ status: 'loading', name, url: null });
+
+    void createAttachmentDownloadUrl(attachment.id, getAccessToken)
+      .then((response) => {
+        setPreviewState({ status: 'ready', name, url: response.download_url });
+      })
+      .catch((error: unknown) => {
+        const errorState = classifyApiErrorForUi(error);
+        const copy = getAttachmentDownloadErrorCopy(errorState.kind);
+        setPreviewState({ status: 'closed', name: '', url: null });
+        setOperationError(copy);
+        void messageApi.error(copy);
+      })
+      .finally(() => setOpeningAttachmentId(null));
+  }, [getAccessToken, messageApi]);
+
+  const handleDownload = useCallback((attachment: Attachment) => {
+    if (!attachment.id) {
+      setOperationError('附件資料不完整，請重新整理後再試。');
+      return;
+    }
+
+    const downloadWindow = window.open('', '_blank');
+
+    if (!downloadWindow) {
+      const copy = '瀏覽器阻擋了下載視窗，請允許彈出視窗後再試一次。';
+      setOperationError(copy);
+      void messageApi.warning(copy);
+      return;
+    }
+
+    setOpeningAttachmentId(attachment.id);
+    setOperationError(null);
+
+    void createAttachmentDownloadUrl(attachment.id, getAccessToken)
+      .then((response) => {
+        downloadWindow.location.href = response.download_url;
+        void messageApi.success('附件下載已開啟。');
+      })
+      .catch((error: unknown) => {
+        downloadWindow.close();
+        const errorState = classifyApiErrorForUi(error);
+        const copy = getAttachmentDownloadErrorCopy(errorState.kind);
+        setOperationError(copy);
+        void messageApi.error(copy);
+      })
+      .finally(() => setOpeningAttachmentId(null));
+  }, [getAccessToken, messageApi]);
+
   const listError = listState.status === 'forbidden'
     || listState.status === 'not-found'
     || listState.status === 'error';
@@ -373,6 +458,28 @@ export function AttachmentManager({
     <Space direction="vertical" size={12} className="page-stack">
       {messageContextHolder}
       {modalContextHolder}
+      <Modal
+        title={previewState.name || '附件預覽'}
+        open={previewState.status !== 'closed'}
+        footer={null}
+        width={720}
+        onCancel={() => setPreviewState({ status: 'closed', name: '', url: null })}
+      >
+        {previewState.status === 'loading' ? (
+          <Typography.Text type="secondary">照片載入中...</Typography.Text>
+        ) : previewState.status === 'ready' ? (
+          <img
+            alt={previewState.name}
+            className="attachment-preview-image"
+            src={previewState.url}
+            onError={() => {
+              const copy = '照片預覽無法開啟，請稍後再試。';
+              setOperationError(copy);
+              void messageApi.error(copy);
+            }}
+          />
+        ) : null}
+      </Modal>
       <div className="billing-section-heading">
         <div>
           <Typography.Title level={2}>{title}</Typography.Title>
@@ -644,6 +751,29 @@ export function AttachmentManager({
             renderItem={(attachment) => (
               <List.Item
                 actions={[
+                  isPreviewableImageAttachment(attachment) ? (
+                    <Button
+                      key="preview"
+                      icon={<EyeOutlined />}
+                      aria-label={`預覽 ${getAttachmentName(attachment)}`}
+                      loading={openingAttachmentId === attachment.id}
+                      disabled={mutationInProgress}
+                      onClick={() => handlePreview(attachment)}
+                    >
+                      預覽
+                    </Button>
+                  ) : (
+                    <Button
+                      key="download"
+                      icon={<DownloadOutlined />}
+                      aria-label={`下載 ${getAttachmentName(attachment)}`}
+                      loading={openingAttachmentId === attachment.id}
+                      disabled={mutationInProgress}
+                      onClick={() => handleDownload(attachment)}
+                    >
+                      下載
+                    </Button>
+                  ),
                   <Button
                     key="delete"
                     danger

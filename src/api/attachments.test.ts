@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  createAttachmentDownloadUrl,
   createAttachmentUploadUrl,
   deleteAttachment,
   listRepairRequestAttachments,
@@ -47,6 +48,27 @@ describe('attachment API helpers', () => {
     expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer firebase-id-token');
     expect(await new Response(init?.body).json()).toEqual(body);
     expect(result.nonce).toBe('nonce-1');
+  });
+
+  it('creates download URLs by encoded attachment id', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        download_url: 'https://files.example.com/attachments/download?token=masked',
+        expires_at: '2026-05-11T10:15:00Z',
+      }),
+    );
+
+    const result = await createAttachmentDownloadUrl(
+      'attachment/with/slash',
+      () => 'firebase-id-token',
+      { fetcher },
+    );
+
+    const [url, init] = fetcher.mock.calls[0];
+    expect(url).toBe('/api/v1/attachments/attachment%2Fwith%2Fslash/download-url');
+    expect(init?.method).toBe('POST');
+    expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer firebase-id-token');
+    expect(result.download_url).toBe('https://files.example.com/attachments/download?token=masked');
   });
 
   it('lists room attachments by encoded room id', async () => {

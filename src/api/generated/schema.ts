@@ -1484,6 +1484,28 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/attachments/{id}/download-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate attachment download signed URL
+         * @description x-required-role: admin, organizer, staff; owner only for attachments whose host-resource read/list policy allows owner (property, room, bill on owned properties).
+         *     Generate a short-lived read signed URL by attachment id. Caller must be authenticated and satisfy host-resource property access policy. Owners may only download attachments allowed by host-resource read/list policy (property/room/bill on owned properties). Tenant attachments follow the same tenant-to-property access model as other tenant flows.
+         *     Missing or soft-deleted attachments must not return a usable URL. The response must not expose object_path, bucket, service account, or other storage internals.
+         */
+        post: operations["createAttachmentDownloadURL"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/attachments/{id}": {
         parameters: {
             query?: never;
@@ -2498,6 +2520,12 @@ export type components = {
             nonce?: string;
             /** Format: date-time */
             expires_at?: string;
+        };
+        AttachmentDownloadURLResponse: {
+            /** Format: uri */
+            download_url: string;
+            /** Format: date-time */
+            expires_at: string;
         };
     };
     responses: never;
@@ -7450,6 +7478,55 @@ export interface operations {
             };
             /** @description Business Rule 拒絕 */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    createAttachmentDownloadURL: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Signed URL 建立成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentDownloadURLResponse"];
+                };
+            };
+            /** @description 未認證 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 權限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 附件不存在或已刪除 */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

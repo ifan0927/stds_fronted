@@ -6,8 +6,10 @@ export type Attachment = components['schemas']['AttachmentResponse'];
 export type AttachmentList = components['schemas']['AttachmentListResponse'];
 export type AttachmentUploadURLRequest = components['schemas']['AttachmentUploadURLRequest'];
 export type AttachmentUploadURLResponse = components['schemas']['AttachmentUploadURLResponse'];
+export type AttachmentDownloadURLResponse = components['schemas']['AttachmentDownloadURLResponse'];
 export type AttachmentUploadUrlRequest = AttachmentUploadURLRequest;
 export type AttachmentUploadUrlResponse = AttachmentUploadURLResponse;
+export type AttachmentDownloadUrlResponse = AttachmentDownloadURLResponse;
 export type RegisterAttachmentRequest = components['schemas']['RegisterAttachmentRequest'];
 type GeneratedRegisterRepairRequestAttachmentRequest = components['schemas']['RegisterRepairRequestAttachmentRequest'];
 export type RegisterRepairRequestAttachmentRequest = Omit<
@@ -58,6 +60,22 @@ export function createAttachmentUploadURL(
 }
 
 export const createAttachmentUploadUrl = createAttachmentUploadURL;
+
+export function createAttachmentDownloadURL(
+  attachmentId: string,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<AttachmentDownloadURLResponse>({
+    method: 'POST',
+    path: `${attachmentPath(attachmentId)}/download-url`,
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export const createAttachmentDownloadUrl = createAttachmentDownloadURL;
 
 export async function directUploadAttachmentFile(
   uploadUrl: string,

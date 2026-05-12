@@ -2,13 +2,16 @@
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import {
   ApiError,
   getBill,
+  exportBillReceipt,
   listBills,
   listPropertyPendingMeters,
   listPropertyTenantLeaseRoster,
+  openHtmlDocumentPreview,
+  recordBillPayment,
   submitBillMeter,
   type BillingBill,
   type BillingBillList,
@@ -59,7 +62,7 @@ vi.mock('antd', async () => {
     children,
     onFinish,
   }: React.PropsWithChildren<{
-    onFinish?: (values: Record<string, number | null>) => void;
+    onFinish?: (values: Record<string, number | null | string | undefined>) => void;
   }>) {
     return (
       <form
@@ -67,10 +70,22 @@ vi.mock('antd', async () => {
           event.preventDefault();
           const formData = new FormData(event.currentTarget);
           const reading = formData.get('current_reading');
+          const paymentMethod = formData.get('payment_method');
+          const values: Record<string, number | null | string | undefined> = {};
 
-          onFinish?.({
-            current_reading: reading === null || reading === '' ? null : Number(reading),
-          });
+          if (event.currentTarget.elements.namedItem('current_reading')) {
+            values.current_reading = reading === null || reading === '' ? null : Number(reading);
+          }
+
+          if (event.currentTarget.elements.namedItem('payment_method')) {
+            if (paymentMethod === null || paymentMethod === '') {
+              return;
+            }
+
+            values.payment_method = String(paymentMethod);
+          }
+
+          onFinish?.(values);
         }}
       >
         {children}
@@ -169,29 +184,40 @@ vi.mock('antd', async () => {
     Select: ({
       'aria-label': ariaLabel,
       allowClear,
+      name,
       onChange,
       options,
       value,
     }: {
       'aria-label'?: string;
       allowClear?: boolean;
+      name?: string;
       onChange?: (value: string) => void;
       options?: Array<{ value: string; label: React.ReactNode }>;
       value?: string;
-    }) => (
-      <select
-        aria-label={ariaLabel}
-        value={value ?? ''}
-        onChange={(event) => onChange?.(event.target.value)}
-      >
-        {allowClear && <option value="">未選擇</option>}
-        {options?.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    ),
+    }) => {
+      const [internalValue, setInternalValue] = React.useState(value ?? '');
+
+      return (
+        <select
+          aria-label={ariaLabel}
+          name={name}
+          value={value ?? internalValue}
+          onChange={(event) => {
+            setInternalValue(event.target.value);
+            onChange?.(event.target.value);
+          }}
+        >
+          <option value="">請選擇</option>
+          {allowClear && <option value="">未選擇</option>}
+          {options?.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      );
+    },
     Space: ({ children }: React.PropsWithChildren) => <div>{children}</div>,
     Spin: () => <span>載入中</span>,
     Table: ({
@@ -274,6 +300,9 @@ vi.mock('../api', async () => {
     listPropertyPendingMeters: vi.fn(),
     listPropertyTenantLeaseRoster: vi.fn(),
     submitBillMeter: vi.fn(),
+    recordBillPayment: vi.fn(),
+    exportBillReceipt: vi.fn(),
+    openHtmlDocumentPreview: vi.fn(),
   };
 });
 
@@ -346,15 +375,21 @@ function mockRoster(response: PropertyTenantLeaseRoster = {
   vi.mocked(listPropertyTenantLeaseRoster).mockResolvedValue(response);
 }
 
-function renderBillingPage(initialEntry = '/properties/property-1/billing') {
+function renderBillingPage(initialEntry: string | string[] = '/properties/property-1/billing') {
   function LocationProbe() {
     const location = useLocation();
+    const navigate = useNavigate();
 
-    return <output aria-label="目前路徑">{`${location.pathname}${location.search}`}</output>;
+    return (
+      <>
+        <output aria-label="目前路徑">{`${location.pathname}${location.search}`}</output>
+        <button type="button" onClick={() => navigate(-1)}>返回上一頁</button>
+      </>
+    );
   }
 
   return render(
-    <MemoryRouter initialEntries={[initialEntry]}>
+    <MemoryRouter initialEntries={Array.isArray(initialEntry) ? initialEntry : [initialEntry]}>
       <LocationProbe />
       <Routes>
         <Route path="/properties/:propertyId/billing" element={<BillingMeterPage />} />
@@ -377,6 +412,14 @@ afterEach(() => {
 beforeEach(() => {
   mockBills();
   mockRoster();
+  vi.mocked(recordBillPayment).mockResolvedValue(createBill({ status: 'paid', amount: 18000 }));
+  vi.mocked(exportBillReceipt).mockResolvedValue({
+    html: '<!doctype html><title>收據</title>',
+    contentType: 'text/html; charset=utf-8',
+    contentDisposition: 'inline; filename="receipt.html"',
+    filename: 'receipt.html',
+  });
+  vi.mocked(openHtmlDocumentPreview).mockReturnValue({ ok: true });
 });
 
 describe('BillingMeterPage', () => {
@@ -441,7 +484,261 @@ describe('BillingMeterPage', () => {
     await waitFor(() => expect(screen.getAllByText('租金').length).toBeGreaterThan(0));
     expect(screen.getByText('A-102')).toBeTruthy();
     expect(screen.getByText('NT$18,000')).toBeTruthy();
-    expect(screen.getByRole<HTMLButtonElement>('button', { name: '收款' }).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: '收款' }).disabled).toBe(false);
+  });
+
+  it('requires a visible payment method and submits the locked backend bill amount', async () => {
+    mockPendingMeters({ data: [] });
+    mockBills({
+      data: [
+        createBill({
+          id: 'rent-bill-1',
+          type: 'rent',
+          status: 'pending_payment',
+          amount: 18000,
+        }),
+      ],
+    });
+
+    renderBillingPage('/properties/property-1/billing?leaseId=lease-1&billType=rent');
+
+    await screen.findByText('NT$18,000');
+    fireEvent.click(screen.getByRole('button', { name: '收款' }));
+
+    expect(await screen.findByLabelText('確認收款')).toBeTruthy();
+    expect(screen.getByText('必填欄位')).toBeTruthy();
+    expect(screen.getByText('收款方式為必填；收款金額固定使用後端帳單金額，不提供手動輸入。收款時間不需填寫，系統會以後端時間記錄。')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: '確認收款' }));
+    expect(recordBillPayment).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText('收款方式（必填）'), { target: { value: 'transfer' } });
+    fireEvent.click(screen.getByRole('button', { name: '確認收款' }));
+
+    await waitFor(() => {
+      expect(recordBillPayment).toHaveBeenCalledWith(
+        'rent-bill-1',
+        { payment_method: 'transfer', paid_amount: 18000 },
+        expect.any(Function),
+      );
+    });
+    await waitFor(() => expect(listBills).toHaveBeenCalledTimes(2));
+  });
+
+  it('opens the payment drawer from existing billId and view route state', async () => {
+    mockPendingMeters({ data: [] });
+    vi.mocked(getBill).mockResolvedValue(createBill({
+      id: 'rent-bill-1',
+      type: 'rent',
+      status: 'pending_payment',
+      amount: 18000,
+    }));
+
+    renderBillingPage('/properties/property-1/billing?leaseId=lease-1&billType=rent&billId=rent-bill-1&view=rent-payment');
+
+    expect(await screen.findByLabelText('確認收款')).toBeTruthy();
+    expect(screen.getAllByText('NT$18,000').length).toBeGreaterThan(0);
+  });
+
+  it('normalizes rent action deep links with bill id into the rent tab context', async () => {
+    mockPendingMeters({ data: [] });
+    vi.mocked(getBill).mockResolvedValue(createBill({
+      id: 'rent-bill-1',
+      type: 'rent',
+      status: 'pending_payment',
+      amount: 18000,
+    }));
+
+    renderBillingPage('/properties/property-1/billing?leaseId=lease-1&billId=rent-bill-1&view=rent-payment');
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('目前路徑').textContent)
+        .toBe('/properties/property-1/billing?leaseId=lease-1&billId=rent-bill-1&view=rent-payment&billType=rent');
+    });
+    await waitFor(() => {
+      expect(listBills).toHaveBeenLastCalledWith(
+        expect.any(Function),
+        {
+          property_id: 'property-1',
+          lease_id: 'lease-1',
+          type: 'rent',
+          status: undefined,
+          page: 1,
+          limit: 20,
+        },
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    });
+    expect(await screen.findByLabelText('確認收款')).toBeTruthy();
+  });
+
+  it('honors tenant and lease rent-payment entry routes without a bill id', async () => {
+    mockPendingMeters({ data: [] });
+    mockBills({
+      data: [
+        createBill({
+          id: 'rent-bill-1',
+          type: 'rent',
+          status: 'pending_payment',
+          amount: 18000,
+        }),
+      ],
+    });
+
+    renderBillingPage('/properties/property-1/billing?roomId=room-1&leaseId=lease-1&tenantId=tenant-1&view=rent-payment');
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('目前路徑').textContent)
+        .toBe('/properties/property-1/billing?roomId=room-1&leaseId=lease-1&tenantId=tenant-1&view=rent-payment&billType=rent');
+    });
+    await waitFor(() => {
+      expect(listBills).toHaveBeenLastCalledWith(
+        expect.any(Function),
+        {
+          property_id: 'property-1',
+          lease_id: 'lease-1',
+          type: 'rent',
+          status: undefined,
+          page: 1,
+          limit: 20,
+        },
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    });
+    expect(await screen.findByText('NT$18,000')).toBeTruthy();
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: '收款' }).disabled).toBe(false);
+  });
+
+  it('clears stale rent-payment action when selecting a plain bill detail', async () => {
+    mockPendingMeters({ data: [] });
+    mockBills({
+      data: [
+        createBill({
+          id: 'rent-bill-1',
+          type: 'rent',
+          status: 'pending_payment',
+          amount: 18000,
+        }),
+      ],
+    });
+    vi.mocked(getBill).mockResolvedValue(createBill({
+      id: 'rent-bill-1',
+      type: 'rent',
+      status: 'pending_payment',
+      amount: 18000,
+    }));
+
+    renderBillingPage('/properties/property-1/billing?leaseId=lease-1&view=rent-payment');
+
+    await screen.findByText('NT$18,000');
+    fireEvent.click(screen.getByRole('button', { name: '詳情' }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('目前路徑').textContent)
+        .toBe('/properties/property-1/billing?leaseId=lease-1&billType=rent&billId=rent-bill-1');
+    });
+    expect(await screen.findByLabelText('帳單詳情')).toBeTruthy();
+    expect(screen.queryByLabelText('確認收款')).toBeNull();
+  });
+
+  it('clears consumed payment route actions when closing bill detail', async () => {
+    mockPendingMeters({ data: [] });
+    mockBills({
+      data: [
+        createBill({
+          id: 'rent-bill-2',
+          type: 'rent',
+          status: 'paid',
+          amount: 18000,
+        }),
+      ],
+    });
+    vi.mocked(getBill).mockResolvedValueOnce(createBill({
+      id: 'rent-bill-1',
+      type: 'rent',
+      status: 'pending_payment',
+      amount: 18000,
+    }));
+
+    renderBillingPage('/properties/property-1/billing?leaseId=lease-1&billType=rent&billId=rent-bill-1&view=rent-payment');
+
+    expect(await screen.findByLabelText('確認收款')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '關閉' }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('目前路徑').textContent)
+        .toBe('/properties/property-1/billing?leaseId=lease-1&billType=rent');
+    });
+
+    vi.mocked(getBill).mockResolvedValueOnce(createBill({
+      id: 'rent-bill-2',
+      type: 'rent',
+      status: 'paid',
+      amount: 18000,
+    }));
+    fireEvent.click(screen.getByRole('button', { name: '詳情' }));
+
+    await screen.findByLabelText('帳單詳情');
+    expect(screen.queryByText('此帳單目前不能收款')).toBeNull();
+    expect(screen.queryByLabelText('確認收款')).toBeNull();
+  });
+
+  it('allows the same payment deep link to run again after the action leaves the URL', async () => {
+    mockPendingMeters({ data: [] });
+    vi.mocked(getBill).mockResolvedValue(createBill({
+      id: 'rent-bill-1',
+      type: 'rent',
+      status: 'pending_payment',
+      amount: 18000,
+    }));
+
+    renderBillingPage([
+      '/properties/property-1/billing?leaseId=lease-1&billId=rent-bill-1&view=rent-payment&billType=rent',
+      '/properties/property-1/billing?leaseId=lease-1&billId=rent-bill-1&billType=rent',
+    ]);
+
+    expect(await screen.findByLabelText('帳單詳情')).toBeTruthy();
+    expect(screen.queryByLabelText('確認收款')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: '返回上一頁' }));
+
+    expect(await screen.findByLabelText('確認收款')).toBeTruthy();
+  });
+
+  it('opens paid bill receipts through the runtime HTML helper', async () => {
+    const previewWindow = {
+      document: {
+        open: vi.fn(),
+        write: vi.fn(),
+        close: vi.fn(),
+      },
+      focus: vi.fn(),
+    };
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(previewWindow as unknown as Window);
+    mockPendingMeters({ data: [] });
+    mockBills({
+      data: [
+        createBill({
+          id: 'paid-bill-1',
+          status: 'paid',
+          amount: 18000,
+        }),
+      ],
+    });
+
+    renderBillingPage('/properties/property-1/billing?leaseId=lease-1');
+
+    await screen.findByText('NT$18,000');
+    fireEvent.click(screen.getByRole('button', { name: '收據' }));
+
+    await waitFor(() => {
+      expect(exportBillReceipt).toHaveBeenCalledWith('paid-bill-1', expect.any(Function));
+      expect(openHtmlDocumentPreview).toHaveBeenCalledWith(
+        expect.objectContaining({ html: '<!doctype html><title>收據</title>' }),
+        previewWindow,
+      );
+    });
+    openSpy.mockRestore();
   });
 
   it('switches billing flow tabs without refetching property queues', async () => {

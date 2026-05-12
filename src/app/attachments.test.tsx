@@ -6,10 +6,14 @@ import {
   createAttachmentDownloadUrl,
   createAttachmentUploadUrl,
   deleteAttachment,
+  listLeaseAttachments,
   listRepairRequestAttachments,
   listRoomAttachments,
+  listTenantAttachments,
+  registerLeaseAttachment,
   registerRepairRequestAttachment,
   registerRoomAttachment,
+  registerTenantAttachment,
   uploadAttachmentFile,
 } from '../api';
 import { AttachmentManager } from './AttachmentManager';
@@ -42,10 +46,14 @@ vi.mock('../api', async () => {
     createAttachmentUploadUrl: vi.fn(),
     createAttachmentDownloadUrl: vi.fn(),
     deleteAttachment: vi.fn(),
+    listLeaseAttachments: vi.fn(),
     listRepairRequestAttachments: vi.fn(),
     listRoomAttachments: vi.fn(),
+    listTenantAttachments: vi.fn(),
+    registerLeaseAttachment: vi.fn(),
     registerRepairRequestAttachment: vi.fn(),
     registerRoomAttachment: vi.fn(),
+    registerTenantAttachment: vi.fn(),
     uploadAttachmentFile: vi.fn(),
   };
 });
@@ -84,6 +92,46 @@ function getFileInput(container: HTMLElement) {
 
 function renderRoomAttachmentManager() {
   return render(<AttachmentManager resourceType="room" resourceId="room/with/slash" />);
+}
+
+function mockTenantAttachmentList() {
+  vi.mocked(listTenantAttachments).mockResolvedValue({
+    data: [
+      {
+        id: 'attachment-tenant',
+        object_path: 'gs://private-bucket/attachments/tenants/tenant-1/id-card.pdf',
+        file_name: '租客證件.pdf',
+        uploaded_by: 'user-1',
+        created_at: '2026-05-11T10:00:00Z',
+        sort_order: null,
+        photo_stage: null,
+      },
+    ],
+  });
+}
+
+function renderTenantAttachmentManager() {
+  return render(<AttachmentManager resourceType="tenant" resourceId="tenant/with/slash" title="租客附件" />);
+}
+
+function mockLeaseAttachmentList() {
+  vi.mocked(listLeaseAttachments).mockResolvedValue({
+    data: [
+      {
+        id: 'attachment-lease',
+        object_path: 'gs://private-bucket/attachments/leases/lease-1/contract.pdf',
+        file_name: '租約文件.pdf',
+        uploaded_by: 'user-1',
+        created_at: '2026-05-11T10:00:00Z',
+        sort_order: null,
+        photo_stage: null,
+      },
+    ],
+  });
+}
+
+function renderLeaseAttachmentManager() {
+  return render(<AttachmentManager resourceType="lease" resourceId="lease/with/slash" title="租約附件" />);
 }
 
 function mockRepairAttachmentList() {
@@ -447,6 +495,110 @@ describe('RoomAttachmentManager', () => {
     expect(visibleText).not.toMatch(/upload_url|nonce|object_path|bucket|GCS|signed URL|service account|storage/i);
     expect(visibleText).not.toContain('gs://private-bucket');
     expect(visibleText).not.toContain('https://storage.example/upload-1');
+  });
+});
+
+describe('Tenant and lease AttachmentManager adoption', () => {
+  it('uploads and registers tenant attachments through the shared primitive', async () => {
+    mockTenantAttachmentList();
+    vi.mocked(createAttachmentUploadUrl).mockResolvedValue({
+      upload_url: 'https://storage.example/upload-tenant?signature=masked',
+      nonce: 'nonce-tenant',
+      expires_at: '2026-05-11T10:00:00Z',
+    });
+    vi.mocked(uploadAttachmentFile).mockResolvedValue(undefined);
+    vi.mocked(registerTenantAttachment).mockResolvedValue({
+      id: 'attachment-new',
+      object_path: 'gs://private-bucket/attachments/tenants/tenant-1/new.pdf',
+      file_name: '租客新附件.pdf',
+      uploaded_by: 'user-1',
+      created_at: '2026-05-11T10:01:00Z',
+      sort_order: null,
+      photo_stage: null,
+    });
+
+    const { container } = renderTenantAttachmentManager();
+    await screen.findByText('租客證件.pdf');
+
+    const file = new File(['tenant bytes'], '租客新附件.pdf', { type: 'application/pdf' });
+    fireEvent.change(getFileInput(container), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: /確認上傳附件/ }));
+
+    await waitFor(() => {
+      expect(registerTenantAttachment).toHaveBeenCalledWith(
+        'tenant/with/slash',
+        { nonce: 'nonce-tenant', file_name: '租客新附件.pdf' },
+        expect.any(Function),
+      );
+    });
+    expect(createAttachmentUploadUrl).toHaveBeenCalledWith(
+      {
+        resource_type: 'tenant',
+        resource_id: 'tenant/with/slash',
+        file_name: '租客新附件.pdf',
+        content_type: 'application/pdf',
+        file_size: file.size,
+      },
+      expect.any(Function),
+    );
+    expect(uploadAttachmentFile).toHaveBeenCalledWith(
+      'https://storage.example/upload-tenant?signature=masked',
+      file,
+      'application/pdf',
+      {},
+    );
+    expect(listTenantAttachments).toHaveBeenCalledTimes(2);
+  });
+
+  it('uploads and registers lease attachments through the shared primitive', async () => {
+    mockLeaseAttachmentList();
+    vi.mocked(createAttachmentUploadUrl).mockResolvedValue({
+      upload_url: 'https://storage.example/upload-lease?signature=masked',
+      nonce: 'nonce-lease',
+      expires_at: '2026-05-11T10:00:00Z',
+    });
+    vi.mocked(uploadAttachmentFile).mockResolvedValue(undefined);
+    vi.mocked(registerLeaseAttachment).mockResolvedValue({
+      id: 'attachment-new',
+      object_path: 'gs://private-bucket/attachments/leases/lease-1/new.pdf',
+      file_name: '租約新附件.pdf',
+      uploaded_by: 'user-1',
+      created_at: '2026-05-11T10:01:00Z',
+      sort_order: null,
+      photo_stage: null,
+    });
+
+    const { container } = renderLeaseAttachmentManager();
+    await screen.findByText('租約文件.pdf');
+
+    const file = new File(['lease bytes'], '租約新附件.pdf', { type: 'application/pdf' });
+    fireEvent.change(getFileInput(container), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: /確認上傳附件/ }));
+
+    await waitFor(() => {
+      expect(registerLeaseAttachment).toHaveBeenCalledWith(
+        'lease/with/slash',
+        { nonce: 'nonce-lease', file_name: '租約新附件.pdf' },
+        expect.any(Function),
+      );
+    });
+    expect(createAttachmentUploadUrl).toHaveBeenCalledWith(
+      {
+        resource_type: 'lease',
+        resource_id: 'lease/with/slash',
+        file_name: '租約新附件.pdf',
+        content_type: 'application/pdf',
+        file_size: file.size,
+      },
+      expect.any(Function),
+    );
+    expect(uploadAttachmentFile).toHaveBeenCalledWith(
+      'https://storage.example/upload-lease?signature=masked',
+      file,
+      'application/pdf',
+      {},
+    );
+    expect(listLeaseAttachments).toHaveBeenCalledTimes(2);
   });
 });
 

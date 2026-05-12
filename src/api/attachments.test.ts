@@ -3,10 +3,14 @@ import {
   createAttachmentDownloadUrl,
   createAttachmentUploadUrl,
   deleteAttachment,
+  listLeaseAttachments,
   listRepairRequestAttachments,
   listRoomAttachments,
+  listTenantAttachments,
+  registerLeaseAttachment,
   registerRepairRequestAttachment,
   registerRoomAttachment,
+  registerTenantAttachment,
   uploadAttachmentFile,
   type AttachmentUploadUrlRequest,
   type RegisterRepairRequestAttachmentRequest,
@@ -122,6 +126,114 @@ describe('attachment API helpers', () => {
     expect(await new Response(init?.body).json()).toEqual({
       nonce: 'nonce-1',
       file_name: '合約.pdf',
+    });
+  });
+
+  it('lists tenant attachments by encoded tenant id', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        data: [
+          {
+            id: 'attachment-1',
+            object_path: 'attachments/tenants/tenant-1/id-card.jpg',
+            file_name: '身分證.jpg',
+            uploaded_by: 'user-1',
+            created_at: '2026-05-11T10:00:00Z',
+            sort_order: null,
+            photo_stage: null,
+          },
+        ],
+      }),
+    );
+
+    const result = await listTenantAttachments('tenant/with/slash', () => 'firebase-id-token', { fetcher });
+
+    const [url, init] = fetcher.mock.calls[0];
+    expect(url).toBe('/api/v1/tenants/tenant%2Fwith%2Fslash/attachments');
+    expect(init?.method).toBe('GET');
+    expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer firebase-id-token');
+    expect(result.data?.[0]?.file_name).toBe('身分證.jpg');
+  });
+
+  it('registers tenant attachments with nonce and file name only', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        id: 'attachment-1',
+        object_path: 'attachments/tenants/tenant-1/id-card.jpg',
+        file_name: '身分證.jpg',
+        uploaded_by: 'user-1',
+        created_at: '2026-05-11T10:00:00Z',
+        sort_order: null,
+        photo_stage: null,
+      }, { status: 201 }),
+    );
+    const body = {
+      nonce: 'nonce-1',
+      file_name: '身分證.jpg',
+    } satisfies RegisterAttachmentRequest;
+
+    await registerTenantAttachment('tenant/with/slash', body, () => 'firebase-id-token', { fetcher });
+
+    const [url, init] = fetcher.mock.calls[0];
+    expect(url).toBe('/api/v1/tenants/tenant%2Fwith%2Fslash/attachments');
+    expect(init?.method).toBe('POST');
+    expect(await new Response(init?.body).json()).toEqual({
+      nonce: 'nonce-1',
+      file_name: '身分證.jpg',
+    });
+  });
+
+  it('lists lease attachments by encoded lease id', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        data: [
+          {
+            id: 'attachment-1',
+            object_path: 'attachments/leases/lease-1/contract.pdf',
+            file_name: '租約.pdf',
+            uploaded_by: 'user-1',
+            created_at: '2026-05-11T10:00:00Z',
+            sort_order: null,
+            photo_stage: null,
+          },
+        ],
+      }),
+    );
+
+    const result = await listLeaseAttachments('lease/with/slash', () => 'firebase-id-token', { fetcher });
+
+    const [url, init] = fetcher.mock.calls[0];
+    expect(url).toBe('/api/v1/leases/lease%2Fwith%2Fslash/attachments');
+    expect(init?.method).toBe('GET');
+    expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer firebase-id-token');
+    expect(result.data?.[0]?.file_name).toBe('租約.pdf');
+  });
+
+  it('registers lease attachments with nonce and file name only', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        id: 'attachment-1',
+        object_path: 'attachments/leases/lease-1/contract.pdf',
+        file_name: '租約.pdf',
+        uploaded_by: 'user-1',
+        created_at: '2026-05-11T10:00:00Z',
+        sort_order: null,
+        photo_stage: null,
+      }, { status: 201 }),
+    );
+    const body = {
+      nonce: 'nonce-1',
+      file_name: '租約.pdf',
+    } satisfies RegisterAttachmentRequest;
+
+    await registerLeaseAttachment('lease/with/slash', body, () => 'firebase-id-token', { fetcher });
+
+    const [url, init] = fetcher.mock.calls[0];
+    expect(url).toBe('/api/v1/leases/lease%2Fwith%2Fslash/attachments');
+    expect(init?.method).toBe('POST');
+    expect(await new Response(init?.body).json()).toEqual({
+      nonce: 'nonce-1',
+      file_name: '租約.pdf',
     });
   });
 

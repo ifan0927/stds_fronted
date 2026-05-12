@@ -3,7 +3,6 @@ import {
   AuditOutlined,
   EditOutlined,
   FileTextOutlined,
-  PaperClipOutlined,
   ReloadOutlined,
   SaveOutlined,
   SwapOutlined,
@@ -57,6 +56,7 @@ import {
   getStatusColor,
   type LeaseAdjustmentFormValues,
 } from './tenantLeaseDetail';
+import { LeaseAttachmentManager } from './attachments';
 
 type LeaseDetailLoadState =
   | { status: 'loading'; data: null }
@@ -502,17 +502,14 @@ export default function LeaseDetailPage() {
               </span>
             </Space>
           </div>
-          <div className="property-link-row disabled-link-row">
-            <Space size={12} align="start">
-              <span className="property-link-icon"><PaperClipOutlined /></span>
-              <span>
-                <Typography.Text strong>租約附件</Typography.Text>
-                <Typography.Text type="secondary">附件上傳與刪除屬於 P2，這裡先保留入口位置。</Typography.Text>
-              </span>
-            </Space>
-          </div>
         </div>
       </Card>
+
+      {lease.id ? (
+        <Card title="文件附件">
+          <LeaseAttachmentManager leaseId={lease.id} />
+        </Card>
+      ) : null}
 
       <LeaseAdjustmentModal
         open={adjustOpen}

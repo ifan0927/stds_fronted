@@ -172,6 +172,15 @@ vi.mock('../auth', async () => {
   };
 });
 
+vi.mock('./attachments', () => ({
+  LeaseAttachmentManager: ({ leaseId }: { leaseId: string }) => (
+    <section aria-label="租約附件">租約附件管理：{leaseId}</section>
+  ),
+  TenantAttachmentManager: ({ tenantId }: { tenantId: string }) => (
+    <section aria-label="租客附件">租客附件管理：{tenantId}</section>
+  ),
+}));
+
 function renderTenantDetailPage(initialEntry = '/properties/property-1/tenants/tenant-1') {
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
@@ -229,6 +238,7 @@ describe('TenantDetailPage', () => {
     );
     expect(screen.getByRole('link', { name: '租約詳情' }).getAttribute('href')).toBe('/properties/property-1/leases/lease-1?roomId=room-1&tenantId=tenant-1');
     expect(screen.getByText(/租客備註、付款、收據與附件上傳由後續工作流承接/)).toBeTruthy();
+    expect(screen.getByLabelText('租客附件').textContent).toContain('tenant-1');
   });
 });
 
@@ -267,6 +277,7 @@ describe('LeaseDetailPage', () => {
       );
     });
     expect(screen.getByRole('link', { name: '收據' }).getAttribute('href')).toBe('/properties/property-1/billing?roomId=room-1&leaseId=lease-1&tenantId=tenant-1&billId=bill-1&view=rent-receipt');
+    expect(screen.getByLabelText('租約附件').textContent).toContain('lease-1');
   });
 
   it('keeps lease adjustment disabled for staff while preserving deferred workflow entries', async () => {
@@ -287,6 +298,6 @@ describe('LeaseDetailPage', () => {
 
     expect(adjustButton.hasAttribute('disabled')).toBe(true);
     expect(screen.getByText('租約更換')).toBeTruthy();
-    expect(screen.getByText('租約附件')).toBeTruthy();
+    expect(screen.getByLabelText('租約附件').textContent).toContain('lease-1');
   });
 });

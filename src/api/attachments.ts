@@ -40,6 +40,14 @@ function roomAttachmentPath(roomId: string) {
   return `/rooms/${encodeURIComponent(roomId)}/attachments`;
 }
 
+function tenantAttachmentPath(tenantId: string) {
+  return `/tenants/${encodeURIComponent(tenantId)}/attachments`;
+}
+
+function leaseAttachmentPath(leaseId: string) {
+  return `/leases/${encodeURIComponent(leaseId)}/attachments`;
+}
+
 function repairRequestAttachmentPath(repairRequestId: string) {
   return `/repair-requests/${encodeURIComponent(repairRequestId)}/attachments`;
 }
@@ -151,6 +159,68 @@ export function createRoomAttachment(
 }
 
 export const registerRoomAttachment = createRoomAttachment;
+
+export function listTenantAttachments(
+  tenantId: string,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<AttachmentList>({
+    path: tenantAttachmentPath(tenantId),
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function createTenantAttachment(
+  tenantId: string,
+  body: RegisterAttachmentRequest,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<Attachment>({
+    method: 'POST',
+    path: tenantAttachmentPath(tenantId),
+    body,
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export const registerTenantAttachment = createTenantAttachment;
+
+export function listLeaseAttachments(
+  leaseId: string,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<AttachmentList>({
+    path: leaseAttachmentPath(leaseId),
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function createLeaseAttachment(
+  leaseId: string,
+  body: RegisterAttachmentRequest,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<Attachment>({
+    method: 'POST',
+    path: leaseAttachmentPath(leaseId),
+    body,
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export const registerLeaseAttachment = createLeaseAttachment;
 
 export function listRepairRequestAttachments(
   repairRequestId: string,

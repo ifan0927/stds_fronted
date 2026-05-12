@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  exportBillReceipt,
   getBill,
   listPropertyMeterHistory,
   listPropertyPendingMeters,
   listRoomMeterHistory,
+  recordBillPayment,
   submitBillMeter,
 } from './billing';
 
@@ -76,5 +78,45 @@ describe('billing API helpers', () => {
         body: JSON.stringify({ current_reading: 1380 }),
       }),
     );
+  });
+
+  it('records full bill payment with the backend payment payload', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ id: 'bill-1', status: 'paid' }));
+
+    await recordBillPayment(
+      'bill/1',
+      { payment_method: 'transfer', paid_amount: 18000 },
+      () => 'token',
+      { fetcher },
+    );
+
+    expect(fetcher).toHaveBeenCalledWith(
+      expect.stringContaining('/bills/bill%2F1/payment'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ payment_method: 'transfer', paid_amount: 18000 }),
+      }),
+    );
+  });
+
+  it('exports a bill receipt through the HTML response path', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('<!doctype html><title>收據</title>', {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Content-Disposition': 'inline; filename="bill-receipt.html"',
+      },
+    }));
+
+    const result = await exportBillReceipt('bill/1', () => 'token', { fetcher });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      expect.stringContaining('/bills/bill%2F1/receipt?format=html'),
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(result).toMatchObject({
+      html: '<!doctype html><title>收據</title>',
+      filename: 'bill-receipt.html',
+    });
   });
 });

@@ -28,13 +28,17 @@ import { useLocation, useNavigate, useParams, useSearchParams } from 'react-rout
 import {
   ApiError,
   classifyApiErrorForUi,
+  exportBillReceipt,
   getBill,
   listBills,
   listPropertyPendingMeters,
   listPropertyTenantLeaseRoster,
+  openHtmlDocumentPreview,
+  recordBillPayment,
   submitBillMeter,
   type BillingBill,
   type BillingBillList,
+  type HtmlPreviewWindow,
   type PropertyTenantLeaseRoster,
   type PropertyTenantLeaseRosterRow,
 } from '../api';
@@ -78,6 +82,10 @@ type MeterFormValues = {
   current_reading?: number | null;
 };
 
+type PaymentFormValues = {
+  payment_method?: NonNullable<BillingBill['payment_method']>;
+};
+
 type OperationNotice = {
   type: 'info' | 'warning' | 'error';
   message: string;
@@ -99,6 +107,20 @@ const meterErrorCopy: Record<string, string> = {
   METER_READING_LESS_THAN_PREVIOUS: '本期度數不可小於上期度數，請確認後再送出。',
   BILL_NOT_ELECTRICITY_TYPE: '此帳單不是電費帳單，不能抄表。',
   BILL_STATUS_NOT_RECORDABLE: '此帳單目前不是待抄表狀態，請重新整理後確認。',
+};
+
+const paymentMethodOptions: Array<{ value: NonNullable<BillingBill['payment_method']>; label: string }> = [
+  { value: 'cash', label: '現金' },
+  { value: 'transfer', label: '匯款' },
+  { value: 'other', label: '其他' },
+];
+
+const paymentErrorCopy: Record<string, string> = {
+  VALIDATION_PAYMENT_METHOD_REQUIRED: '請選擇收款方式。',
+  VALIDATION_PAID_AMOUNT_REQUIRED: '收款金額由系統帶入，請重新整理後再試一次。',
+  BILL_ALREADY_PAID: '此帳單已完成收款，系統已重新讀取最新狀態。',
+  BILL_STATUS_NOT_PAYABLE: '此帳單目前不是待收款或逾期狀態，請重新整理後確認。',
+  BILL_PAID_AMOUNT_MISMATCH: '收款金額必須等於帳單金額，請重新整理後再送出。',
 };
 
 function getBillingReturnTo(returnTo: string) {
@@ -218,9 +240,42 @@ function canSubmitMeter(bill: BillingBill | null | undefined) {
   return bill?.type === 'electricity' && bill.status === 'pending_meter';
 }
 
+function canRecordPayment(bill: BillingBill | null | undefined) {
+  return (bill?.status === 'pending_payment' || bill?.status === 'overdue')
+    && typeof bill.amount === 'number';
+}
+
+function canExportReceipt(bill: BillingBill | null | undefined) {
+  return bill?.status === 'paid';
+}
+
 function getMeterErrorMessage(error: unknown) {
   if (error instanceof ApiError && error.errorCode) {
     return meterErrorCopy[error.errorCode] ?? '抄表送出失敗，請確認資料後再試一次。';
+  }
+
+  const state = classifyApiErrorForUi(error);
+  return state.description;
+}
+
+function getPaymentErrorMessage(error: unknown) {
+  if (error instanceof ApiError && error.errorCode) {
+    return paymentErrorCopy[error.errorCode] ?? '收款確認失敗，請確認帳單狀態後再試一次。';
+  }
+
+  const state = classifyApiErrorForUi(error);
+  return state.description;
+}
+
+function getReceiptErrorMessage(error: unknown) {
+  if (error instanceof ApiError) {
+    if (error.errorCode === 'BILL_RECEIPT_NOT_EXPORTABLE') {
+      return '此帳單目前不能開啟收據；請確認帳單已完成收款。';
+    }
+
+    if (error.errorCode === 'BILL_NOT_FOUND') {
+      return '找不到這張帳單，請重新整理後再確認。';
+    }
   }
 
   const state = classifyApiErrorForUi(error);
@@ -250,12 +305,14 @@ export default function BillingMeterPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { currentUser, getAccessToken } = useAuth();
   const [form] = Form.useForm<MeterFormValues>();
+  const [paymentForm] = Form.useForm<PaymentFormValues>();
   const [messageApi, contextHolder] = message.useMessage();
   const pendingRequestRef = useRef<{ id: number; controller: AbortController } | null>(null);
   const billListRequestRef = useRef<{ id: number; controller: AbortController } | null>(null);
   const rosterRequestRef = useRef<{ id: number; controller: AbortController } | null>(null);
   const detailRequestRef = useRef<{ id: number; controller: AbortController } | null>(null);
   const latestReturnToRef = useRef(`${location.pathname}${location.search}`);
+  const handledActionViewRef = useRef<string | null>(null);
   const pendingRequestIdRef = useRef(0);
   const billListRequestIdRef = useRef(0);
   const rosterRequestIdRef = useRef(0);
@@ -266,9 +323,14 @@ export default function BillingMeterPage() {
   const [detailState, setDetailState] = useState<BillDetailState>({ status: 'idle', data: null });
   const [meterBill, setMeterBill] = useState<BillingBill | null>(null);
   const [meterDrawerOpen, setMeterDrawerOpen] = useState(false);
+  const [paymentBill, setPaymentBill] = useState<BillingBill | null>(null);
+  const [paymentDrawerOpen, setPaymentDrawerOpen] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const [operationNotice, setOperationNotice] = useState<OperationNotice | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [paymentSubmitting, setPaymentSubmitting] = useState(false);
+  const [receiptExportingBillId, setReceiptExportingBillId] = useState<string | null>(null);
   const selectedBillId = searchParams.get('billId');
   const roomId = searchParams.get('roomId');
   const leaseId = searchParams.get('leaseId');
@@ -277,8 +339,10 @@ export default function BillingMeterPage() {
   const activeBillingFlow = getValidBillingFlow(searchParams.get('flow'));
   const activeBillType = billType ?? 'electricity';
   const billStatus = getValidBillStatus(searchParams.get('billStatus'));
+  const actionView = searchParams.get('view');
   const routeContextMessage = getReadableRouteContext(roomId, leaseId);
   const canOperateMeter = hasRole(currentUser, ['admin', 'organizer', 'staff']);
+  const canOperatePayment = hasRole(currentUser, ['admin', 'organizer', 'staff']);
 
   useEffect(() => {
     latestReturnToRef.current = `${location.pathname}${location.search}`;
@@ -290,8 +354,10 @@ export default function BillingMeterPage() {
 
       if (billId) {
         updated.set('billId', billId);
+        updated.delete('view');
       } else {
         updated.delete('billId');
+        updated.delete('view');
       }
 
       return updated;
@@ -470,6 +536,7 @@ export default function BillingMeterPage() {
     detailRequestRef.current = { id: requestId, controller };
     setDetailState({ status: 'loading', data: null });
     setSubmitError(null);
+    setPaymentError(null);
 
     void getBill(billId, getAccessToken, { signal: controller.signal })
       .then((response) => {
@@ -551,11 +618,22 @@ export default function BillingMeterPage() {
     form.setFieldsValue({ current_reading: null });
   }, [form]);
 
+  const openPaymentDrawer = useCallback((bill: BillingBill) => {
+    setPaymentBill(bill);
+    setPaymentDrawerOpen(true);
+    setPaymentError(null);
+    setOperationNotice(null);
+    paymentForm.resetFields();
+  }, [paymentForm]);
+
   const closeDetail = useCallback(() => {
     setSelectedBillId(null);
     setMeterDrawerOpen(false);
     setMeterBill(null);
+    setPaymentDrawerOpen(false);
+    setPaymentBill(null);
     setSubmitError(null);
+    setPaymentError(null);
   }, [setSelectedBillId]);
 
   const submitMeter = useCallback((values: MeterFormValues) => {
@@ -654,6 +732,232 @@ export default function BillingMeterPage() {
     navigate,
     selectedBillId,
   ]);
+
+  const submitPayment = useCallback((values: PaymentFormValues) => {
+    if (!paymentBill?.id || typeof paymentBill.amount !== 'number' || !values.payment_method) {
+      return;
+    }
+
+    const paymentBillId = paymentBill.id;
+    const paidAmount = paymentBill.amount;
+    setPaymentSubmitting(true);
+    setPaymentError(null);
+    setOperationNotice(null);
+
+    void recordBillPayment(
+      paymentBillId,
+      {
+        payment_method: values.payment_method,
+        paid_amount: paidAmount,
+      },
+      getAccessToken,
+    )
+      .then((response) => {
+        if (selectedBillId === paymentBillId) {
+          setDetailState({ status: 'ready', data: response });
+        }
+        setPaymentDrawerOpen(false);
+        setPaymentBill(null);
+        paymentForm.resetFields();
+        messageApi.success('收款已確認，帳單狀態已重新讀取。');
+        loadPendingMeters();
+        loadBillList();
+      })
+      .catch((error: unknown) => {
+        const errorState = classifyApiErrorForUi(error);
+
+        if (errorState.kind === 'unauthorized') {
+          navigate(getBillingReturnTo(latestReturnToRef.current), { replace: true });
+          return;
+        }
+
+        if (errorState.kind === 'conflict') {
+          setOperationNotice({
+            type: 'warning',
+            message: '資料已被更新',
+            description: '系統已重新讀取最新帳單，請從更新後的清單重新開啟收款。',
+          });
+          setPaymentDrawerOpen(false);
+          setPaymentBill(null);
+          setPaymentError(null);
+          paymentForm.resetFields();
+          loadPendingMeters();
+          loadBillList();
+          if (selectedBillId === paymentBillId) {
+            loadBillDetail(paymentBillId);
+          }
+          return;
+        }
+
+        if (errorState.kind === 'forbidden') {
+          const messageText = '目前角色或物業授權不可確認收款，請確認登入帳號與物業權限。';
+          setPaymentError(messageText);
+          setOperationNotice({
+            type: 'error',
+            message: '沒有權限確認收款',
+            description: messageText,
+          });
+          return;
+        }
+
+        if (errorState.kind === 'not-found') {
+          setOperationNotice({
+            type: 'error',
+            message: '找不到這張帳單',
+            description: '帳單可能已被移除或狀態已變更，系統已重新整理清單。',
+          });
+          setPaymentDrawerOpen(false);
+          setPaymentBill(null);
+          setPaymentError(null);
+          paymentForm.resetFields();
+          loadPendingMeters();
+          loadBillList();
+          if (selectedBillId === paymentBillId) {
+            setDetailState({ status: 'not-found', data: null });
+          }
+          return;
+        }
+
+        if (error instanceof ApiError && error.errorCode === 'BILL_ALREADY_PAID') {
+          setPaymentDrawerOpen(false);
+          setPaymentBill(null);
+          setPaymentError(null);
+          paymentForm.resetFields();
+          setOperationNotice({
+            type: 'warning',
+            message: '帳單已完成收款',
+            description: '此帳單已經是已付款狀態，系統已重新整理清單。',
+          });
+          loadPendingMeters();
+          loadBillList();
+          if (selectedBillId === paymentBillId) {
+            loadBillDetail(paymentBillId);
+          }
+          return;
+        }
+
+        setPaymentError(getPaymentErrorMessage(error));
+      })
+      .finally(() => setPaymentSubmitting(false));
+  }, [
+    getAccessToken,
+    loadBillDetail,
+    loadBillList,
+    loadPendingMeters,
+    messageApi,
+    navigate,
+    paymentBill,
+    paymentForm,
+    selectedBillId,
+  ]);
+
+  const openReceipt = useCallback((bill: BillingBill) => {
+    if (!bill.id) {
+      return;
+    }
+
+    const billId = bill.id;
+    const previewWindow = window.open('', '_blank');
+    setReceiptExportingBillId(billId);
+    setOperationNotice(null);
+
+    void exportBillReceipt(billId, getAccessToken)
+      .then((response) => {
+        const result = openHtmlDocumentPreview(response, previewWindow as HtmlPreviewWindow | null);
+
+        if (!result.ok) {
+          setOperationNotice({
+            type: 'warning',
+            message: '收據預覽未開啟',
+            description: result.reason === 'popup-blocked'
+              ? '瀏覽器阻擋了收據預覽視窗，請允許彈出視窗後再試一次。'
+              : '收據預覽格式無法開啟，請稍後再試。',
+          });
+          return;
+        }
+
+        messageApi.success('收據已開啟。');
+      })
+      .catch((error: unknown) => {
+        previewWindow?.close();
+        const errorState = classifyApiErrorForUi(error);
+
+        if (errorState.kind === 'unauthorized') {
+          navigate(getBillingReturnTo(latestReturnToRef.current), { replace: true });
+          return;
+        }
+
+        setOperationNotice({
+          type: errorState.kind === 'validation' ? 'warning' : 'error',
+          message: '收據預覽失敗',
+          description: getReceiptErrorMessage(error),
+        });
+      })
+      .finally(() => setReceiptExportingBillId(null));
+  }, [getAccessToken, messageApi, navigate]);
+
+  useEffect(() => {
+    if (!selectedBill?.id || (actionView !== 'rent-payment' && actionView !== 'rent-receipt')) {
+      handledActionViewRef.current = null;
+      return;
+    }
+
+    const actionKey = `${selectedBill.id}:${actionView}`;
+    if (handledActionViewRef.current === actionKey) {
+      return;
+    }
+
+    handledActionViewRef.current = actionKey;
+
+    if (actionView === 'rent-payment') {
+      if (canOperatePayment && canRecordPayment(selectedBill)) {
+        openPaymentDrawer(selectedBill);
+        return;
+      }
+
+      setOperationNotice({
+        type: 'warning',
+        message: '此帳單目前不能收款',
+        description: canOperatePayment
+          ? '收款只適用於待收款或逾期帳單，且金額必須由後端提供。'
+          : '目前角色只能查看帳單，不能確認收款。',
+      });
+      return;
+    }
+
+    if (canExportReceipt(selectedBill)) {
+      openReceipt(selectedBill);
+      return;
+    }
+
+    setOperationNotice({
+      type: 'warning',
+      message: '此帳單目前不能開啟收據',
+      description: '收據只適用於已付款的租金或電費帳單。',
+    });
+  }, [
+    actionView,
+    canOperatePayment,
+    openPaymentDrawer,
+    openReceipt,
+    selectedBill,
+  ]);
+
+  useEffect(() => {
+    if (actionView !== 'rent-payment' && actionView !== 'rent-receipt') {
+      return;
+    }
+
+    if (activeBillType === 'rent') {
+      return;
+    }
+
+    setSearchParams((previous) => {
+      const updated = new URLSearchParams(previous);
+      updated.set('billType', 'rent');
+      return updated;
+    }, { replace: true });
+  }, [actionView, activeBillType, selectedBillId, setSearchParams]);
 
   const rows = pendingState.status === 'ready' ? pendingState.data.data ?? [] : [];
   const billRows = billListState.status === 'ready' ? billListState.data.data ?? [] : [];
@@ -842,8 +1146,12 @@ export default function BillingMeterPage() {
             <Button size="small" type="primary" icon={<AuditOutlined />} onClick={() => openMeterDrawer(record)}>
               抄表
             </Button>
+          ) : canOperatePayment && canRecordPayment(record) ? (
+            <Button size="small" type="primary" onClick={() => openPaymentDrawer(record)}>
+              收款
+            </Button>
           ) : (
-            <Tooltip title="收款流程尚未在本階段實作。">
+            <Tooltip title={canOperatePayment ? '只有待收款或逾期且已有金額的帳單可以收款。' : '目前角色只能查看，不能確認收款。'}>
               <span>
                 <Button size="small" disabled>
                   收款
@@ -851,17 +1159,35 @@ export default function BillingMeterPage() {
               </span>
             </Tooltip>
           )}
-          <Tooltip title="收據流程尚未在本階段實作。">
-            <span>
-              <Button size="small" disabled>
-                收據
-              </Button>
-            </span>
-          </Tooltip>
+          {canExportReceipt(record) ? (
+            <Button
+              size="small"
+              loading={receiptExportingBillId === record.id}
+              onClick={() => openReceipt(record)}
+            >
+              收據
+            </Button>
+          ) : (
+            <Tooltip title="已付款帳單才能開啟收據。">
+              <span>
+                <Button size="small" disabled>
+                  收據
+                </Button>
+              </span>
+            </Tooltip>
+          )}
         </Space>
       ),
     },
-  ], [canOperateMeter, openMeterDrawer, setSelectedBillId]);
+  ], [
+    canOperateMeter,
+    canOperatePayment,
+    openMeterDrawer,
+    openPaymentDrawer,
+    openReceipt,
+    receiptExportingBillId,
+    setSelectedBillId,
+  ]);
 
   const billProcessingContent = (
     <Card>
@@ -869,7 +1195,7 @@ export default function BillingMeterPage() {
         <div>
           <Typography.Title level={2}>帳單處理</Typography.Title>
           <Typography.Paragraph type="secondary">
-            先選擇房間或租約，再分別處理該租約的電費與租金帳單；收款與收據目前只保留在帳單列動作。
+            先選擇房間或租約，再分別處理該租約的電費與租金帳單；待收款或逾期帳單可確認收款，已付款帳單可開啟收據。
           </Typography.Paragraph>
         </div>
         <Space wrap className="billing-context-controls">
@@ -1065,7 +1391,7 @@ export default function BillingMeterPage() {
           </Space>
           <Typography.Title level={1}>帳單與抄表</Typography.Title>
           <Typography.Paragraph type="secondary">
-            查看租金與電費帳單、開啟帳單詳情，並針對待抄表電費帳單送出本期電表度數。
+            查看租金與電費帳單、開啟帳單詳情，並處理抄表、收款與後端產生的收據預覽。
           </Typography.Paragraph>
         </div>
         <Space wrap>
@@ -1144,6 +1470,19 @@ export default function BillingMeterPage() {
                 抄表
               </Button>
             )}
+            {selectedBill && canOperatePayment && canRecordPayment(selectedBill) && (
+              <Button type="primary" onClick={() => openPaymentDrawer(selectedBill)}>
+                收款
+              </Button>
+            )}
+            {selectedBill && canExportReceipt(selectedBill) && (
+              <Button
+                loading={receiptExportingBillId === selectedBill.id}
+                onClick={() => openReceipt(selectedBill)}
+              >
+                開啟收據
+              </Button>
+            )}
           </Space>
         }
       >
@@ -1190,7 +1529,23 @@ export default function BillingMeterPage() {
                 type="info"
                 showIcon
                 message="此帳單已進入待收款"
-                description="收款流程不在 #54 範圍內；後續頁面會承接此入口。"
+                description="可從下方收款按鈕確認完整收款；金額固定使用後端帳單金額。"
+              />
+            )}
+            {detailState.data.status === 'overdue' && (
+              <Alert
+                type="warning"
+                showIcon
+                message="此帳單已逾期"
+                description="仍可確認完整收款；送出後以後端回傳的已付款狀態為準。"
+              />
+            )}
+            {detailState.data.status === 'paid' && (
+              <Alert
+                type="success"
+                showIcon
+                message="此帳單已付款"
+                description="可開啟後端產生的收據 HTML；前端不重建收據內容或金額。"
               />
             )}
           </Space>
@@ -1276,6 +1631,94 @@ export default function BillingMeterPage() {
                 disabled={!canOperateMeter || !canSubmitMeter(meterBill)}
               >
                 送出抄表
+              </Button>
+            </div>
+          </Form>
+        )}
+      </Drawer>
+
+      <Drawer
+        title="確認收款"
+        open={paymentDrawerOpen}
+        onClose={() => {
+          setPaymentDrawerOpen(false);
+          setPaymentBill(null);
+          setPaymentError(null);
+          paymentForm.resetFields();
+        }}
+        width={520}
+        destroyOnClose
+      >
+        {paymentBill && (
+          <Form
+            form={paymentForm}
+            layout="vertical"
+            requiredMark={false}
+            onFinish={submitPayment}
+          >
+            <Descriptions bordered column={1} size="small" className="meter-submit-summary">
+              <Descriptions.Item label="帳單類型">{getBillTypeLabel(paymentBill.type)}</Descriptions.Item>
+              <Descriptions.Item label="房間">{getOptionalText(paymentBill.room_label)}</Descriptions.Item>
+              <Descriptions.Item label="租客">{getOptionalText(paymentBill.tenant_label)}</Descriptions.Item>
+              <Descriptions.Item label="帳單週期">{getPeriodText(paymentBill)}</Descriptions.Item>
+              <Descriptions.Item label="目前狀態">
+                <Tag color={getStatusColor(paymentBill.status)}>
+                  {getBillStatusLabel(paymentBill.status)}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="收款金額">{getAmountText(paymentBill.amount)}</Descriptions.Item>
+            </Descriptions>
+
+            <Alert
+              type="info"
+              showIcon
+              className="form-alert"
+              message="必填欄位"
+              description="收款方式為必填；收款金額固定使用後端帳單金額，不提供手動輸入。收款時間不需填寫，系統會以後端時間記錄。"
+            />
+
+            {paymentError && (
+              <Alert
+                type="error"
+                showIcon
+                className="form-alert"
+                message="收款確認失敗"
+                description={paymentError}
+              />
+            )}
+
+            <Form.Item
+              name="payment_method"
+              label="收款方式（必填）"
+              rules={[
+                { required: true, message: '請選擇收款方式。' },
+              ]}
+            >
+              <Select
+                aria-label="收款方式（必填）"
+                className="full-width-control"
+                placeholder="請選擇收款方式"
+                options={paymentMethodOptions}
+              />
+            </Form.Item>
+
+            <div className="form-footer-actions">
+              <Button onClick={() => {
+                setPaymentDrawerOpen(false);
+                setPaymentBill(null);
+                setPaymentError(null);
+                paymentForm.resetFields();
+              }}
+              >
+                取消
+              </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={paymentSubmitting}
+                disabled={!canOperatePayment || !canRecordPayment(paymentBill)}
+              >
+                確認收款
               </Button>
             </div>
           </Form>

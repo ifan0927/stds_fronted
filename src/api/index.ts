@@ -32,10 +32,12 @@ export {
   uploadAttachmentFile,
 } from './attachments';
 export {
+  exportBillReceipt,
   getBill,
   listPropertyMeterHistory,
   listPropertyPendingMeters,
   listRoomMeterHistory,
+  recordBillPayment,
   submitBillMeter,
 } from './billing';
 export {
@@ -121,6 +123,7 @@ export type {
   PropertyMeterHistory,
   PropertyMeterHistoryRow,
   RecordMeterRequest,
+  RecordPaymentRequest,
 } from './billing';
 export type {
   FinancialReport,

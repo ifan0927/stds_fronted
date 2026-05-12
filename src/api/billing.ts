@@ -6,6 +6,7 @@ export type BillList = components['schemas']['BillListResponse'];
 export type PropertyMeterHistory = components['schemas']['PropertyMeterHistoryResponse'];
 export type PropertyMeterHistoryRow = components['schemas']['PropertyMeterHistoryRow'];
 export type RecordMeterRequest = components['schemas']['RecordMeterRequest'];
+export type RecordPaymentRequest = components['schemas']['RecordPaymentRequest'];
 
 export type MeterHistoryQuery = {
   year?: number;
@@ -95,6 +96,37 @@ export function submitBillMeter(
     method: 'POST',
     path: billPath(billId, '/meter'),
     body,
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function recordBillPayment(
+  billId: string,
+  body: RecordPaymentRequest,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<Bill>({
+    method: 'POST',
+    path: billPath(billId, '/payment'),
+    body,
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function exportBillReceipt(
+  billId: string,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest({
+    path: billPath(billId, '/receipt'),
+    query: { format: 'html' },
+    responseType: 'html',
     tokenProvider,
     signal: options.signal,
     fetcher: options.fetcher,

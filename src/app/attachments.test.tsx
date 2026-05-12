@@ -7,10 +7,12 @@ import {
   createAttachmentUploadUrl,
   deleteAttachment,
   listLeaseAttachments,
+  listPropertyAttachments,
   listRepairRequestAttachments,
   listRoomAttachments,
   listTenantAttachments,
   registerLeaseAttachment,
+  registerPropertyAttachment,
   registerRepairRequestAttachment,
   registerRoomAttachment,
   registerTenantAttachment,
@@ -47,10 +49,12 @@ vi.mock('../api', async () => {
     createAttachmentDownloadUrl: vi.fn(),
     deleteAttachment: vi.fn(),
     listLeaseAttachments: vi.fn(),
+    listPropertyAttachments: vi.fn(),
     listRepairRequestAttachments: vi.fn(),
     listRoomAttachments: vi.fn(),
     listTenantAttachments: vi.fn(),
     registerLeaseAttachment: vi.fn(),
+    registerPropertyAttachment: vi.fn(),
     registerRepairRequestAttachment: vi.fn(),
     registerRoomAttachment: vi.fn(),
     registerTenantAttachment: vi.fn(),
@@ -92,6 +96,34 @@ function getFileInput(container: HTMLElement) {
 
 function renderRoomAttachmentManager() {
   return render(<AttachmentManager resourceType="room" resourceId="room/with/slash" />);
+}
+
+function mockPropertyAttachmentList() {
+  vi.mocked(listPropertyAttachments).mockResolvedValue({
+    data: [
+      {
+        id: 'attachment-property',
+        object_path: 'gs://private-bucket/attachments/properties/property-1/file.pdf',
+        file_name: '物業文件.pdf',
+        uploaded_by: 'user-1',
+        created_at: '2026-05-11T10:00:00Z',
+        sort_order: null,
+        photo_stage: null,
+      },
+    ],
+  });
+}
+
+function renderPropertyAttachmentManager(canMutate = true) {
+  return render(
+    <AttachmentManager
+      resourceType="property"
+      resourceId="property/with/slash"
+      title="物業附件"
+      canMutate={canMutate}
+      readOnlyReason="此角色只能查看與下載物業附件。"
+    />,
+  );
 }
 
 function mockTenantAttachmentList() {
@@ -499,6 +531,68 @@ describe('RoomAttachmentManager', () => {
 });
 
 describe('Tenant and lease AttachmentManager adoption', () => {
+  it('uploads and registers property attachments through the shared primitive', async () => {
+    mockPropertyAttachmentList();
+    vi.mocked(createAttachmentUploadUrl).mockResolvedValue({
+      upload_url: 'https://storage.example/upload-property?signature=masked',
+      nonce: 'nonce-property',
+      expires_at: '2026-05-11T10:00:00Z',
+    });
+    vi.mocked(uploadAttachmentFile).mockResolvedValue(undefined);
+    vi.mocked(registerPropertyAttachment).mockResolvedValue({
+      id: 'attachment-new',
+      object_path: 'gs://private-bucket/attachments/properties/property-1/new.pdf',
+      file_name: '物業新附件.pdf',
+      uploaded_by: 'user-1',
+      created_at: '2026-05-11T10:01:00Z',
+      sort_order: null,
+      photo_stage: null,
+    });
+
+    const { container } = renderPropertyAttachmentManager();
+    await screen.findByText('物業文件.pdf');
+
+    const file = new File(['property bytes'], '物業新附件.pdf', { type: 'application/pdf' });
+    fireEvent.change(getFileInput(container), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: /確認上傳附件/ }));
+
+    await waitFor(() => {
+      expect(registerPropertyAttachment).toHaveBeenCalledWith(
+        'property/with/slash',
+        { nonce: 'nonce-property', file_name: '物業新附件.pdf' },
+        expect.any(Function),
+      );
+    });
+    expect(createAttachmentUploadUrl).toHaveBeenCalledWith(
+      {
+        resource_type: 'property',
+        resource_id: 'property/with/slash',
+        file_name: '物業新附件.pdf',
+        content_type: 'application/pdf',
+        file_size: file.size,
+      },
+      expect.any(Function),
+    );
+    expect(uploadAttachmentFile).toHaveBeenCalledWith(
+      'https://storage.example/upload-property?signature=masked',
+      file,
+      'application/pdf',
+      {},
+    );
+    expect(listPropertyAttachments).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps property attachment upload and delete actions read-only when mutation is not allowed', async () => {
+    mockPropertyAttachmentList();
+
+    renderPropertyAttachmentManager(false);
+    await screen.findByText('物業文件.pdf');
+
+    expect(screen.getByText('此角色只能查看與下載物業附件。')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '選擇檔案' })).toBeNull();
+    expect(screen.getByRole('button', { name: /刪除 物業文件.pdf/ }).hasAttribute('disabled')).toBe(true);
+  });
+
   it('uploads and registers tenant attachments through the shared primitive', async () => {
     mockTenantAttachmentList();
     vi.mocked(createAttachmentUploadUrl).mockResolvedValue({

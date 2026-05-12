@@ -26,10 +26,12 @@ import {
   createAttachmentUploadUrl,
   deleteAttachment,
   listLeaseAttachments,
+  listPropertyAttachments,
   listRepairRequestAttachments,
   listRoomAttachments,
   listTenantAttachments,
   registerLeaseAttachment,
+  registerPropertyAttachment,
   registerRepairRequestAttachment,
   registerRoomAttachment,
   registerTenantAttachment,
@@ -55,9 +57,11 @@ type AttachmentListState =
   | { status: 'error'; data: Attachment[] };
 
 type AttachmentManagerProps = {
-  resourceType: 'room' | 'tenant' | 'lease' | 'repair_request' | 'repair-request';
+  resourceType: 'property' | 'room' | 'tenant' | 'lease' | 'repair_request' | 'repair-request';
   resourceId: string;
   title?: string;
+  canMutate?: boolean;
+  readOnlyReason?: string;
   onMutationBusyChange?: (busy: boolean) => void;
 };
 
@@ -164,6 +168,10 @@ function getNextRepairSortOrder(attachments: Attachment[]) {
 }
 
 function getAttachmentResourceLabel(resourceType: AttachmentManagerProps['resourceType']) {
+  if (resourceType === 'property') {
+    return '物業';
+  }
+
   if (resourceType === 'tenant') {
     return '租客';
   }
@@ -183,6 +191,8 @@ export function AttachmentManager({
   resourceType,
   resourceId,
   title = '附件管理',
+  canMutate = true,
+  readOnlyReason = '目前角色只能查看與下載附件。',
   onMutationBusyChange,
 }: AttachmentManagerProps) {
   const { getAccessToken } = useAuth();
@@ -238,6 +248,10 @@ export function AttachmentManager({
 
       if (resourceType === 'lease') {
         return listLeaseAttachments;
+      }
+
+      if (resourceType === 'property') {
+        return listPropertyAttachments;
       }
 
       return listRoomAttachments;
@@ -347,6 +361,10 @@ export function AttachmentManager({
 
           if (resourceType === 'lease') {
             return registerLeaseAttachment;
+          }
+
+          if (resourceType === 'property') {
+            return registerPropertyAttachment;
           }
 
           return registerRoomAttachment;
@@ -541,7 +559,10 @@ export function AttachmentManager({
           >
             重新整理
           </Button>
-          {isRepairAttachment ? (
+          {!canMutate && (
+            <Tag>{readOnlyReason}</Tag>
+          )}
+          {isRepairAttachment && canMutate ? (
             <>
               <input
                 ref={photoInputRef}
@@ -605,7 +626,7 @@ export function AttachmentManager({
                 選擇其他文件
               </Button>
             </>
-          ) : (
+          ) : canMutate ? (
             <Button
               icon={<PaperClipOutlined />}
               onClick={() => inputRef.current?.click()}
@@ -613,7 +634,7 @@ export function AttachmentManager({
             >
               選擇檔案
             </Button>
-          )}
+          ) : null}
           {!isRepairAttachment && (
             <input
               ref={inputRef}
@@ -621,7 +642,7 @@ export function AttachmentManager({
               aria-label="選擇檔案"
               accept="image/jpeg,image/png,image/heic,application/pdf"
               hidden
-              disabled={mutationInProgress}
+              disabled={!canMutate || mutationInProgress}
               onChange={(event) => {
                 const file = event.currentTarget.files?.[0];
                 event.currentTarget.value = '';
@@ -717,7 +738,7 @@ export function AttachmentManager({
         />
       )}
 
-      {!isRepairAttachment && selectedFile && (
+      {!isRepairAttachment && canMutate && selectedFile && (
         <Alert
           type="info"
           showIcon
@@ -826,7 +847,11 @@ export function AttachmentManager({
                     icon={<DeleteOutlined />}
                     aria-label={`刪除 ${getAttachmentName(attachment)}`}
                     loading={deletingAttachmentId === attachment.id}
-                    disabled={uploading || (deletingAttachmentId !== null && deletingAttachmentId !== attachment.id)}
+                    disabled={
+                      !canMutate
+                      || uploading
+                      || (deletingAttachmentId !== null && deletingAttachmentId !== attachment.id)
+                    }
                     onClick={() => handleDelete(attachment)}
                   >
                     刪除
@@ -872,6 +897,28 @@ export function AttachmentManager({
 type RoomAttachmentManagerProps = {
   roomId: string;
 };
+
+type PropertyAttachmentManagerProps = {
+  propertyId: string;
+  canMutate?: boolean;
+  readOnlyReason?: string;
+};
+
+export function PropertyAttachmentManager({
+  propertyId,
+  canMutate,
+  readOnlyReason,
+}: PropertyAttachmentManagerProps) {
+  return (
+    <AttachmentManager
+      resourceType="property"
+      resourceId={propertyId}
+      title="物業附件"
+      canMutate={canMutate}
+      readOnlyReason={readOnlyReason}
+    />
+  );
+}
 
 export function RoomAttachmentManager({ roomId }: RoomAttachmentManagerProps) {
   return <AttachmentManager resourceType="room" resourceId={roomId} />;

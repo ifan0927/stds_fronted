@@ -8,6 +8,7 @@ export {
 } from './attachmentRules';
 export {
   LeaseAttachmentManager,
+  PropertyAttachmentManager,
   RepairAttachmentManager,
   RoomAttachmentManager,
   TenantAttachmentManager,

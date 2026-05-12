@@ -51,6 +51,7 @@ import {
   getRoomStatusLabel,
 } from './format';
 import { abortRequest } from './requestAbort';
+import { PropertyAttachmentManager } from './attachments';
 
 type PropertyDashboardLoadState =
   | { status: 'loading'; data: null }
@@ -478,6 +479,16 @@ export default function PropertyDashboardPage() {
                 </Space>
               </div>
             </Card>
+
+            {property.id && (
+              <Card>
+                <PropertyAttachmentManager
+                  propertyId={property.id}
+                  canMutate={canWriteProperty}
+                  readOnlyReason="此角色只能查看與下載物業附件。"
+                />
+              </Card>
+            )}
 
             <Card title="房間狀態" extra={<Tag>{rooms.length} 間</Tag>}>
               {rooms.length > 0 ? (

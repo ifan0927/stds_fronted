@@ -36,6 +36,10 @@ function attachmentPath(attachmentId: string) {
   return `/attachments/${encodeURIComponent(attachmentId)}`;
 }
 
+function propertyAttachmentPath(propertyId: string) {
+  return `/properties/${encodeURIComponent(propertyId)}/attachments`;
+}
+
 function roomAttachmentPath(roomId: string) {
   return `/rooms/${encodeURIComponent(roomId)}/attachments`;
 }
@@ -128,6 +132,37 @@ export function deleteAttachment(
     fetcher: options.fetcher,
   });
 }
+
+export function listPropertyAttachments(
+  propertyId: string,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<AttachmentList>({
+    path: propertyAttachmentPath(propertyId),
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function createPropertyAttachment(
+  propertyId: string,
+  body: RegisterAttachmentRequest,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<Attachment>({
+    method: 'POST',
+    path: propertyAttachmentPath(propertyId),
+    body,
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export const registerPropertyAttachment = createPropertyAttachment;
 
 export function listRoomAttachments(
   roomId: string,

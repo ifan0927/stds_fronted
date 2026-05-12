@@ -35,6 +35,7 @@ vi.mock('@ant-design/icons', () => ({
   DeleteOutlined: () => null,
   EditOutlined: () => null,
   EyeOutlined: () => null,
+  PaperClipOutlined: () => null,
   PlusOutlined: () => null,
   ReloadOutlined: () => null,
   SaveOutlined: () => null,
@@ -386,6 +387,20 @@ vi.mock('../auth', async () => {
   };
 });
 
+vi.mock('./attachments', () => ({
+  PropertyAttachmentManager: ({
+    canMutate,
+    propertyId,
+  }: {
+    canMutate?: boolean;
+    propertyId: string;
+  }) => (
+    <section aria-label="物業附件內容">
+      物業附件管理：{propertyId} / {canMutate ? '可異動' : '唯讀'}
+    </section>
+  ),
+}));
+
 vi.mock('./routeState', () => ({
   EmptyState: ({ action, description, title }: { action?: ReactNode; description?: ReactNode; title?: ReactNode }) => (
     <section>
@@ -470,6 +485,9 @@ describe('Property master-data routes', () => {
     await screen.findByText('台北大安物業');
 
     expect(screen.getByRole('link', { name: '新增物業' }).getAttribute('href')).toBe('/properties/new');
+    fireEvent.click(screen.getByRole('button', { name: '附件' }));
+    expect(screen.getByLabelText('物業附件：台北大安物業')).toBeTruthy();
+    expect(screen.getByLabelText('物業附件內容').textContent).toContain('property-1');
     expect(screen.getByRole('link', { name: '編輯' }).getAttribute('href')).toBe('/properties/property-1/edit');
     fireEvent.click(screen.getByRole('button', { name: '刪除' }));
     expect(screen.getByRole('heading', { name: '確認刪除物業' })).toBeTruthy();

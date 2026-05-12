@@ -2,11 +2,11 @@ import {
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
+  PaperClipOutlined,
   PlusOutlined,
   ReloadOutlined,
-  UploadOutlined,
 } from '@ant-design/icons';
-import { Alert, App as AntdApp, Button, Card, Modal, Progress, Space, Table, Tag, Tooltip, Typography } from 'antd';
+import { Alert, App as AntdApp, Button, Card, Drawer, Modal, Progress, Space, Table, Tag, Tooltip, Typography } from 'antd';
 import type { TableColumnsType } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -20,6 +20,7 @@ import {
 } from './routeState';
 import { formatPercent } from './format';
 import { abortRequest } from './requestAbort';
+import { PropertyAttachmentManager } from './attachments';
 
 type PropertyListLoadState =
   | { status: 'loading'; data: null }
@@ -105,6 +106,7 @@ export default function PropertyListPage() {
     data: null,
   });
   const [deleteTarget, setDeleteTarget] = useState<Property | null>(null);
+  const [attachmentTarget, setAttachmentTarget] = useState<Property | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const canWriteProperty = currentUser?.role === 'admin'
@@ -287,7 +289,7 @@ export default function PropertyListPage() {
     },
     {
       title: '操作',
-      width: 300,
+      width: 340,
       fixed: 'right',
       render: (_value, record) => {
         if (!record.id) {
@@ -298,6 +300,12 @@ export default function PropertyListPage() {
           <Space size={8} wrap>
             <Button type="primary" icon={<EyeOutlined />}>
               <Link to={`/properties/${record.id}`}>進入工作台</Link>
+            </Button>
+            <Button
+              icon={<PaperClipOutlined />}
+              onClick={() => setAttachmentTarget(record)}
+            >
+              附件
             </Button>
             <Tooltip title={canWriteProperty ? undefined : '目前角色沒有編輯物業權限。'}>
               <Button icon={<EditOutlined />} disabled={!canWriteProperty}>
@@ -340,11 +348,6 @@ export default function PropertyListPage() {
           <Button icon={<ReloadOutlined />} onClick={() => loadProperties()}>
             重新整理
           </Button>
-          <Tooltip title="附件管理尚未開放，後續會提供物業附件工作流。">
-            <Button icon={<UploadOutlined />} disabled>
-              附件入口
-            </Button>
-          </Tooltip>
           <Tooltip title={canWriteProperty ? undefined : '目前角色沒有新增物業權限。'}>
             <Button type="primary" icon={<PlusOutlined />} disabled={!canWriteProperty}>
               {canWriteProperty ? <Link to="/properties/new">新增物業</Link> : '新增物業'}
@@ -403,6 +406,22 @@ export default function PropertyListPage() {
           )}
         </Space>
       </Modal>
+
+      <Drawer
+        title={attachmentTarget ? `物業附件：${getPropertyDisplayName(attachmentTarget)}` : '物業附件'}
+        open={Boolean(attachmentTarget)}
+        onClose={() => setAttachmentTarget(null)}
+        width={720}
+        destroyOnClose
+      >
+        {attachmentTarget?.id && (
+          <PropertyAttachmentManager
+            propertyId={attachmentTarget.id}
+            canMutate={canWriteProperty}
+            readOnlyReason="此角色只能查看與下載物業附件。"
+          />
+        )}
+      </Drawer>
     </Space>
   );
 }

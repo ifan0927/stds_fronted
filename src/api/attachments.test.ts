@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createAttachmentDownloadUrl,
   createAttachmentUploadUrl,
+  createPropertyAttachment,
   deleteAttachment,
   listLeaseAttachments,
+  listPropertyAttachments,
   listRepairRequestAttachments,
   listRoomAttachments,
   listTenantAttachments,
@@ -73,6 +75,60 @@ describe('attachment API helpers', () => {
     expect(init?.method).toBe('POST');
     expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer firebase-id-token');
     expect(result.download_url).toBe('https://files.example.com/attachments/download?token=masked');
+  });
+
+  it('lists property attachments by encoded property id', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        data: [
+          {
+            id: 'attachment-1',
+            object_path: 'attachments/properties/property-1/file.pdf',
+            file_name: '物業文件.pdf',
+            uploaded_by: 'user-1',
+            created_at: '2026-05-11T10:00:00Z',
+            sort_order: null,
+            photo_stage: null,
+          },
+        ],
+      }),
+    );
+
+    const result = await listPropertyAttachments('property/with/slash', () => 'firebase-id-token', { fetcher });
+
+    const [url, init] = fetcher.mock.calls[0];
+    expect(url).toBe('/api/v1/properties/property%2Fwith%2Fslash/attachments');
+    expect(init?.method).toBe('GET');
+    expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer firebase-id-token');
+    expect(result.data?.[0]?.file_name).toBe('物業文件.pdf');
+  });
+
+  it('registers property attachments with nonce and file name only', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        id: 'attachment-1',
+        object_path: 'attachments/properties/property-1/file.pdf',
+        file_name: '物業文件.pdf',
+        uploaded_by: 'user-1',
+        created_at: '2026-05-11T10:00:00Z',
+        sort_order: null,
+        photo_stage: null,
+      }, { status: 201 }),
+    );
+    const body = {
+      nonce: 'nonce-1',
+      file_name: '物業文件.pdf',
+    } satisfies RegisterAttachmentRequest;
+
+    await createPropertyAttachment('property/with/slash', body, () => 'firebase-id-token', { fetcher });
+
+    const [url, init] = fetcher.mock.calls[0];
+    expect(url).toBe('/api/v1/properties/property%2Fwith%2Fslash/attachments');
+    expect(init?.method).toBe('POST');
+    expect(await new Response(init?.body).json()).toEqual({
+      nonce: 'nonce-1',
+      file_name: '物業文件.pdf',
+    });
   });
 
   it('lists room attachments by encoded room id', async () => {

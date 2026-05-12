@@ -1,7 +1,6 @@
 import {
   ArrowLeftOutlined,
   EditOutlined,
-  PaperClipOutlined,
   PlusOutlined,
   ReloadOutlined,
   SaveOutlined,
@@ -44,6 +43,7 @@ import {
   NotFoundState,
   RetryableErrorState,
 } from './routeState';
+import { TenantAttachmentManager } from './attachments';
 import {
   buildTenantUpdateRequest,
   getCadenceLabel,
@@ -364,19 +364,11 @@ export default function TenantDetailPage() {
         )}
       </Card>
 
-      <Card title="後續工作入口">
-        <div className="property-link-grid">
-          <div className="property-link-row disabled-link-row">
-            <Space size={12} align="start">
-              <span className="property-link-icon"><PaperClipOutlined /></span>
-              <span>
-                <Typography.Text strong>租客附件</Typography.Text>
-                <Typography.Text type="secondary">附件上傳與刪除屬於 P2，這裡先保留入口位置。</Typography.Text>
-              </span>
-            </Space>
-          </div>
-        </div>
-      </Card>
+      {tenant.id ? (
+        <Card title="文件附件">
+          <TenantAttachmentManager tenantId={tenant.id} />
+        </Card>
+      ) : null}
 
       <TenantEditModal
         open={editOpen}

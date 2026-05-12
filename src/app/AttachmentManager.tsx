@@ -25,10 +25,14 @@ import {
   createAttachmentDownloadUrl,
   createAttachmentUploadUrl,
   deleteAttachment,
+  listLeaseAttachments,
   listRepairRequestAttachments,
   listRoomAttachments,
+  listTenantAttachments,
+  registerLeaseAttachment,
   registerRepairRequestAttachment,
   registerRoomAttachment,
+  registerTenantAttachment,
   type Attachment,
   type AttachmentContentType,
   uploadAttachmentFile,
@@ -51,7 +55,7 @@ type AttachmentListState =
   | { status: 'error'; data: Attachment[] };
 
 type AttachmentManagerProps = {
-  resourceType: 'room' | 'repair_request' | 'repair-request';
+  resourceType: 'room' | 'tenant' | 'lease' | 'repair_request' | 'repair-request';
   resourceId: string;
   title?: string;
   onMutationBusyChange?: (busy: boolean) => void;
@@ -109,13 +113,13 @@ function formatAttachmentFileSize(size: number) {
   return `${size} B`;
 }
 
-function getListErrorDescription(status: AttachmentListState['status']) {
+function getListErrorDescription(status: AttachmentListState['status'], resourceLabel: string) {
   if (status === 'forbidden') {
     return '目前角色或物業授權範圍不能查看此附件列表。';
   }
 
   if (status === 'not-found') {
-    return '找不到要查看附件的資料，請重新整理房間後再試。';
+    return `找不到要查看附件的${resourceLabel}資料，請重新整理後再試。`;
   }
 
   return '附件列表暫時無法載入，請稍後重試。';
@@ -159,6 +163,22 @@ function getNextRepairSortOrder(attachments: Attachment[]) {
   }, 1);
 }
 
+function getAttachmentResourceLabel(resourceType: AttachmentManagerProps['resourceType']) {
+  if (resourceType === 'tenant') {
+    return '租客';
+  }
+
+  if (resourceType === 'lease') {
+    return '租約';
+  }
+
+  if (resourceType === 'repair_request' || resourceType === 'repair-request') {
+    return '維修單';
+  }
+
+  return '房間';
+}
+
 export function AttachmentManager({
   resourceType,
   resourceId,
@@ -197,6 +217,7 @@ export function AttachmentManager({
   const [operationError, setOperationError] = useState<string | null>(null);
   const isRepairAttachment = resourceType === 'repair_request' || resourceType === 'repair-request';
   const apiResourceType = isRepairAttachment ? 'repair_request' : resourceType;
+  const resourceLabel = getAttachmentResourceLabel(resourceType);
 
   const loadAttachments = useCallback(() => {
     abortRequest(activeRequestRef.current?.controller);
@@ -206,9 +227,21 @@ export function AttachmentManager({
     activeRequestRef.current = { id: requestId, controller };
     setListState((current) => ({ status: 'loading', data: current.data }));
 
-    const listAttachments = isRepairAttachment
-      ? listRepairRequestAttachments
-      : listRoomAttachments;
+    const listAttachments = (() => {
+      if (isRepairAttachment) {
+        return listRepairRequestAttachments;
+      }
+
+      if (resourceType === 'tenant') {
+        return listTenantAttachments;
+      }
+
+      if (resourceType === 'lease') {
+        return listLeaseAttachments;
+      }
+
+      return listRoomAttachments;
+    })();
 
     void listAttachments(resourceId, getAccessToken, { signal: controller.signal })
       .then((response) => {
@@ -241,7 +274,7 @@ export function AttachmentManager({
 
         setListState({ status: 'error', data: [] });
       });
-  }, [getAccessToken, isRepairAttachment, resourceId]);
+  }, [getAccessToken, isRepairAttachment, resourceId, resourceType]);
 
   useEffect(() => {
     loadAttachments();
@@ -307,7 +340,19 @@ export function AttachmentManager({
           return;
         }
 
-        await registerRoomAttachment(
+        const registerAttachment = (() => {
+          if (resourceType === 'tenant') {
+            return registerTenantAttachment;
+          }
+
+          if (resourceType === 'lease') {
+            return registerLeaseAttachment;
+          }
+
+          return registerRoomAttachment;
+        })();
+
+        await registerAttachment(
           resourceId,
           {
             nonce: uploadResponse.nonce,
@@ -342,6 +387,7 @@ export function AttachmentManager({
     repairUploadMode,
     resourceId,
     apiResourceType,
+    resourceType,
   ]);
 
   const handleDelete = useCallback((attachment: Attachment) => {
@@ -729,7 +775,7 @@ export function AttachmentManager({
           type="error"
           showIcon
           message="無法載入附件"
-          description={getListErrorDescription(listState.status)}
+          description={getListErrorDescription(listState.status, resourceLabel)}
           action={<Button onClick={() => loadAttachments()}>重試</Button>}
         />
       ) : (
@@ -829,6 +875,22 @@ type RoomAttachmentManagerProps = {
 
 export function RoomAttachmentManager({ roomId }: RoomAttachmentManagerProps) {
   return <AttachmentManager resourceType="room" resourceId={roomId} />;
+}
+
+type TenantAttachmentManagerProps = {
+  tenantId: string;
+};
+
+export function TenantAttachmentManager({ tenantId }: TenantAttachmentManagerProps) {
+  return <AttachmentManager resourceType="tenant" resourceId={tenantId} title="租客附件" />;
+}
+
+type LeaseAttachmentManagerProps = {
+  leaseId: string;
+};
+
+export function LeaseAttachmentManager({ leaseId }: LeaseAttachmentManagerProps) {
+  return <AttachmentManager resourceType="lease" resourceId={leaseId} title="租約附件" />;
 }
 
 type RepairAttachmentManagerProps = {

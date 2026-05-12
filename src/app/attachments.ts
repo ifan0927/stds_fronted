@@ -6,4 +6,9 @@ export {
   validateAttachmentFile,
   type AttachmentValidationResult,
 } from './attachmentRules';
-export { RepairAttachmentManager, RoomAttachmentManager } from './AttachmentManager';
+export {
+  LeaseAttachmentManager,
+  RepairAttachmentManager,
+  RoomAttachmentManager,
+  TenantAttachmentManager,
+} from './AttachmentManager';

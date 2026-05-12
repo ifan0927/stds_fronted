@@ -7,6 +7,7 @@ export {
   type AttachmentValidationResult,
 } from './attachmentRules';
 export {
+  JournalAttachmentManager,
   LeaseAttachmentManager,
   PropertyAttachmentManager,
   RepairAttachmentManager,

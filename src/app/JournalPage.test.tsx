@@ -38,7 +38,9 @@ const authMocks = vi.hoisted(() => ({
 vi.mock('@ant-design/icons', () => ({
   CheckOutlined: () => null,
   DeleteOutlined: () => null,
+  DownloadOutlined: () => null,
   EditOutlined: () => null,
+  EyeOutlined: () => null,
   PaperClipOutlined: () => null,
   PlayCircleOutlined: () => null,
   PlusOutlined: () => null,

@@ -69,3 +69,19 @@ export function getAttachmentDeleteErrorCopy(errorKind: string) {
 
   return '附件刪除失敗，請稍後再試。';
 }
+
+export function getAttachmentDownloadErrorCopy(errorKind: string) {
+  if (errorKind === 'forbidden') {
+    return '目前角色或物業授權範圍不能開啟此附件。';
+  }
+
+  if (errorKind === 'not-found') {
+    return '找不到附件，可能已被刪除，請重新整理列表。';
+  }
+
+  if (errorKind === 'retryable') {
+    return '附件服務暫時無法開啟檔案，請稍後重試。';
+  }
+
+  return '附件開啟失敗，請稍後再試。';
+}

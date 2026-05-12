@@ -337,6 +337,13 @@ a {
   margin-bottom: 0;
 }
 
+.attachment-preview-image {
+  display: block;
+  width: 100%;
+  max-height: min(70vh, 720px);
+  object-fit: contain;
+}
+
 .billing-context-controls {
   justify-content: flex-end;
 }

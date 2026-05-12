@@ -5,6 +5,8 @@ export type { CurrentUser, UpdateCurrentUserRequest } from './auth';
 export { getDashboard } from './dashboard';
 export type { HomeDashboard } from './dashboard';
 export {
+  createAttachmentDownloadURL,
+  createAttachmentDownloadUrl,
   createAttachmentUploadURL,
   createAttachmentUploadUrl,
   createRepairRequestAttachment,
@@ -88,6 +90,8 @@ export {
 export type {
   Attachment,
   AttachmentContentType,
+  AttachmentDownloadURLResponse,
+  AttachmentDownloadUrlResponse,
   AttachmentList,
   AttachmentResourceType,
   AttachmentUploadURLRequest,

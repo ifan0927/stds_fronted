@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  createAttachmentDownloadUrl,
   createAttachmentUploadUrl,
   deleteAttachment,
   listRepairRequestAttachments,
@@ -23,13 +24,13 @@ const modalMocks = vi.hoisted(() => ({
 
 vi.mock('antd', async () => {
   const actual = await vi.importActual<typeof import('antd')>('antd');
+  const Modal = Object.assign(actual.Modal, {
+    useModal: () => [modalMocks, null],
+  });
 
   return {
     ...actual,
-    Modal: {
-      ...actual.Modal,
-      useModal: () => [modalMocks, null],
-    },
+    Modal,
   };
 });
 
@@ -39,6 +40,7 @@ vi.mock('../api', async () => {
   return {
     ...actual,
     createAttachmentUploadUrl: vi.fn(),
+    createAttachmentDownloadUrl: vi.fn(),
     deleteAttachment: vi.fn(),
     listRepairRequestAttachments: vi.fn(),
     listRoomAttachments: vi.fn(),
@@ -319,6 +321,114 @@ describe('RoomAttachmentManager', () => {
       expect(deleteAttachment).toHaveBeenCalledWith('attachment-1', expect.any(Function));
     });
     expect(listRoomAttachments).toHaveBeenCalledTimes(2);
+  });
+
+  it('previews image attachments by file extension without exposing the signed URL as visible text', async () => {
+    vi.mocked(listRoomAttachments).mockResolvedValue({
+      data: [
+        {
+          id: 'attachment-image',
+          object_path: 'gs://private-bucket/attachments/rooms/room-1/photo.jpg',
+          file_name: '現況照片.JPG',
+          uploaded_by: 'user-1',
+          created_at: '2026-05-11T10:00:00Z',
+          sort_order: null,
+          photo_stage: null,
+        },
+      ],
+    });
+    vi.mocked(createAttachmentDownloadUrl).mockResolvedValue({
+      download_url: 'https://files.example.com/attachments/photo.jpg?token=masked',
+      expires_at: '2026-05-11T10:15:00Z',
+    });
+
+    renderRoomAttachmentManager();
+    await screen.findByText('現況照片.JPG');
+
+    fireEvent.click(screen.getByRole('button', { name: /預覽 現況照片\.JPG/ }));
+
+    const previewImage = await screen.findByAltText('現況照片.JPG');
+    expect(previewImage.getAttribute('src'))
+      .toBe('https://files.example.com/attachments/photo.jpg?token=masked');
+    expect(createAttachmentDownloadUrl).toHaveBeenCalledWith('attachment-image', expect.any(Function));
+    const visibleText = document.body.textContent ?? '';
+    expect(visibleText).not.toContain('https://files.example.com/attachments/photo.jpg');
+    expect(visibleText).not.toContain('gs://private-bucket');
+  });
+
+  it('downloads non-image attachments through the backend download URL', async () => {
+    mockAttachmentList();
+    vi.mocked(createAttachmentDownloadUrl).mockResolvedValue({
+      download_url: 'https://files.example.com/attachments/contract.pdf?token=masked',
+      expires_at: '2026-05-11T10:15:00Z',
+    });
+    const downloadWindow = { location: { href: '' }, close: vi.fn() };
+    const windowOpenSpy = vi.spyOn(window, 'open').mockReturnValue(downloadWindow as unknown as Window);
+
+    renderRoomAttachmentManager();
+    await screen.findByText('合約.pdf');
+
+    fireEvent.click(screen.getByRole('button', { name: /下載 合約\.pdf/ }));
+
+    await waitFor(() => {
+      expect(downloadWindow.location.href)
+        .toBe('https://files.example.com/attachments/contract.pdf?token=masked');
+    });
+    expect(createAttachmentDownloadUrl).toHaveBeenCalledWith('attachment-1', expect.any(Function));
+    expect(windowOpenSpy).toHaveBeenCalledWith('', '_blank');
+    windowOpenSpy.mockRestore();
+  });
+
+  it('downloads HEIC attachments instead of routing them to browser image preview', async () => {
+    vi.mocked(listRoomAttachments).mockResolvedValue({
+      data: [
+        {
+          id: 'attachment-heic',
+          object_path: 'gs://private-bucket/attachments/rooms/room-1/photo.heic',
+          file_name: '維修照片.HEIC',
+          uploaded_by: 'user-1',
+          created_at: '2026-05-11T10:00:00Z',
+          sort_order: null,
+          photo_stage: null,
+        },
+      ],
+    });
+    vi.mocked(createAttachmentDownloadUrl).mockResolvedValue({
+      download_url: 'https://files.example.com/attachments/photo.heic?token=masked',
+      expires_at: '2026-05-11T10:15:00Z',
+    });
+    const downloadWindow = { location: { href: '' }, close: vi.fn() };
+    const windowOpenSpy = vi.spyOn(window, 'open').mockReturnValue(downloadWindow as unknown as Window);
+
+    renderRoomAttachmentManager();
+    await screen.findByText('維修照片.HEIC');
+
+    expect(screen.queryByRole('button', { name: /預覽 維修照片\.HEIC/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /下載 維修照片\.HEIC/ }));
+
+    await waitFor(() => {
+      expect(downloadWindow.location.href)
+        .toBe('https://files.example.com/attachments/photo.heic?token=masked');
+    });
+    expect(createAttachmentDownloadUrl).toHaveBeenCalledWith('attachment-heic', expect.any(Function));
+    expect(windowOpenSpy).toHaveBeenCalledWith('', '_blank');
+    windowOpenSpy.mockRestore();
+  });
+
+  it('shows a clear error when the backend refuses an attachment download URL', async () => {
+    mockAttachmentList();
+    vi.mocked(createAttachmentDownloadUrl).mockRejectedValue(new Error('download failed'));
+    const downloadWindow = { location: { href: '' }, close: vi.fn() };
+    const windowOpenSpy = vi.spyOn(window, 'open').mockReturnValue(downloadWindow as unknown as Window);
+
+    renderRoomAttachmentManager();
+    await screen.findByText('合約.pdf');
+
+    fireEvent.click(screen.getByRole('button', { name: /下載 合約\.pdf/ }));
+
+    expect(await screen.findAllByText(/附件開啟失敗/)).not.toHaveLength(0);
+    expect(downloadWindow.close).toHaveBeenCalled();
+    windowOpenSpy.mockRestore();
   });
 
   it('keeps storage internals out of visible UI copy', async () => {

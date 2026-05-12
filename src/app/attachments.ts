@@ -1,5 +1,6 @@
 export {
   getAttachmentDeleteErrorCopy,
+  getAttachmentDownloadErrorCopy,
   getAttachmentUploadErrorCopy,
   MAX_ATTACHMENT_BYTES,
   validateAttachmentFile,

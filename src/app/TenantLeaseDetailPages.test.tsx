@@ -31,6 +31,7 @@ vi.mock('@ant-design/icons', () => ({
   ReloadOutlined: () => null,
   SaveOutlined: () => null,
   SwapOutlined: () => null,
+  WarningOutlined: () => null,
 }));
 
 vi.mock('antd', async () => {

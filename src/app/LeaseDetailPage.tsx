@@ -6,6 +6,7 @@ import {
   ReloadOutlined,
   SaveOutlined,
   SwapOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import {
   Alert,
@@ -493,6 +494,33 @@ export default function LeaseDetailPage() {
               </span>
             </Space>
           </Link>
+          {canAdjustLease ? (
+            <Link className="property-link-row" to={buildPropertyPath(propertyId, '/checkout', {
+              roomId: lease.room_id,
+              leaseId: lease.id,
+              tenantId: lease.tenant_id,
+              mode: 'force',
+            })}
+            >
+              <Space size={12} align="start">
+                <span className="property-link-icon"><WarningOutlined /></span>
+                <span>
+                  <Typography.Text strong>強制退租</Typography.Text>
+                  <Typography.Text type="secondary">危險獨立流程；送出前會重新載入租約並要求確認。</Typography.Text>
+                </span>
+              </Space>
+            </Link>
+          ) : (
+            <div className="property-link-row disabled-link-row">
+              <Space size={12} align="start">
+                <span className="property-link-icon"><WarningOutlined /></span>
+                <span>
+                  <Typography.Text strong>強制退租</Typography.Text>
+                  <Typography.Text type="secondary">目前角色不可執行強制退租；後端仍會再次檢查權限。</Typography.Text>
+                </span>
+              </Space>
+            </div>
+          )}
           <div className="property-link-row disabled-link-row">
             <Space size={12} align="start">
               <span className="property-link-icon"><SwapOutlined /></span>

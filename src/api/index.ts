@@ -93,6 +93,8 @@ export {
   createTenant,
   exportLeaseCheckoutSettlement,
   finalizeLeaseCheckoutSettlement,
+  forceTerminateLease,
+  getForceTermination,
   getLease,
   getTenant,
   listBills,
@@ -102,6 +104,7 @@ export {
   listTenantLeases,
   listTenants,
   previewLeaseCheckoutSettlement,
+  updateLeaseDeposit,
   updateLease,
   updateTenant,
 } from './tenants';
@@ -188,6 +191,8 @@ export type {
   CheckoutSettlementResponse,
   CreateLeaseRequest,
   CreateTenantRequest,
+  ForceTerminateRequest,
+  ForceTermination,
   LeaseCheckoutReview,
   LeaseCheckoutReviewList,
   Lease,
@@ -202,6 +207,7 @@ export type {
   PropertyTenantLeaseRosterRow,
   Tenant,
   TenantList,
+  UpdateDepositRequest,
   UpdateLeaseRequest,
   UpdateTenantRequest,
 } from './tenants';

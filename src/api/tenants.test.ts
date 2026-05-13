@@ -4,6 +4,8 @@ import {
   createTenant,
   exportLeaseCheckoutSettlement,
   finalizeLeaseCheckoutSettlement,
+  forceTerminateLease,
+  getForceTermination,
   getLease,
   getTenant,
   listBills,
@@ -14,6 +16,7 @@ import {
   listTenants,
   previewLeaseCheckoutSettlement,
   updateLease,
+  updateLeaseDeposit,
   updateTenant,
 } from './tenants';
 
@@ -309,5 +312,68 @@ describe('tenant and lease API helpers', () => {
 
     expect(fetcher.mock.calls[0][0]).toBe('/api/v1/leases/lease%2Fwith%2Fslash/checkout-settlement/export?format=html');
     expect(result.filename).toBe('checkout.html');
+  });
+
+  it('force terminates lease with encoded lease id and backend-owned payload', async () => {
+    const payload = {
+      termination_date: '2026-06-15',
+      actual_move_out_date: '2026-06-14',
+      reason: '重大違約，依合約強制終止',
+      deposit_handling: 'write_off' as const,
+    };
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({ id: 'force-termination-1', lease_id: 'lease/with/slash', status: 'completed' }),
+    );
+
+    const result = await forceTerminateLease(
+      'lease/with/slash',
+      payload,
+      () => 'firebase-id-token',
+      { fetcher },
+    );
+
+    expect(fetcher.mock.calls[0][0]).toBe('/api/v1/leases/lease%2Fwith%2Fslash/force-terminate');
+    expect(fetcher.mock.calls[0][1]?.method).toBe('POST');
+    expect(fetcher.mock.calls[0][1]?.body).toBe(JSON.stringify(payload));
+    expect(result.id).toBe('force-termination-1');
+  });
+
+  it('loads force termination detail by encoded id', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({ id: 'force/termination', lease_id: 'lease-1', status: 'completed' }),
+    );
+
+    const result = await getForceTermination(
+      'force/termination',
+      () => 'firebase-id-token',
+      { fetcher },
+    );
+
+    expect(fetcher.mock.calls[0][0]).toBe('/api/v1/force-terminations/force%2Ftermination');
+    expect(fetcher.mock.calls[0][1]?.method).toBe('GET');
+    expect(result.id).toBe('force/termination');
+  });
+
+  it('updates lease deposit through the dedicated deposit endpoint', async () => {
+    const payload = {
+      refund_amount: 15000,
+      deduction_amount: 5000,
+      deduction_reason: '牆壁毀損修繕費用 NT$5,000',
+    };
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({ id: 'lease/with/slash', deposit_status: 'settled', deposit_refund_amount: 15000 }),
+    );
+
+    const result = await updateLeaseDeposit(
+      'lease/with/slash',
+      payload,
+      () => 'firebase-id-token',
+      { fetcher },
+    );
+
+    expect(fetcher.mock.calls[0][0]).toBe('/api/v1/leases/lease%2Fwith%2Fslash/deposit');
+    expect(fetcher.mock.calls[0][1]?.method).toBe('PATCH');
+    expect(fetcher.mock.calls[0][1]?.body).toBe(JSON.stringify(payload));
+    expect(result.deposit_status).toBe('settled');
   });
 });

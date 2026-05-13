@@ -585,6 +585,14 @@ a {
   background: #ffffff;
 }
 
+button.property-link-row {
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 .property-link-row:hover {
   border-color: #1677ff;
 }

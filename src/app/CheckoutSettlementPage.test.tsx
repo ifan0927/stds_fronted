@@ -7,6 +7,7 @@ import {
   ApiError,
   exportLeaseCheckoutSettlement,
   finalizeLeaseCheckoutSettlement,
+  forceTerminateLease,
   getLease,
   listLeaseCheckoutReviews,
   openHtmlDocumentPreview,
@@ -125,8 +126,10 @@ vi.mock('antd', async () => {
 
           onFinish?.({
             checkout_date: getStringValue(formData, 'checkout_date'),
+            termination_date: getStringValue(formData, 'termination_date'),
             actual_move_out_date: getStringValue(formData, 'actual_move_out_date'),
             reason: getStringValue(formData, 'reason'),
+            deposit_handling: getStringValue(formData, 'deposit_handling'),
             final_meter_reading: getNumber(formData, 'final_meter_reading'),
             cleaning_fee: getNumber(formData, 'cleaning_fee'),
             key_card_loss_fee: getNumber(formData, 'key_card_loss_fee'),
@@ -196,10 +199,16 @@ vi.mock('antd', async () => {
     DatePicker: ({ 'aria-label': ariaLabel, name }: { 'aria-label'?: string; name?: string }) => (
       <input aria-label={ariaLabel} name={name} type="date" />
     ),
-    Drawer: ({ children, open, title }: React.PropsWithChildren<{ open?: boolean; title?: string }>) => (
+    Drawer: ({
+      children,
+      onClose,
+      open,
+      title,
+    }: React.PropsWithChildren<{ onClose?: () => void; open?: boolean; title?: string }>) => (
       open ? (
         <section aria-label={title}>
           <h2>{title}</h2>
+          <button type="button" onClick={onClose}>關閉抽屜</button>
           {children}
         </section>
       ) : null
@@ -252,16 +261,28 @@ vi.mock('antd', async () => {
     ) : null,
     Select: ({
       'aria-label': ariaLabel,
+      name,
       onChange,
       options,
       value,
     }: {
       'aria-label'?: string;
+      name?: string;
       onChange?: (value: string) => void;
       options?: Array<{ value: string; label: React.ReactNode }>;
       value?: string;
     }) => (
-      <select aria-label={ariaLabel} value={value ?? ''} onChange={(event) => onChange?.(event.target.value)}>
+      <select
+        aria-label={ariaLabel}
+        name={name}
+        value={value ?? ''}
+        onChange={(event) => {
+          if (name) {
+            formMocks.values[name] = event.target.value;
+          }
+          onChange?.(event.target.value);
+        }}
+      >
         <option value="">全部</option>
         {options?.map((option) => (
           <option key={option.value} value={option.value}>{option.label}</option>
@@ -319,6 +340,7 @@ vi.mock('../api', async () => {
     ...actual,
     exportLeaseCheckoutSettlement: vi.fn(),
     finalizeLeaseCheckoutSettlement: vi.fn(),
+    forceTerminateLease: vi.fn(),
     getLease: vi.fn(),
     listLeaseCheckoutReviews: vi.fn(),
     openHtmlDocumentPreview: vi.fn(),
@@ -365,6 +387,9 @@ const reviews: LeaseCheckoutReviewList = {
   data: [
     {
       lease_id: 'lease-1',
+      force_termination_id: 'force-1',
+      force_termination_status: 'completed',
+      force_termination_deposit_handling: 'write_off',
       property_id: 'property-1',
       room_id: 'room-1',
       tenant_id: 'tenant-1',
@@ -428,6 +453,26 @@ function makeUnauthorizedError() {
   });
 }
 
+function makeForbiddenError() {
+  return new ApiError({
+    status: 403,
+    message: 'forbidden',
+    errorCode: null,
+    details: null,
+    response: new Response(null, { status: 403 }),
+  });
+}
+
+function makeUnprocessableError() {
+  return new ApiError({
+    status: 422,
+    message: 'invalid termination date',
+    errorCode: null,
+    details: null,
+    response: new Response(null, { status: 422 }),
+  });
+}
+
 function renderCheckoutPage(path = '/properties/property-1/checkout?leaseId=lease-1&roomId=room-1&tenantId=tenant-1') {
   return render(
     <MemoryRouter initialEntries={[path]}>
@@ -448,9 +493,24 @@ function renderCheckoutPage(path = '/properties/property-1/checkout?leaseId=leas
 }
 
 beforeEach(() => {
+  authMocks.currentUser = {
+    id: 'user-1',
+    email: 'ops@example.com',
+    role: 'organizer',
+    assigned_property_ids: ['property-1'],
+  };
   formMocks.resetFields();
   vi.mocked(listLeaseCheckoutReviews).mockResolvedValue(reviews);
   vi.mocked(getLease).mockResolvedValue(lease);
+  vi.mocked(forceTerminateLease).mockResolvedValue({
+    id: 'force-1',
+    lease_id: 'lease-1',
+    property_id: 'property-1',
+    room_id: 'room-1',
+    tenant_id: 'tenant-1',
+    status: 'completed',
+    deposit_handling: 'write_off',
+  });
   vi.mocked(openHtmlDocumentPreview).mockReturnValue({ ok: true });
   window.open = vi.fn(() => ({ close: vi.fn() })) as unknown as typeof window.open;
 });
@@ -491,7 +551,7 @@ describe('CheckoutSettlementPage', () => {
           export_available: false,
         },
       ],
-      pagination: { page: 1, limit: 100, total: 2, total_pages: 1, has_next: false },
+      pagination: { page: 1, limit: 20, total: 2, total_pages: 1, has_next: false },
     });
 
     renderCheckoutPage('/properties/property-1/checkout');
@@ -499,7 +559,7 @@ describe('CheckoutSettlementPage', () => {
     await waitFor(() => {
       expect(listLeaseCheckoutReviews).toHaveBeenCalledWith(
         expect.any(Function),
-        { property_id: 'property-1', status: 'expired', page: 1, limit: 100 },
+        { property_id: 'property-1', status: 'expired', page: 1, limit: 20 },
         expect.any(Object),
       );
     });
@@ -532,6 +592,25 @@ describe('CheckoutSettlementPage', () => {
     });
   });
 
+  it('clears workflow query when closing the drawer so review filters do not reopen it', async () => {
+    renderCheckoutPage('/properties/property-1/checkout?status=expired&leaseId=lease-1&roomId=room-1&tenantId=tenant-1');
+
+    expect(await screen.findByLabelText('退租結算試算')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '關閉抽屜' }));
+
+    await waitFor(() => {
+      expect(screen.queryByLabelText('退租結算試算')).toBeNull();
+      expect(screen.getByLabelText('目前路徑').textContent).toBe('/properties/property-1/checkout?status=expired');
+    });
+
+    fireEvent.change(screen.getByLabelText('退租狀態'), { target: { value: 'terminated' } });
+
+    await waitFor(() => {
+      expect(screen.queryByLabelText('退租結算試算')).toBeNull();
+      expect(screen.getByLabelText('目前路徑').textContent).toBe('/properties/property-1/checkout?status=terminated&page=1');
+    });
+  });
+
   it('resets checkout form values when switching selected leases', async () => {
     vi.mocked(listLeaseCheckoutReviews).mockResolvedValue({
       data: [
@@ -547,7 +626,7 @@ describe('CheckoutSettlementPage', () => {
           export_available: false,
         },
       ],
-      pagination: { page: 1, limit: 100, total: 1, total_pages: 1, has_next: false },
+      pagination: { page: 1, limit: 20, total: 1, total_pages: 1, has_next: false },
     });
     vi.mocked(getLease)
       .mockResolvedValueOnce(lease)
@@ -603,17 +682,45 @@ describe('CheckoutSettlementPage', () => {
           export_available: true,
         },
       ],
-      pagination: { page: 1, limit: 100, total: 1, total_pages: 1, has_next: false },
+      pagination: { page: 1, limit: 20, total: 1, total_pages: 1, has_next: false },
     });
 
     renderCheckoutPage('/properties/property-1/checkout?status=terminated');
 
     expect(await screen.findByText('已退租客')).toBeTruthy();
     expect(screen.queryByRole('button', { name: '開啟流程' })).toBeNull();
-    expect(screen.getByRole('button', { name: '匯出' })).toHaveProperty('disabled', false);
+    expect(screen.queryByRole('button', { name: '匯出' })).toBeNull();
   });
 
-  it('surfaces review-list export popup failures in the main page context', async () => {
+  it('labels force-terminated rows with held deposit as pending deposit handling', async () => {
+    vi.mocked(listLeaseCheckoutReviews).mockResolvedValue({
+      data: [
+        {
+          lease_id: 'force-lease',
+          force_termination_id: 'force-1',
+          force_termination_status: 'completed',
+          force_termination_deposit_handling: 'keep_held',
+          property_id: 'property-1',
+          room_id: 'room-1',
+          tenant_id: 'tenant-1',
+          room_label: 'A101',
+          tenant_label: '強制退租客',
+          lease_status: 'force_terminated',
+          deposit_status: 'held',
+          export_available: false,
+        },
+      ],
+      pagination: { page: 1, limit: 20, total: 1, total_pages: 1, has_next: false },
+    });
+
+    renderCheckoutPage('/properties/property-1/checkout?status=force_terminated');
+
+    expect(await screen.findByText('強制退租客')).toBeTruthy();
+    expect(screen.getByText('尚未處理押金')).toBeTruthy();
+    expect(screen.getByRole('link', { name: '押金處理' })).toHaveProperty('href', 'http://localhost:3000/properties/property-1/force-terminations/force-1');
+  });
+
+  it('keeps finalized review rows read-only without list-level export actions', async () => {
     vi.mocked(listLeaseCheckoutReviews).mockResolvedValue({
       data: [
         {
@@ -629,22 +736,15 @@ describe('CheckoutSettlementPage', () => {
           export_available: true,
         },
       ],
-      pagination: { page: 1, limit: 100, total: 1, total_pages: 1, has_next: false },
+      pagination: { page: 1, limit: 20, total: 1, total_pages: 1, has_next: false },
     });
-    vi.mocked(exportLeaseCheckoutSettlement).mockResolvedValue({
-      html: '<!doctype html><title>退租結算</title>',
-      contentType: 'text/html; charset=utf-8',
-      contentDisposition: 'inline; filename="checkout.html"',
-      filename: 'checkout.html',
-    });
-    vi.mocked(openHtmlDocumentPreview).mockReturnValue({ ok: false, reason: 'popup-blocked' });
 
     renderCheckoutPage('/properties/property-1/checkout?status=terminated');
 
-    fireEvent.click(await screen.findByRole('button', { name: '匯出' }));
-
-    expect(await screen.findByText('退租結算書無法開啟')).toBeTruthy();
-    expect(screen.getByText('瀏覽器阻擋了新視窗，請允許彈出視窗後重試。')).toBeTruthy();
+    expect(await screen.findByText('已退租客')).toBeTruthy();
+    expect(exportLeaseCheckoutSettlement).not.toHaveBeenCalled();
+    expect(openHtmlDocumentPreview).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: '匯出' })).toBeNull();
   });
 
   it('defaults checkout date to lease end date and uses it for preview payload', async () => {
@@ -824,6 +924,162 @@ describe('CheckoutSettlementPage', () => {
       );
     });
     expect(screen.queryByText('登入狀態已失效')).toBeNull();
+  });
+
+  it('requires explicit force termination fields before opening confirmation', async () => {
+    renderCheckoutPage('/properties/property-1/checkout?leaseId=lease-1&roomId=room-1&tenantId=tenant-1&mode=force');
+
+    await waitFor(() => expect(getLease).toHaveBeenCalledWith('lease-1', expect.any(Function), expect.any(Object)));
+    expect(formMocks.values.termination_date).toBeUndefined();
+    fireEvent.click(screen.getByRole('button', { name: '送出強制退租' }));
+
+    expect(await screen.findByText('強制退租資料未完成')).toBeTruthy();
+    expect(forceTerminateLease).not.toHaveBeenCalled();
+    expect(screen.queryByText('確認送出強制退租')).toBeNull();
+  });
+
+  it('submits force termination only after confirmation and navigates to the detail route', async () => {
+    renderCheckoutPage('/properties/property-1/checkout?leaseId=lease-1&roomId=room-1&tenantId=tenant-1&mode=force');
+
+    await waitFor(() => expect(getLease).toHaveBeenCalledWith('lease-1', expect.any(Function), expect.any(Object)));
+    fireEvent.change(screen.getByLabelText('強制退租日（必填）'), { target: { value: '2026-05-20' } });
+    fireEvent.change(screen.getByLabelText('實際搬出日 / 點交日'), { target: { value: '2026-05-19' } });
+    fireEvent.change(screen.getByLabelText('押金處理（必填）'), { target: { value: 'keep_held' } });
+    fireEvent.change(screen.getByLabelText('強制退租原因（必填）'), { target: { value: '  嚴重違約  ' } });
+    fireEvent.click(screen.getByRole('button', { name: '送出強制退租' }));
+
+    expect(await screen.findByText('確認送出強制退租')).toBeTruthy();
+    expect(forceTerminateLease).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: '確認強制退租' }));
+
+    await waitFor(() => {
+      expect(forceTerminateLease).toHaveBeenCalledWith(
+        'lease-1',
+        {
+          termination_date: '2026-05-20',
+          actual_move_out_date: '2026-05-19',
+          reason: '嚴重違約',
+          deposit_handling: 'keep_held',
+        },
+        expect.any(Function),
+      );
+    });
+    await waitFor(() => {
+      expect(screen.getByLabelText('目前路徑').textContent).toBe('/properties/property-1/force-terminations/force-1');
+    });
+  });
+
+  it('clears stale checkout preview when entering and returning from force termination', async () => {
+    vi.mocked(previewLeaseCheckoutSettlement).mockResolvedValue(makePreview());
+
+    renderCheckoutPage();
+
+    await waitFor(() => expect(getLease).toHaveBeenCalledWith('lease-1', expect.any(Function), expect.any(Object)));
+    fireEvent.click(screen.getByRole('button', { name: '產生退租試算' }));
+
+    expect(await screen.findByText('退租結算試算結果')).toBeTruthy();
+    fireEvent.click(screen.getAllByRole('button', { name: '強制退租' })[0]);
+
+    expect(await screen.findByText('強制退租是獨立危險流程')).toBeTruthy();
+    expect(screen.queryByText('退租結算試算結果')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: '返回正常退租' }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('目前路徑').textContent).toBe('/properties/property-1/checkout?leaseId=lease-1&roomId=room-1&tenantId=tenant-1');
+    });
+    expect(screen.queryByText('退租結算試算結果')).toBeNull();
+  });
+
+  it('keeps force termination initiation disabled for staff users', async () => {
+    authMocks.currentUser = {
+      id: 'staff-1',
+      email: 'staff@example.com',
+      role: 'staff',
+      assigned_property_ids: ['property-1'],
+    };
+
+    renderCheckoutPage('/properties/property-1/checkout?leaseId=lease-1&roomId=room-1&tenantId=tenant-1&mode=force');
+
+    expect(await screen.findByText('目前角色不能執行強制退租')).toBeTruthy();
+    const submitButton = screen.getByRole('button', { name: '送出強制退租' });
+
+    expect(submitButton).toHaveProperty('disabled', true);
+    fireEvent.click(submitButton);
+    expect(forceTerminateLease).not.toHaveBeenCalled();
+  });
+
+  it('keeps force termination disabled when the lease is not active', async () => {
+    vi.mocked(getLease).mockResolvedValue({
+      ...lease,
+      status: 'expired',
+    });
+
+    renderCheckoutPage('/properties/property-1/checkout?leaseId=lease-1&roomId=room-1&tenantId=tenant-1&mode=force');
+
+    expect(await screen.findByText('此租約狀態不適合強制退租')).toBeTruthy();
+    const submitButton = screen.getByRole('button', { name: '送出強制退租' });
+
+    expect(submitButton).toHaveProperty('disabled', true);
+    fireEvent.click(submitButton);
+    expect(forceTerminateLease).not.toHaveBeenCalled();
+  });
+
+  it('links force termination review rows to the detail route using force_termination_id', async () => {
+    renderCheckoutPage('/properties/property-1/checkout?status=force_terminated');
+
+    const detailLink = await screen.findByRole('link', { name: '已完成' });
+
+    expect(detailLink).toHaveProperty('href', 'http://localhost:3000/properties/property-1/force-terminations/force-1');
+  });
+
+  it('surfaces forbidden and validation failures from force termination distinctly', async () => {
+    vi.mocked(forceTerminateLease)
+      .mockRejectedValueOnce(makeForbiddenError())
+      .mockRejectedValueOnce(makeUnprocessableError());
+
+    renderCheckoutPage('/properties/property-1/checkout?leaseId=lease-1&roomId=room-1&tenantId=tenant-1&mode=force');
+
+    await waitFor(() => expect(getLease).toHaveBeenCalledWith('lease-1', expect.any(Function), expect.any(Object)));
+    formMocks.values = {
+      ...formMocks.values,
+      termination_date: '2026-05-20',
+      actual_move_out_date: null,
+      reason: '嚴重違約',
+      deposit_handling: 'write_off',
+    };
+    fireEvent.click(screen.getByRole('button', { name: '送出強制退租' }));
+    fireEvent.click(await screen.findByRole('button', { name: '確認強制退租' }));
+
+    expect(await screen.findByText('沒有權限執行強制退租')).toBeTruthy();
+    expect(screen.queryByText('確認送出強制退租')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '送出強制退租' }));
+    fireEvent.click(await screen.findByRole('button', { name: '確認強制退租' }));
+
+    expect(await screen.findByText('資料未通過檢查')).toBeTruthy();
+    expect(screen.queryByText('確認送出強制退租')).toBeNull();
+  });
+
+  it('redirects to login with returnTo when force termination receives unauthorized', async () => {
+    vi.mocked(forceTerminateLease).mockRejectedValue(makeUnauthorizedError());
+
+    renderCheckoutPage('/properties/property-1/checkout?leaseId=lease-1&roomId=room-1&tenantId=tenant-1&mode=force');
+
+    await waitFor(() => expect(getLease).toHaveBeenCalledWith('lease-1', expect.any(Function), expect.any(Object)));
+    formMocks.values = {
+      ...formMocks.values,
+      termination_date: '2026-05-20',
+      reason: '嚴重違約',
+      deposit_handling: 'write_off',
+    };
+    fireEvent.click(screen.getByRole('button', { name: '送出強制退租' }));
+    fireEvent.click(await screen.findByRole('button', { name: '確認強制退租' }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('目前路徑').textContent).toBe(
+        '/login?reason=session-expired&returnTo=%2Fproperties%2Fproperty-1%2Fcheckout%3FleaseId%3Dlease-1%26roomId%3Droom-1%26tenantId%3Dtenant-1%26mode%3Dforce',
+      );
+    });
   });
 
   it('highlights manual rent refund reason when backend validation rejects preview', async () => {

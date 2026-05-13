@@ -3,8 +3,10 @@ import {
   FileTextOutlined,
   HistoryOutlined,
   ReloadOutlined,
+  SwapOutlined,
   TeamOutlined,
   ToolOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import {
   Alert,
@@ -27,6 +29,7 @@ import {
 } from 'antd';
 import type { TableColumnsType, TablePaginationConfig } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
+import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
@@ -56,7 +59,8 @@ import {
   type TenantList,
   type UiErrorState,
 } from '../api';
-import { useAuth } from '../auth';
+import { hasRole, useAuth } from '../auth';
+import CheckoutSettlementPage from './CheckoutSettlementPage';
 import { formatTwd, getRoomStatusLabel } from './format';
 import { abortRequest } from './requestAbort';
 import {
@@ -409,7 +413,7 @@ export default function TenantLeaseRosterPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { getAccessToken } = useAuth();
+  const { currentUser, getAccessToken } = useAuth();
   const rosterRequestRef = useRef<{ id: number; controller: AbortController } | null>(null);
   const hubRequestRef = useRef<{ id: number; controller: AbortController } | null>(null);
   const locationSearchRef = useRef(location.search);
@@ -430,7 +434,13 @@ export default function TenantLeaseRosterPage() {
   const selectedLeaseId = searchParams.get('leaseId') ?? undefined;
   const selectedView = searchParams.get('view') ?? undefined;
   const selectedMode = searchParams.get('mode') ?? undefined;
-  const shouldShowHub = Boolean(selectedRoomId && selectedView === 'hub');
+  const shouldShowCheckoutWorkflow = Boolean(
+    selectedRoomId
+    && selectedLeaseId
+    && selectedView === 'hub'
+    && (selectedMode === 'checkout' || selectedMode === 'force'),
+  );
+  const shouldShowHub = Boolean(selectedRoomId && selectedView === 'hub' && !shouldShowCheckoutWorkflow);
   const shouldShowMoveInPlaceholder = Boolean(selectedRoomId && selectedMode === 'move-in');
   const selectedRosterRow = loadState.status === 'ready'
     ? loadState.data.data?.find((row) => (
@@ -1167,8 +1177,19 @@ export default function TenantLeaseRosterPage() {
           propertyId={propertyId}
           roomId={selectedRoomId}
           state={hubState}
+          canForceTerminate={hasRole(currentUser, ['admin', 'organizer'])}
           onRetry={() => loadHub()}
           onClose={() => setRosterQuery({ roomId: null, view: null, mode: null, leaseId: null })}
+        />
+      )}
+      {shouldShowCheckoutWorkflow && (
+        <CheckoutSettlementPage
+          embeddedWorkflow
+          onEmbeddedClose={() => setRosterQuery({ view: 'hub', mode: null })}
+          onEmbeddedWorkflowSuccess={() => {
+            loadRoster();
+            setRosterQuery({ view: 'hub', mode: null });
+          }}
         />
       )}
       {shouldShowMoveInPlaceholder && selectedRoomId && (
@@ -1200,6 +1221,7 @@ type OccupiedRoomHubProps = {
   propertyId: string | undefined;
   roomId: string;
   state: HubLoadState;
+  canForceTerminate: boolean;
   onRetry: () => void;
   onClose: () => void;
 };
@@ -1568,6 +1590,7 @@ function OccupiedRoomHub({
   propertyId,
   roomId,
   state,
+  canForceTerminate,
   onRetry,
   onClose,
 }: OccupiedRoomHubProps) {
@@ -1746,13 +1769,54 @@ function OccupiedRoomHub({
             {propertyId && lease.id && (
               <WorkflowLink
                 title="退租結算"
-                description="從此租約建立退租試算，完成後可匯出結算書。"
-                path={buildPropertyPath(propertyId, '/checkout', buildActionQuery({
+                description="從此租約建立正常退租試算，完成後可匯出結算書。"
+                path={buildPropertyPath(propertyId, '/tenants', buildActionQuery({
                   roomId: lease.room_id,
                   leaseId: lease.id,
                   tenantId: lease.tenant_id,
+                  view: 'hub',
+                  mode: 'checkout',
                 }))}
               />
+            )}
+            {propertyId && lease.id && (
+              <div className="property-link-row disabled-link-row">
+                <Space size={12} align="start">
+                  <span className="property-link-icon"><SwapOutlined /></span>
+                  <span>
+                    <Space size={6} wrap>
+                      <Typography.Text strong>租約更換</Typography.Text>
+                      <Tag color="blue">後續流程</Tag>
+                    </Space>
+                    <Typography.Text type="secondary">續約、週期變更與重發合約需獨立 workflow，這裡先保留入口。</Typography.Text>
+                  </span>
+                </Space>
+              </div>
+            )}
+            {propertyId && lease.id && canForceTerminate && (
+              <WorkflowLink
+                title="強制退租"
+                description="特殊危險流程；送出前會重新載入租約並要求確認。"
+                icon={<WarningOutlined />}
+                path={buildPropertyPath(propertyId, '/tenants', buildActionQuery({
+                  roomId: lease.room_id,
+                  leaseId: lease.id,
+                  tenantId: lease.tenant_id,
+                  view: 'hub',
+                  mode: 'force',
+                }))}
+              />
+            )}
+            {propertyId && lease.id && !canForceTerminate && (
+              <div className="property-link-row disabled-link-row">
+                <Space size={12} align="start">
+                  <span className="property-link-icon"><WarningOutlined /></span>
+                  <span>
+                    <Typography.Text strong>強制退租</Typography.Text>
+                    <Typography.Text type="secondary">目前角色不可執行強制退租；後端仍會再次檢查權限。</Typography.Text>
+                  </span>
+                </Space>
+              </div>
             )}
             {propertyId && lease.room_id && (
               <Link
@@ -1825,13 +1889,14 @@ type WorkflowLinkProps = {
   title: string;
   description: string;
   path: string;
+  icon?: ReactNode;
 };
 
-function WorkflowLink({ title, description, path }: WorkflowLinkProps) {
+function WorkflowLink({ title, description, path, icon = <TeamOutlined /> }: WorkflowLinkProps) {
   return (
     <Link className="property-link-row" to={path}>
       <Space size={12} align="start">
-        <span className="property-link-icon"><TeamOutlined /></span>
+        <span className="property-link-icon">{icon}</span>
         <span>
           <Typography.Text strong>{title}</Typography.Text>
           <Typography.Text type="secondary">{description}</Typography.Text>

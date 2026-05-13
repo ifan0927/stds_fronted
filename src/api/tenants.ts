@@ -18,6 +18,9 @@ export type LeaseCheckoutReviewList = components['schemas']['LeaseCheckoutReview
 export type CheckoutSettlementPreviewRequest = components['schemas']['CheckoutSettlementPreviewRequest'];
 export type CheckoutSettlementFinalizeRequest = components['schemas']['CheckoutSettlementFinalizeRequest'];
 export type CheckoutSettlementResponse = components['schemas']['CheckoutSettlementResponse'];
+export type ForceTerminateRequest = components['schemas']['ForceTerminateRequest'];
+export type ForceTermination = components['schemas']['ForceTerminationResponse'];
+export type UpdateDepositRequest = components['schemas']['UpdateDepositRequest'];
 
 export type ListPropertyTenantLeaseRosterQuery = {
   include_vacant?: boolean;
@@ -295,6 +298,51 @@ export function exportLeaseCheckoutSettlement(
     path: `${leasePath(leaseId)}/checkout-settlement/export`,
     query: { format: 'html' },
     responseType: 'html',
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function forceTerminateLease(
+  leaseId: string,
+  body: ForceTerminateRequest,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<ForceTermination>({
+    method: 'POST',
+    path: `${leasePath(leaseId)}/force-terminate`,
+    body,
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function getForceTermination(
+  forceTerminationId: string,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<ForceTermination>({
+    path: `/force-terminations/${encodeURIComponent(forceTerminationId)}`,
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function updateLeaseDeposit(
+  leaseId: string,
+  body: UpdateDepositRequest,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<Lease>({
+    method: 'PATCH',
+    path: `${leasePath(leaseId)}/deposit`,
+    body,
     tokenProvider,
     signal: options.signal,
     fetcher: options.fetcher,

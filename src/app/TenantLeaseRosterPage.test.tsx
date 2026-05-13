@@ -25,6 +25,12 @@ const defaultHistoryYear = previousMonthDate.getFullYear();
 const defaultHistoryMonth = previousMonthDate.getMonth() + 1;
 
 const authMocks = vi.hoisted(() => ({
+  currentUser: {
+    id: 'user-1',
+    email: 'ops@example.com',
+    role: 'organizer' as 'admin' | 'organizer' | 'staff' | 'owner',
+    assigned_property_ids: ['property-1'],
+  },
   getAccessToken: vi.fn(() => 'firebase-token'),
 }));
 
@@ -33,8 +39,10 @@ vi.mock('@ant-design/icons', () => ({
   FileTextOutlined: () => null,
   HistoryOutlined: () => null,
   ReloadOutlined: () => null,
+  SwapOutlined: () => null,
   TeamOutlined: () => null,
   ToolOutlined: () => null,
+  WarningOutlined: () => null,
 }));
 
 vi.mock('antd', async () => {
@@ -364,7 +372,11 @@ vi.mock('../api', async () => {
 });
 
 vi.mock('../auth', () => ({
+  hasRole: (currentUser: typeof authMocks.currentUser | null, roles: Array<typeof authMocks.currentUser.role>) => (
+    Boolean(currentUser?.role && roles.includes(currentUser.role))
+  ),
   useAuth: () => ({
+    currentUser: authMocks.currentUser,
     getAccessToken: authMocks.getAccessToken,
   }),
 }));
@@ -672,7 +684,10 @@ describe('TenantLeaseRosterPage', () => {
     expect(screen.getByRole('link', { name: /收款與收據/ }).getAttribute('href')).toBe('/properties/property-1/billing?roomId=room-1&leaseId=lease-1&tenantId=tenant-1&view=rent-payment');
     expect(screen.getByRole('link', { name: /抄表歷史/ }).getAttribute('href'))
       .toBe(`/properties/property-1/billing/meter-history?roomId=room-1&year=${defaultHistoryYear}&month=${defaultHistoryMonth}`);
-    expect(screen.getByRole('link', { name: /退租結算/ }).getAttribute('href')).toBe('/properties/property-1/checkout?roomId=room-1&leaseId=lease-1&tenantId=tenant-1');
+    expect(screen.getByRole('link', { name: /退租結算/ }).getAttribute('href')).toBe('/properties/property-1/tenants?roomId=room-1&leaseId=lease-1&tenantId=tenant-1&view=hub&mode=checkout');
+    expect(screen.getByText('租約更換')).toBeTruthy();
+    expect(screen.getByText('後續流程')).toBeTruthy();
+    expect(screen.getByRole('link', { name: /強制退租/ }).getAttribute('href')).toBe('/properties/property-1/tenants?roomId=room-1&leaseId=lease-1&tenantId=tenant-1&view=hub&mode=force');
   });
 
   it('corrects stale URL lease id to the roster active lease before loading bills', async () => {

@@ -1,7 +1,5 @@
 import {
-  AuditOutlined,
   ExportOutlined,
-  FileTextOutlined,
   ReloadOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
@@ -32,6 +30,7 @@ import {
   classifyApiErrorForUi,
   exportLeaseCheckoutSettlement,
   finalizeLeaseCheckoutSettlement,
+  forceTerminateLease,
   getLease,
   listLeaseCheckoutReviews,
   openHtmlDocumentPreview,
@@ -39,6 +38,8 @@ import {
   type CheckoutSettlementFinalizeRequest,
   type CheckoutSettlementPreviewRequest,
   type CheckoutSettlementResponse,
+  type ForceTerminateRequest,
+  type ForceTermination,
   type HtmlPreviewWindow,
   type Lease,
   type LeaseCheckoutReview,
@@ -84,10 +85,17 @@ type CheckoutFormValues = {
 };
 
 type CheckoutActionError = {
-  type: 'preview' | 'finalize' | 'export';
+  type: 'preview' | 'finalize' | 'export' | 'force';
   title: string;
   description: string;
   retryable: boolean;
+};
+
+type ForceTerminationFormValues = {
+  termination_date?: Dayjs | string | null;
+  actual_move_out_date?: Dayjs | string | null;
+  reason?: string;
+  deposit_handling?: ForceTerminateRequest['deposit_handling'];
 };
 
 type CloseableHtmlPreviewWindow = HtmlPreviewWindow & {
@@ -100,7 +108,7 @@ type CheckoutFormFieldError = {
 };
 
 const defaultPage = 1;
-const defaultLimit = 100;
+const defaultLimit = 20;
 const defaultReviewStatus: NonNullable<LeaseCheckoutReview['lease_status']> = 'expired';
 const defaultCheckoutValues: CheckoutFormValues = {
   cleaning_fee: 0,
@@ -108,6 +116,7 @@ const defaultCheckoutValues: CheckoutFormValues = {
   other_fee: 0,
   manual_rent_refund_amount: 0,
 };
+const defaultForceTerminationValues: ForceTerminationFormValues = {};
 
 const checkoutStatusOptions: Array<{ value: 'all' | NonNullable<LeaseCheckoutReview['lease_status']>; label: string }> = [
   { value: 'all', label: '全部狀態' },
@@ -149,6 +158,10 @@ const checkoutValidationFieldMessages: Partial<Record<keyof CheckoutFormValues, 
 };
 
 const checkoutValidationFieldNames = new Set<keyof CheckoutFormValues>(Object.keys(checkoutValidationFieldMessages) as Array<keyof CheckoutFormValues>);
+const forceDepositHandlingOptions: Array<{ value: ForceTerminateRequest['deposit_handling']; label: string }> = [
+  { value: 'write_off', label: '押金沖銷' },
+  { value: 'keep_held', label: '保留押金' },
+];
 
 function getCheckoutReturnTo(pathname: string, search: string) {
   return `/login?reason=session-expired&returnTo=${encodeURIComponent(`${pathname}${search}`)}`;
@@ -185,6 +198,15 @@ function buildCheckoutRequest(values: CheckoutFormValues): CheckoutSettlementPre
     manual_rent_refund_amount: values.manual_rent_refund_amount ?? 0,
     manual_rent_refund_reason: values.manual_rent_refund_reason?.trim() || null,
     notes: values.notes?.trim() || null,
+  };
+}
+
+function buildForceTerminationRequest(values: ForceTerminationFormValues): Partial<ForceTerminateRequest> {
+  return {
+    termination_date: getDateValue(values.termination_date),
+    actual_move_out_date: getDateValue(values.actual_move_out_date) || null,
+    reason: values.reason?.trim() ?? '',
+    deposit_handling: values.deposit_handling,
   };
 }
 
@@ -426,7 +448,46 @@ function canSubmitCheckoutSettlement(lease: Lease) {
   return lease.status === 'active' || lease.status === 'expired';
 }
 
-export default function CheckoutSettlementPage() {
+function canSubmitForceTermination(lease: Lease) {
+  return lease.status === 'active';
+}
+
+function getCheckoutProgressLabel(record: LeaseCheckoutReview) {
+  if (record.checkout_finalized_at) {
+    return formatDashboardDateTime(record.checkout_finalized_at);
+  }
+
+  if (
+    record.lease_status === 'force_terminated'
+    && record.force_termination_deposit_handling === 'keep_held'
+    && record.deposit_status === 'held'
+  ) {
+    return '尚未處理押金';
+  }
+
+  return '尚未完成';
+}
+
+function canStartForceDepositHandling(record: LeaseCheckoutReview) {
+  return Boolean(
+    record.force_termination_id
+    && record.lease_status === 'force_terminated'
+    && record.force_termination_deposit_handling === 'keep_held'
+    && record.deposit_status === 'held',
+  );
+}
+
+type CheckoutSettlementPageProps = {
+  embeddedWorkflow?: boolean;
+  onEmbeddedClose?: () => void;
+  onEmbeddedWorkflowSuccess?: () => void;
+};
+
+export default function CheckoutSettlementPage({
+  embeddedWorkflow = false,
+  onEmbeddedClose,
+  onEmbeddedWorkflowSuccess,
+}: CheckoutSettlementPageProps = {}) {
   const { propertyId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -434,6 +495,7 @@ export default function CheckoutSettlementPage() {
   const { currentUser, getAccessToken } = useAuth();
   const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm<CheckoutFormValues>();
+  const [forceForm] = Form.useForm<ForceTerminationFormValues>();
   const reviewRequestRef = useRef<AbortController | null>(null);
   const leaseRequestRef = useRef<AbortController | null>(null);
   const formTouchedRef = useRef(false);
@@ -446,10 +508,12 @@ export default function CheckoutSettlementPage() {
   const [workflowOpen, setWorkflowOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [actionError, setActionError] = useState<CheckoutActionError | null>(null);
+  const [forceConfirmOpen, setForceConfirmOpen] = useState(false);
+  const [forceSubmitting, setForceSubmitting] = useState(false);
+  const [pendingForceRequest, setPendingForceRequest] = useState<ForceTerminateRequest | null>(null);
 
   const leaseId = searchParams.get('leaseId') ?? undefined;
-  const roomId = searchParams.get('roomId') ?? undefined;
-  const tenantId = searchParams.get('tenantId') ?? undefined;
+  const workflowMode = searchParams.get('mode') === 'force' ? 'force' : 'checkout';
   const statusParam = searchParams.get('status') as 'all' | LeaseCheckoutReview['lease_status'] | null;
   const status = statusParam === 'all' ? undefined : statusParam ?? defaultReviewStatus;
   const statusControlValue = statusParam ?? defaultReviewStatus;
@@ -576,10 +640,14 @@ export default function CheckoutSettlementPage() {
   }, [getAccessToken, location.pathname, location.search, navigate]);
 
   useEffect(() => {
+    if (embeddedWorkflow) {
+      return undefined;
+    }
+
     loadReviews();
 
     return () => abortRequest(reviewRequestRef.current);
-  }, [loadReviews]);
+  }, [embeddedWorkflow, loadReviews]);
 
   useEffect(() => {
     if (!leaseId) {
@@ -588,20 +656,28 @@ export default function CheckoutSettlementPage() {
       setPreview(null);
       setActionError((current) => current?.type === 'export' ? current : null);
       setWorkflowOpen(false);
+      setForceConfirmOpen(false);
+      setPendingForceRequest(null);
       formTouchedRef.current = false;
       form.resetFields();
       form.setFieldsValue(defaultCheckoutValues);
+      forceForm.resetFields();
+      forceForm.setFieldsValue(defaultForceTerminationValues);
       return undefined;
     }
 
     formTouchedRef.current = false;
     form.resetFields();
     form.setFieldsValue(defaultCheckoutValues);
+    forceForm.resetFields();
+    forceForm.setFieldsValue(defaultForceTerminationValues);
+    setForceConfirmOpen(false);
+    setPendingForceRequest(null);
     setWorkflowOpen(true);
     loadLease(leaseId);
 
     return () => abortRequest(leaseRequestRef.current);
-  }, [form, leaseId, loadLease]);
+  }, [forceForm, form, leaseId, loadLease]);
 
   const reviewRows = useMemo(
     () => reviewState.status === 'ready' ? reviewState.data.data ?? [] : [],
@@ -614,13 +690,34 @@ export default function CheckoutSettlementPage() {
   const canExport = Boolean(preview?.export_available && (preview?.lease_id || leaseId));
   const mainActionError = actionError?.type === 'export' && !workflowOpen ? actionError : null;
 
+  const closeWorkflow = useCallback(() => {
+    setWorkflowOpen(false);
+    setFinalizeOpen(false);
+    setForceConfirmOpen(false);
+    setPendingForceRequest(null);
+    setPreview(null);
+    setActionError(null);
+
+    if (embeddedWorkflow) {
+      onEmbeddedClose?.();
+      return;
+    }
+
+    const updated = new URLSearchParams(searchParams);
+    updated.delete('leaseId');
+    updated.delete('roomId');
+    updated.delete('tenantId');
+    updated.delete('mode');
+    setSearchParams(updated);
+  }, [embeddedWorkflow, onEmbeddedClose, searchParams, setSearchParams]);
+
   useEffect(() => {
-    if (!selectedLease?.end_date || preview || formTouchedRef.current) {
+    if (workflowMode === 'force' || !selectedLease?.end_date || preview || formTouchedRef.current) {
       return;
     }
 
     form.setFieldsValue({ checkout_date: dayjs(selectedLease.end_date) });
-  }, [form, preview, selectedLease]);
+  }, [form, preview, selectedLease, workflowMode]);
 
   const redirectExpiredSession = useCallback(() => {
     navigate(getCheckoutReturnTo(location.pathname, location.search), { replace: true });
@@ -717,12 +814,7 @@ export default function CheckoutSettlementPage() {
       render: (_, record) => (
         <Space direction="vertical" size={0}>
           <Typography.Text>
-            {record.checkout_finalized_at
-              ? formatDashboardDateTime(record.checkout_finalized_at)
-              : '尚未完成'}
-          </Typography.Text>
-          <Typography.Text type="secondary">
-            {record.export_available ? '可匯出結算書' : '尚不可匯出'}
+            {getCheckoutProgressLabel(record)}
           </Typography.Text>
         </Space>
       ),
@@ -733,7 +825,9 @@ export default function CheckoutSettlementPage() {
       width: 180,
       render: (_, record) => record.force_termination_id ? (
         <Space direction="vertical" size={0}>
-          <Typography.Text>{record.force_termination_status === 'completed' ? '已完成' : '處理中'}</Typography.Text>
+          <Link to={buildPropertyPath(propertyId, `/force-terminations/${record.force_termination_id}`)}>
+            {record.force_termination_status === 'completed' ? '已完成' : '處理中'}
+          </Link>
           <Typography.Text type="secondary">
             {getForceDepositHandlingLabel(record.force_termination_deposit_handling)}
           </Typography.Text>
@@ -744,7 +838,7 @@ export default function CheckoutSettlementPage() {
       title: '操作',
       key: 'actions',
       fixed: 'right',
-      width: 190,
+      width: 130,
       render: (_, record) => (
         <Space wrap>
           {record.lease_id && canStartCheckoutWorkflow(record) && (
@@ -759,6 +853,7 @@ export default function CheckoutSettlementPage() {
                 if (record.tenant_id) {
                   updated.set('tenantId', record.tenant_id);
                 }
+                updated.delete('mode');
                 setSearchParams(updated);
                 setWorkflowOpen(true);
               }}
@@ -766,19 +861,17 @@ export default function CheckoutSettlementPage() {
               開啟流程
             </Button>
           )}
-          {record.lease_id && (
-            <Button
-              size="small"
-              disabled={!record.export_available}
-              onClick={() => void openExport(record.lease_id)}
-            >
-              匯出
+          {canStartForceDepositHandling(record) && (
+            <Button size="small">
+              <Link to={buildPropertyPath(propertyId, `/force-terminations/${record.force_termination_id}`)}>
+                押金處理
+              </Link>
             </Button>
           )}
         </Space>
       ),
     },
-  ], [openExport, searchParams, setSearchParams]);
+  ], [propertyId, searchParams, setSearchParams]);
 
   async function submitPreview(values: CheckoutFormValues) {
     if (!leaseId) {
@@ -840,16 +933,22 @@ export default function CheckoutSettlementPage() {
         manual_rent_refund_reason: response.manual_rent_refund_reason ?? null,
         notes: response.notes ?? null,
       });
-      loadReviews();
+      if (!embeddedWorkflow) {
+        loadReviews();
+      }
       loadLease(leaseId, { preservePreview: true });
-      const updated = new URLSearchParams(searchParams);
-      updated.delete('leaseId');
-      updated.delete('roomId');
-      updated.delete('tenantId');
-      updated.set('status', 'terminated');
-      updated.set('page', String(defaultPage));
-      setSearchParams(updated);
-      setWorkflowOpen(false);
+      if (embeddedWorkflow) {
+        onEmbeddedWorkflowSuccess?.();
+      } else {
+        const updated = new URLSearchParams(searchParams);
+        updated.delete('leaseId');
+        updated.delete('roomId');
+        updated.delete('tenantId');
+        updated.set('status', 'terminated');
+        updated.set('page', String(defaultPage));
+        setSearchParams(updated);
+        setWorkflowOpen(false);
+      }
       void messageApi.success('退租結算已完成。');
       if (response.export_available) {
         await openExport(response.lease_id, exportWindow as CloseableHtmlPreviewWindow | null);
@@ -872,25 +971,109 @@ export default function CheckoutSettlementPage() {
     }
   }
 
+  function prepareForceTermination(values: ForceTerminationFormValues) {
+    if (!canForceTerminate || !leaseId || !selectedLease || !canSubmitForceTermination(selectedLease)) {
+      return;
+    }
+
+    const body = buildForceTerminationRequest(values);
+
+    if (!body.termination_date || !body.reason || !body.deposit_handling) {
+      setActionError({
+        type: 'force',
+        title: '強制退租資料未完成',
+        description: '請填寫強制退租日、原因與押金處理方式後再送出。',
+        retryable: false,
+      });
+      return;
+    }
+
+    setPendingForceRequest(body as ForceTerminateRequest);
+    setActionError(null);
+    setForceConfirmOpen(true);
+  }
+
+  async function submitForceTermination() {
+    if (!leaseId || !pendingForceRequest) {
+      return;
+    }
+
+    setForceSubmitting(true);
+    setActionError(null);
+
+    try {
+      const response: ForceTermination = await forceTerminateLease(leaseId, pendingForceRequest, getAccessToken);
+
+      if (!response.id) {
+        setActionError({
+          type: 'force',
+          title: '強制退租已送出但缺少明細識別',
+          description: '後端未回傳 force termination id，無法安全導向明細頁。請重新整理審核清單確認狀態。',
+          retryable: true,
+        });
+        setForceConfirmOpen(false);
+        if (!embeddedWorkflow) {
+          loadReviews();
+        }
+        loadLease(leaseId);
+        return;
+      }
+
+      void messageApi.success('強制退租已建立。');
+      setForceConfirmOpen(false);
+      setPendingForceRequest(null);
+      if (!embeddedWorkflow) {
+        loadReviews();
+      }
+      loadLease(leaseId);
+      if (embeddedWorkflow) {
+        onEmbeddedWorkflowSuccess?.();
+      } else {
+        navigate(buildPropertyPath(propertyId, `/force-terminations/${response.id}`));
+      }
+    } catch (error) {
+      const errorState = classifyApiErrorForUi(error);
+
+      if (errorState.kind === 'unauthorized') {
+        redirectExpiredSession();
+        return;
+      }
+
+      setForceConfirmOpen(false);
+      setActionError({
+        type: 'force',
+        title: errorState.kind === 'forbidden' ? '沒有權限執行強制退租' : errorState.title,
+        description: errorState.kind === 'forbidden'
+          ? '目前帳號不能執行此危險流程；若權限剛調整，請重新登入後再試。'
+          : errorState.description,
+        retryable: errorState.retryable,
+      });
+    } finally {
+      setForceSubmitting(false);
+    }
+  }
+
   if (!propertyId) {
     return <NotFoundState />;
   }
 
-  if (reviewState.status === 'loading' && !leaseId) {
+  if (!embeddedWorkflow && reviewState.status === 'loading' && !leaseId) {
     return <LoadingState />;
   }
 
-  if (reviewState.status === 'forbidden') {
+  if (!embeddedWorkflow && reviewState.status === 'forbidden') {
     return <ForbiddenState />;
   }
 
-  if (reviewState.status === 'error' && !leaseId) {
+  if (!embeddedWorkflow && reviewState.status === 'error' && !leaseId) {
     return <RetryableErrorState onRetry={loadReviews} />;
   }
 
   return (
     <Space direction="vertical" size={16} className="page-stack">
       {contextHolder}
+      {!embeddedWorkflow && (
+      <>
       <div className="page-header">
         <div>
           <Space size={8} wrap>
@@ -915,9 +1098,6 @@ export default function CheckoutSettlementPage() {
           <Button>
             <Link to={buildPropertyPath(propertyId, '/tenants')}>回租客與租約</Link>
           </Button>
-          <Button type="primary" disabled={!leaseId || leaseState.status !== 'ready'} onClick={() => setWorkflowOpen(true)}>
-            建立退租試算
-          </Button>
         </Space>
       </div>
 
@@ -940,43 +1120,6 @@ export default function CheckoutSettlementPage() {
         />
       )}
 
-      <Card title="相關入口">
-        <div className="property-link-grid">
-          <Link className="property-link-row" to={buildPropertyPath(propertyId, '/billing', {
-            roomId,
-            leaseId,
-            tenantId,
-          })}
-          >
-            <Space size={12} align="start">
-              <span className="property-link-icon"><AuditOutlined /></span>
-              <span>
-                <Typography.Text strong>帳單、抄表與收款</Typography.Text>
-                <Typography.Text type="secondary">處理退租前的待處理事項；付款與抄表由帳務頁負責。</Typography.Text>
-              </span>
-            </Space>
-          </Link>
-          <div className="property-link-row disabled-link-row">
-            <Space size={12} align="start">
-              <span className="property-link-icon"><WarningOutlined /></span>
-              <span>
-                <Typography.Text strong>強制退租</Typography.Text>
-                <Typography.Text type="secondary">獨立危險流程，#82 只保留入口，不送出強制退租。</Typography.Text>
-              </span>
-            </Space>
-          </div>
-          <div className="property-link-row disabled-link-row">
-            <Space size={12} align="start">
-              <span className="property-link-icon"><FileTextOutlined /></span>
-              <span>
-                <Typography.Text strong>租約更換</Typography.Text>
-                <Typography.Text type="secondary">續約、週期變更與合約重發不屬於退租結算。</Typography.Text>
-              </span>
-            </Space>
-          </div>
-        </div>
-      </Card>
-
       <Card title="退租審核清單">
         <Space direction="vertical" size={16} className="page-stack">
           <Space wrap>
@@ -992,13 +1135,13 @@ export default function CheckoutSettlementPage() {
             <Button onClick={() => setReviewQuery({ status: 'all', page: defaultPage })}>
               顯示全部
             </Button>
-          <Typography.Text type="secondary">預設顯示已到期；清單順序以後端分頁回傳為準。</Typography.Text>
+            <Typography.Text type="secondary">預設顯示已到期；清單順序以後端分頁回傳為準。</Typography.Text>
           </Space>
           <Table
             rowKey={(record) => record.lease_id ?? `${record.room_id}-${record.tenant_id}`}
             loading={reviewState.status === 'loading'}
             columns={reviewColumns}
-              dataSource={reviewRows}
+            dataSource={reviewRows}
             scroll={{ x: 1180 }}
             pagination={{
               current: pagination?.page ?? page,
@@ -1015,11 +1158,13 @@ export default function CheckoutSettlementPage() {
           />
         </Space>
       </Card>
+      </>
+      )}
 
       <Drawer
-        title="退租結算試算"
+        title={workflowMode === 'force' ? '強制退租' : '退租結算試算'}
         open={workflowOpen}
-        onClose={() => setWorkflowOpen(false)}
+        onClose={closeWorkflow}
         width={960}
         destroyOnClose={false}
       >
@@ -1037,7 +1182,7 @@ export default function CheckoutSettlementPage() {
         {leaseState.status === 'not-found' && <NotFoundState />}
         {leaseState.status === 'error' && <RetryableErrorState onRetry={() => leaseId && loadLease(leaseId)} />}
 
-        {selectedLease && (
+        {selectedLease && workflowMode === 'checkout' && (
           <Space direction="vertical" size={16} className="page-stack">
             <Descriptions bordered size="small" column={{ xs: 1, md: 2, xl: 3 }}>
               <Descriptions.Item label="物業">{getOptionalText(selectedLease.property_label)}</Descriptions.Item>
@@ -1059,7 +1204,7 @@ export default function CheckoutSettlementPage() {
                 type="warning"
                 showIcon
                 message="此租約不是進行中"
-                description="正常退租需要進行中或已到期租約；已退租或強制退租資料請使用審核清單與匯出入口。"
+                description="正常退租需要進行中或已到期租約；已退租或強制退租資料請使用審核清單與明細頁檢視。"
               />
             )}
 
@@ -1146,8 +1291,15 @@ export default function CheckoutSettlementPage() {
                 <Button
                   danger
                   icon={<WarningOutlined />}
-                  disabled
-                  title="強制退租不在 #82 實作範圍內"
+                  disabled={!canForceTerminate}
+                  title={canForceTerminate ? undefined : '目前角色不可執行強制退租'}
+                  onClick={() => {
+                    const updated = new URLSearchParams(searchParams);
+                    updated.set('mode', 'force');
+                    setSearchParams(updated);
+                    setPreview(null);
+                    setActionError(null);
+                  }}
                 >
                   強制退租
                 </Button>
@@ -1156,6 +1308,113 @@ export default function CheckoutSettlementPage() {
                     ? '強制退租是獨立危險流程，這裡先保留入口。'
                     : '目前角色不可執行強制退租，系統仍會再次確認權限。'}
                 </Typography.Text>
+              </Space>
+            </Form>
+          </Space>
+        )}
+
+        {selectedLease && workflowMode === 'force' && (
+          <Space direction="vertical" size={16} className="page-stack">
+            <Alert
+              type="warning"
+              showIcon
+              message="強制退租是獨立危險流程"
+              description="此流程不使用正常退租試算、完成退租或結算書匯出控制；送出後會依後端規則建立強制退租記錄並處理未結清帳單。"
+            />
+            <Descriptions bordered size="small" column={{ xs: 1, md: 2, xl: 3 }}>
+              <Descriptions.Item label="物業">{getOptionalText(selectedLease.property_label)}</Descriptions.Item>
+              <Descriptions.Item label="房間">{getOptionalText(selectedLease.room_label)}</Descriptions.Item>
+              <Descriptions.Item label="租客">{getOptionalText(selectedLease.tenant_label)}</Descriptions.Item>
+              <Descriptions.Item label="租約狀態">
+                <Tag color={getStatusColor(selectedLease.status)}>{getLeaseStatusLabel(selectedLease.status)}</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="租期">
+                {selectedLease.start_date ?? '未提供'} 至 {selectedLease.end_date ?? '未提供'}
+              </Descriptions.Item>
+              <Descriptions.Item label="押金">
+                {renderAmount(selectedLease.deposit_amount)} / {getDepositStatusLabel(selectedLease.deposit_status)}
+              </Descriptions.Item>
+            </Descriptions>
+            {!canForceTerminate && (
+              <Alert
+                type="error"
+                showIcon
+                message="目前角色不能執行強制退租"
+                description="此入口僅供檢視權限限制；送出動作已停用，後端仍會回傳 403 作為最終授權判斷。"
+              />
+            )}
+            {!canSubmitForceTermination(selectedLease) && (
+              <Alert
+                type="warning"
+                showIcon
+                message="此租約狀態不適合強制退租"
+                description="強制退租只從進行中租約發起；已到期、已退租或已強制退租資料請使用審核清單與明細頁檢視。"
+              />
+            )}
+            <Form
+              form={forceForm}
+              layout="vertical"
+              requiredMark={false}
+              initialValues={defaultForceTerminationValues}
+              onFinish={(values) => prepareForceTermination(values)}
+            >
+              <div className="form-grid two-columns">
+                <Form.Item
+                  name="termination_date"
+                  label="強制退租日（必填）"
+                  rules={[{ required: true, message: '請選擇強制退租日。' }]}
+                >
+                  <DatePicker format="YYYY-MM-DD" inputReadOnly className="form-date-input" />
+                </Form.Item>
+                <Form.Item
+                  name="actual_move_out_date"
+                  label="實際搬出日 / 點交日"
+                >
+                  <DatePicker format="YYYY-MM-DD" inputReadOnly className="form-date-input" />
+                </Form.Item>
+                <Form.Item
+                  name="deposit_handling"
+                  label="押金處理（必填）"
+                  rules={[{ required: true, message: '請選擇押金處理方式。' }]}
+                >
+                  <Select
+                    aria-label="押金處理（必填）"
+                    options={forceDepositHandlingOptions}
+                    className="filter-control"
+                  />
+                </Form.Item>
+              </div>
+              <Form.Item
+                name="reason"
+                label="強制退租原因（必填）"
+                rules={[{ required: true, message: '請填寫強制退租原因。' }]}
+              >
+                <Input.TextArea rows={3} />
+              </Form.Item>
+              <Space wrap>
+                <Button
+                  type="primary"
+                  danger
+                  htmlType="submit"
+                  loading={forceSubmitting}
+                  disabled={!canForceTerminate || !canSubmitForceTermination(selectedLease) || forceSubmitting}
+                >
+                  送出強制退租
+                </Button>
+                <Button
+                  onClick={() => {
+                    const updated = new URLSearchParams(searchParams);
+                    if (embeddedWorkflow) {
+                      updated.set('mode', 'checkout');
+                    } else {
+                      updated.delete('mode');
+                    }
+                    setSearchParams(updated);
+                    setActionError(null);
+                  }}
+                >
+                  返回正常退租
+                </Button>
               </Space>
             </Form>
           </Space>
@@ -1175,7 +1434,7 @@ export default function CheckoutSettlementPage() {
           />
         )}
 
-        {preview && (
+        {workflowMode === 'checkout' && preview && (
           <Card title="退租結算試算結果">
             <Space direction="vertical" size={16} className="page-stack">
               <Descriptions bordered size="small" column={{ xs: 1, md: 2, xl: 3 }}>
@@ -1349,6 +1608,33 @@ export default function CheckoutSettlementPage() {
               <Descriptions.Item label="結算結果">
                 {netDirectionLabels[preview.net_direction]} {formatTwd(preview.net_amount)}
               </Descriptions.Item>
+            </Descriptions>
+          )}
+        </Space>
+      </Modal>
+
+      <Modal
+        title="確認送出強制退租"
+        open={forceConfirmOpen}
+        okText="確認強制退租"
+        okButtonProps={{ danger: true, loading: forceSubmitting, disabled: forceSubmitting }}
+        cancelText="取消"
+        onOk={() => void submitForceTermination()}
+        onCancel={() => setForceConfirmOpen(false)}
+      >
+        <Space direction="vertical" size={12}>
+          <Alert
+            type="error"
+            showIcon
+            message="此動作會建立強制退租記錄"
+            description="這不是正常退租結算流程，不會產生退租試算或結算書；送出後請以強制退租明細頁與重新讀取的租約資料為準。"
+          />
+          {selectedLease && pendingForceRequest && (
+            <Descriptions size="small" column={1}>
+              <Descriptions.Item label="租客">{getOptionalText(selectedLease.tenant_label)}</Descriptions.Item>
+              <Descriptions.Item label="房間">{getOptionalText(selectedLease.room_label)}</Descriptions.Item>
+              <Descriptions.Item label="強制退租日">{pendingForceRequest.termination_date}</Descriptions.Item>
+              <Descriptions.Item label="押金處理">{getForceDepositHandlingLabel(pendingForceRequest.deposit_handling)}</Descriptions.Item>
             </Descriptions>
           )}
         </Space>

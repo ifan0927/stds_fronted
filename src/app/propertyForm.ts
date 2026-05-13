@@ -4,6 +4,7 @@ export type PropertyBillingCadence = CreatePropertyRequest['default_electricity_
 
 export type PropertyFormValues = {
   name?: string;
+  property_public_name?: string;
   subtitle?: string | null;
   address?: string;
   electricity_unit_price?: string | number | null;
@@ -73,6 +74,7 @@ export function parsePropertyFacilitiesText(value: unknown) {
 export function getPropertyInitialFormValues(property?: Property): PropertyFormValues {
   return {
     name: property?.name ?? '',
+    property_public_name: property?.property_public_name ?? property?.name ?? '',
     subtitle: property?.subtitle ?? '',
     address: property?.address ?? '',
     electricity_unit_price: property?.electricity_unit_price ?? '',
@@ -88,6 +90,7 @@ export function getPropertyInitialFormValues(property?: Property): PropertyFormV
 export function buildCreatePropertyRequest(values: PropertyFormValues): CreatePropertyRequest {
   return {
     name: normalizeText(values.name),
+    property_public_name: normalizeText(values.property_public_name) || undefined,
     subtitle: normalizeText(values.subtitle) || null,
     address: normalizeText(values.address),
     electricity_unit_price: normalizeRequiredNumber(values.electricity_unit_price),
@@ -106,10 +109,18 @@ export function buildUpdatePropertyRequest(
 ): UpdatePropertyRequest {
   const request: UpdatePropertyRequest = {};
   const nextName = normalizeText(values.name);
+  const nextPropertyPublicName = normalizeText(values.property_public_name);
   const nextAddress = normalizeText(values.address);
 
   if (nextName && nextName !== (property.name ?? '')) {
     request.name = nextName;
+  }
+
+  if (
+    nextPropertyPublicName
+    && nextPropertyPublicName !== (property.property_public_name ?? property.name ?? '')
+  ) {
+    request.property_public_name = nextPropertyPublicName;
   }
 
   if (nextAddress && nextAddress !== (property.address ?? '')) {

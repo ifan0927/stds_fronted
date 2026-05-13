@@ -5,6 +5,14 @@ export type { CurrentUser, UpdateCurrentUserRequest } from './auth';
 export { getDashboard } from './dashboard';
 export type { HomeDashboard } from './dashboard';
 export {
+  createBrandFAQItem,
+  deactivateBrandFAQItem,
+  getBrandProfile,
+  listBrandFAQItems,
+  updateBrandFAQItem,
+  upsertBrandProfile,
+} from './brand';
+export {
   createAttachmentDownloadURL,
   createAttachmentDownloadUrl,
   createAttachmentUploadURL,
@@ -110,6 +118,15 @@ export {
   updateLease,
   updateTenant,
 } from './tenants';
+export type {
+  BrandFAQItem,
+  BrandFAQItemList,
+  BrandProfile,
+  CreateBrandFAQItemRequest,
+  DeactivateBrandFAQItemRequest,
+  UpdateBrandFAQItemRequest,
+  UpsertBrandProfileRequest,
+} from './brand';
 export type {
   Attachment,
   AttachmentContentType,

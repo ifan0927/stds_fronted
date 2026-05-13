@@ -65,6 +65,7 @@ type OwnerOptionsState =
 
 const propertyFieldMap: Record<string, keyof PropertyFormValues> = {
   VALIDATION_NAME_REQUIRED: 'name',
+  VALIDATION_PROPERTY_PUBLIC_NAME_REQUIRED: 'property_public_name',
   VALIDATION_ADDRESS_REQUIRED: 'address',
   VALIDATION_ELECTRICITY_PRICE_REQUIRED: 'electricity_unit_price',
   VALIDATION_ELECTRICITY_PRICE_INVALID: 'electricity_unit_price',
@@ -414,10 +415,17 @@ export default function PropertyMasterDataPage() {
           <div className="property-form-grid">
             <Form.Item
               name="name"
-              label="物業名稱（必填）"
+              label="內部物業名稱（必填）"
               rules={[{ required: true, whitespace: true, message: '請輸入物業名稱。' }]}
             >
               <Input autoComplete="organization" />
+            </Form.Item>
+            <Form.Item
+              name="property_public_name"
+              label="品牌頁公開名稱"
+              extra="顯示在品牌頁與對外列表；留空時建立物業會沿用內部物業名稱。"
+            >
+              <Input />
             </Form.Item>
             <Form.Item name="subtitle" label="副標">
               <Input />

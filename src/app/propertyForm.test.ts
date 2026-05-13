@@ -13,6 +13,7 @@ describe('property form helpers', () => {
     expect(
       buildCreatePropertyRequest({
         name: ' 台北大安物業 ',
+        property_public_name: ' 大安共同生活館 ',
         subtitle: '  大安館 ',
         address: ' 台北市大安區復興南路一段100號 ',
         electricity_unit_price: '4.5',
@@ -25,6 +26,7 @@ describe('property form helpers', () => {
       }),
     ).toEqual({
       name: '台北大安物業',
+      property_public_name: '大安共同生活館',
       subtitle: '大安館',
       address: '台北市大安區復興南路一段100號',
       electricity_unit_price: 4.5,
@@ -41,6 +43,7 @@ describe('property form helpers', () => {
     const property: Property = {
       id: 'property-1',
       name: '台北大安物業',
+      property_public_name: '台北大安物業',
       subtitle: '大安館',
       address: '台北市大安區復興南路一段100號',
       electricity_unit_price: 4.5,
@@ -55,6 +58,7 @@ describe('property form helpers', () => {
     expect(
       buildUpdatePropertyRequest({
         name: '台北大安物業',
+        property_public_name: '大安公開名稱',
         subtitle: '',
         address: '台北市大安區復興南路一段100號',
         electricity_unit_price: '5.25',
@@ -66,6 +70,7 @@ describe('property form helpers', () => {
       }, property),
     ).toEqual({
       subtitle: null,
+      property_public_name: '大安公開名稱',
       electricity_unit_price: 5.25,
       default_electricity_billing_cadence: 'bimonthly',
       contact_phone: null,
@@ -86,6 +91,7 @@ describe('property form helpers', () => {
     expect(
       buildUpdatePropertyRequest({
         name: '台北大安物業',
+        property_public_name: '台北大安物業',
         address: '台北市',
         electricity_unit_price: '4.5',
         default_electricity_billing_cadence: 'monthly',
@@ -109,6 +115,7 @@ describe('property form helpers', () => {
     expect(
       getPropertyInitialFormValues({
         name: '台北大安物業',
+        property_public_name: '大安共同生活館',
         address: '台北市',
         electricity_unit_price: 4.5,
         default_electricity_billing_cadence: 'bimonthly',
@@ -117,6 +124,7 @@ describe('property form helpers', () => {
       }),
     ).toMatchObject({
       name: '台北大安物業',
+      property_public_name: '大安共同生活館',
       electricity_unit_price: 4.5,
       default_electricity_billing_cadence: 'bimonthly',
       owner_id: 'owner-1',

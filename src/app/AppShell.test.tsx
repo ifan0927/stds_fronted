@@ -21,6 +21,7 @@ vi.mock('@ant-design/icons', () => ({
   CarryOutOutlined: () => null,
   DashboardOutlined: () => null,
   FileTextOutlined: () => null,
+  GlobalOutlined: () => null,
   HomeOutlined: () => null,
   LogoutOutlined: () => null,
   MenuFoldOutlined: () => null,
@@ -172,6 +173,24 @@ describe('AppShell user management navigation', () => {
       renderShell(role);
 
       expect(screen.getByRole('link', { name: '成員與權限' }).getAttribute('href')).toBe('/admin/members');
+    },
+  );
+
+  it.each(['admin', 'organizer'] as const)(
+    'shows the brand content entry for %s',
+    (role) => {
+      renderShell(role);
+
+      expect(screen.getByRole('link', { name: '品牌內容' }).getAttribute('href')).toBe('/admin/brand');
+    },
+  );
+
+  it.each(['staff', 'owner'] as const)(
+    'hides the brand content entry for %s',
+    (role) => {
+      renderShell(role);
+
+      expect(screen.queryByRole('link', { name: '品牌內容' })).toBeNull();
     },
   );
 

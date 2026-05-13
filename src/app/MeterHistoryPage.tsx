@@ -828,7 +828,7 @@ export default function MeterHistoryPage() {
           type="info"
           showIcon
           message="目前為單一房間歷史"
-          description="此檢視從房間、出租中 Hub 或帳單詳情進入，篩選條件會保留在網址中。"
+          description="此檢視從房間、出租中房間總覽或帳單詳情進入，篩選條件會保留在網址中。"
         />
       )}
 

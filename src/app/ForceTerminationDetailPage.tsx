@@ -470,7 +470,7 @@ export default function ForceTerminationDetailPage() {
             type="info"
             showIcon
             message="強制退租仍在處理中"
-            description="帳單進度以後端回傳為準，請重新整理取得最新狀態。"
+            description="帳單進度以目前資料為準，請重新整理取得最新狀態。"
           />
         )}
         {billRows.length > 0 ? (
@@ -503,7 +503,7 @@ export default function ForceTerminationDetailPage() {
             type="warning"
             showIcon
             message="此動作會結清押金"
-            description="系統會呼叫後端押金處理 API，依金額觸發押金退還或扣款紀錄。扣款金額大於 0 時必須填寫扣款原因。"
+            description="系統會依金額建立押金退還或扣款紀錄。扣款金額大於 0 時必須填寫扣款原因。"
           />
           {depositError && (
             <Alert type="error" showIcon message="押金處理失敗" description={depositError} />

@@ -208,7 +208,7 @@ export default function UserManagementPage() {
       if (createdUser.id) {
         navigate(`/admin/members/${createdUser.id}`);
       } else {
-        void message.warning('成員已建立，但回應缺少詳情頁識別資料，已留在列表供重新確認。');
+        void message.warning('成員已建立，但詳情資料暫時不完整，已留在列表供重新確認。');
         loadUsers();
       }
     } catch (error) {
@@ -268,7 +268,7 @@ export default function UserManagementPage() {
       fixed: 'right',
       render: (_value, record) => {
         if (!record.id) {
-          return <Tag color="warning">缺少識別資料</Tag>;
+          return <Tag color="warning">資料不完整</Tag>;
         }
 
         return (
@@ -443,7 +443,7 @@ export default function UserManagementPage() {
             type="info"
             showIcon
             message="不需設定密碼"
-            description="後端會建立帳號並寄出設定密碼信。"
+            description="系統會建立帳號並寄出設定密碼信。"
           />
         </Form>
       </Drawer>

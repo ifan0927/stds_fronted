@@ -286,7 +286,7 @@ export default function TenantDetailPage() {
           </Space>
           <Typography.Title level={1}>{tenantName}</Typography.Title>
           <Typography.Paragraph type="secondary">
-            維護租客基本資料並查看租約歷史；租客備註、付款、收據與附件上傳由後續工作流承接。
+            維護租客基本資料並查看租約歷史；租客備註、付款、收據與附件上傳會由相關功能處理。
           </Typography.Paragraph>
         </div>
         <Space wrap>
@@ -532,7 +532,7 @@ function TenantEditModal({ open, tenant, onCancel, onSuccess }: TenantEditModalP
           type="info"
           showIcon
           message="租客備註未開放編輯"
-          description="目前後端與產品邊界尚未確認租客層級備註，這裡只維護已支援的個人資料欄位。"
+          description="租客層級備註尚未開放編輯，這裡只維護目前支援的個人資料欄位。"
         />
 
         <div className="form-footer-actions">

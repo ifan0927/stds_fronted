@@ -912,7 +912,7 @@ export default function TenantLeaseRosterPage() {
         const roomId = record.room_id;
 
         if (!propertyId || !roomId) {
-          return <Typography.Text type="secondary">缺少房間識別</Typography.Text>;
+          return <Typography.Text type="secondary">房間資料不完整</Typography.Text>;
         }
 
         if (!isOccupiedRosterRow(record)) {

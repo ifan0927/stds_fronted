@@ -169,6 +169,100 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/brand/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 取得品牌基本資料
+         * @description x-required-role: admin, organizer
+         *     Singleton brand profile for the demo brand frontend content controls.
+         */
+        get: operations["getBrandProfile"];
+        /**
+         * 建立或更新品牌基本資料
+         * @description x-required-role: admin, organizer
+         *     Upserts the singleton brand profile. version is required when updating an existing profile.
+         */
+        put: operations["upsertBrandProfile"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/brand/faq-items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 列出品牌 FAQ
+         * @description x-required-role: admin, organizer
+         *     Lists brand FAQ items for internal content management. Inactive items are returned only when include_inactive is true.
+         */
+        get: operations["listBrandFAQItems"];
+        put?: never;
+        /**
+         * 建立品牌 FAQ
+         * @description x-required-role: admin, organizer
+         *     Creates a brand FAQ item for internal content management.
+         */
+        post: operations["createBrandFAQItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/brand/faq-items/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * 更新品牌 FAQ
+         * @description x-required-role: admin, organizer
+         *     Updates a brand FAQ item. version is required for optimistic locking.
+         */
+        patch: operations["updateBrandFAQItem"];
+        trace?: never;
+    };
+    "/brand/faq-items/{id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 停用品牌 FAQ
+         * @description x-required-role: admin, organizer
+         *     Deactivates a brand FAQ item without deleting it from internal admin views. version is required for optimistic locking.
+         */
+        post: operations["deactivateBrandFAQItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/properties": {
         parameters: {
             query?: never;
@@ -1641,10 +1735,69 @@ export type components = {
             property_summaries: components["schemas"]["HomeDashboardPropertySummary"][];
             recent_journals: components["schemas"]["HomeDashboardRecentJournalItem"][];
         };
+        BrandProfileResponse: {
+            /** Format: uuid */
+            id?: string;
+            brand_name?: string;
+            contact_phone?: string | null;
+            /** Format: email */
+            contact_email?: string | null;
+            contact_address?: string | null;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+            version?: number;
+        };
+        UpsertBrandProfileRequest: {
+            brand_name: string;
+            contact_phone?: string | null;
+            /** Format: email */
+            contact_email?: string | null;
+            contact_address?: string | null;
+            /** @description Required when updating an existing brand profile; omit for first creation. */
+            version?: number;
+        };
+        BrandFAQItemResponse: {
+            /** Format: uuid */
+            id?: string;
+            question?: string;
+            answer?: string;
+            sort_order?: number;
+            is_active?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+            version?: number;
+        };
+        BrandFAQItemListResponse: {
+            data?: components["schemas"]["BrandFAQItemResponse"][];
+        };
+        CreateBrandFAQItemRequest: {
+            question: string;
+            answer: string;
+            /** @default 0 */
+            sort_order: number;
+            /** @default true */
+            is_active: boolean;
+        };
+        UpdateBrandFAQItemRequest: {
+            question: string;
+            answer: string;
+            sort_order: number;
+            is_active: boolean;
+            version: number;
+        };
+        DeactivateBrandFAQItemRequest: {
+            version: number;
+        };
         PropertyResponse: {
             /** Format: uuid */
             id?: string;
             name?: string;
+            /** @description Public brand-page display name. Internal management name remains name. */
+            property_public_name?: string;
             address?: string;
             subtitle?: string | null;
             /**
@@ -1675,6 +1828,8 @@ export type components = {
         };
         CreatePropertyRequest: {
             name: string;
+            /** @description Public brand-page display name. Defaults from name when omitted. */
+            property_public_name?: string;
             subtitle?: string | null;
             address: string;
             /**
@@ -1699,6 +1854,8 @@ export type components = {
         };
         UpdatePropertyRequest: {
             name?: string;
+            /** @description Public brand-page display name. Can be updated independently from name. */
+            property_public_name?: string;
             subtitle?: string | null;
             address?: string;
             /**
@@ -3057,6 +3214,346 @@ export interface operations {
             };
             /** @description 權限不足 */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getBrandProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 品牌基本資料 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandProfileResponse"];
+                };
+            };
+            /** @description 未認證 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 權限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 尚未建立品牌基本資料 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    upsertBrandProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertBrandProfileRequest"];
+            };
+        };
+        responses: {
+            /** @description 品牌基本資料已建立或更新 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandProfileResponse"];
+                };
+            };
+            /** @description 欄位驗證錯誤 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 未認證 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 權限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 樂觀鎖版本衝突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listBrandFAQItems: {
+        parameters: {
+            query?: {
+                include_inactive?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 品牌 FAQ 清單 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandFAQItemListResponse"];
+                };
+            };
+            /** @description 未認證 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 權限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    createBrandFAQItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBrandFAQItemRequest"];
+            };
+        };
+        responses: {
+            /** @description 品牌 FAQ 已建立 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandFAQItemResponse"];
+                };
+            };
+            /** @description 欄位驗證錯誤 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 未認證 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 權限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updateBrandFAQItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateBrandFAQItemRequest"];
+            };
+        };
+        responses: {
+            /** @description 品牌 FAQ 已更新 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandFAQItemResponse"];
+                };
+            };
+            /** @description 欄位驗證錯誤 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 未認證 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 權限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 品牌 FAQ 不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 樂觀鎖版本衝突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deactivateBrandFAQItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeactivateBrandFAQItemRequest"];
+            };
+        };
+        responses: {
+            /** @description 品牌 FAQ 已停用 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandFAQItemResponse"];
+                };
+            };
+            /** @description 欄位驗證錯誤 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 未認證 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 權限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 品牌 FAQ 不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 樂觀鎖版本衝突 */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

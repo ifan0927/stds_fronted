@@ -833,7 +833,7 @@ export default function JournalPage() {
               type="info"
               showIcon
               message="已套用房間篩選"
-              description={`目前顯示 ${roomOptionMap.get(roomId) ?? '所選房間'} 的日誌；列表仍以後端回傳的房間標籤為準。`}
+              description={`目前顯示 ${roomOptionMap.get(roomId) ?? '所選房間'} 的日誌；列表仍以最新房間資料為準。`}
             />
           )}
           {roomOptionsState.status === 'error' && (

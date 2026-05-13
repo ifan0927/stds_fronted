@@ -251,7 +251,7 @@ function renderLeaseReplacementPage(initialEntry = '/properties/property-1/lease
       <Routes>
         <Route path="/properties/:propertyId/leases/:leaseId/replace" element={<LeaseReplacementPage />} />
         <Route path="/properties/:propertyId/leases/:leaseId" element={<div>租約詳情頁</div>} />
-        <Route path="/properties/:propertyId/tenants" element={<div>租客與租約 Hub</div>} />
+        <Route path="/properties/:propertyId/tenants" element={<div>租客與租約</div>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -389,7 +389,7 @@ describe('LeaseReplacementPage', () => {
     expect(screen.getByText('新租約')).toBeTruthy();
     expect(screen.getByText('2026-07-01')).toBeTruthy();
     expect(screen.getByRole('button', { name: '前往新租約' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: '回租客與租約 Hub' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '回租客與租約' })).toBeTruthy();
   });
 
   it('renders a visible business-rule alert for replacement 422 errors', async () => {

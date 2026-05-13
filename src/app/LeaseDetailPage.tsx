@@ -354,7 +354,7 @@ export default function LeaseDetailPage() {
           </Space>
           <Typography.Title level={1}>{lease.room_label ?? lease.tenant_label ?? '租約詳情'}</Typography.Title>
           <Typography.Paragraph type="secondary">
-            查看租約條件與租金帳單脈絡；本頁只支援租金調整，付款、收據、退租與附件為入口或 placeholder。
+            查看租約條件與租金帳單脈絡；本頁支援租金調整，並可前往付款、收據、退租與附件相關功能。
           </Typography.Paragraph>
         </div>
         <Space wrap>
@@ -477,7 +477,7 @@ export default function LeaseDetailPage() {
               <span className="property-link-icon"><AuditOutlined /></span>
               <span>
                 <Typography.Text strong>收款與收據</Typography.Text>
-                <Typography.Text type="secondary">前往帳務入口；付款與收據 workflow 不在本頁實作。</Typography.Text>
+                <Typography.Text type="secondary">前往帳務入口處理付款與收據。</Typography.Text>
               </span>
             </Space>
           </Link>
@@ -517,7 +517,7 @@ export default function LeaseDetailPage() {
                 <span className="property-link-icon"><WarningOutlined /></span>
                 <span>
                   <Typography.Text strong>強制退租</Typography.Text>
-                  <Typography.Text type="secondary">目前角色不可執行強制退租；後端仍會再次檢查權限。</Typography.Text>
+                  <Typography.Text type="secondary">目前角色不可執行強制退租；送出時仍會再次確認權限。</Typography.Text>
                 </span>
               </Space>
             </div>
@@ -538,7 +538,7 @@ export default function LeaseDetailPage() {
                 <span className="property-link-icon"><SwapOutlined /></span>
                 <span>
                   <Typography.Text strong>租約更換</Typography.Text>
-                  <Typography.Text type="secondary">目前角色不可執行租約更換；後端仍會再次檢查權限。</Typography.Text>
+                  <Typography.Text type="secondary">目前角色不可執行租約更換；送出時仍會再次確認權限。</Typography.Text>
                 </span>
               </Space>
             </div>
@@ -633,7 +633,7 @@ function LeaseAdjustmentModal({ open, lease, onCancel, onSuccess }: LeaseAdjustm
         }}
       >
         <Typography.Paragraph type="secondary">
-          本操作不修改租金週期、押金、付款或收據。若需續約、週期變更或重發合約，請使用後續租約更換 workflow。
+          本操作不修改租金週期、押金、付款或收據。若需續約、週期變更或重發合約，請使用租約更換功能。
         </Typography.Paragraph>
         {submitError && (
           <Alert
@@ -659,7 +659,7 @@ function LeaseAdjustmentModal({ open, lease, onCancel, onSuccess }: LeaseAdjustm
           type="warning"
           showIcon
           message="此調整可能影響後續租金帳單"
-          description="後端目前只支援租金調整，會處理可調整範圍與帳單重產；送出後本頁會重新讀取租約與租金帳單。"
+          description="目前只支援租金調整；送出後系統會處理可調整範圍與帳單更新，並重新讀取租約與租金帳單。"
         />
         <div className="form-footer-actions">
           <Button onClick={onCancel}>取消</Button>

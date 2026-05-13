@@ -1005,7 +1005,7 @@ export default function RepairWorkspace({
           type="info"
           showIcon
           message="已套用房間篩選"
-          description={`目前顯示 ${roomOptions.find((option) => option.value === roomId)?.label ?? '所選房間'} 的維修單；列表仍以後端回傳的房間標籤為準。`}
+          description={`目前顯示 ${roomOptions.find((option) => option.value === roomId)?.label ?? '所選房間'} 的維修單；列表仍以最新房間資料為準。`}
         />
       )}
       {staffOptionsState.status === 'error' && (

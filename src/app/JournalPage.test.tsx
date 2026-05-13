@@ -327,7 +327,7 @@ describe('JournalPage', () => {
       .toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(screen.getByText('會計科目：6681 其他支出')).toBeTruthy();
     expect(screen.getByText('已套用房間篩選')).toBeTruthy();
-    expect(screen.getByText('目前顯示 201 - 林怡君 的日誌；列表仍以後端回傳的房間標籤為準。')).toBeTruthy();
+    expect(screen.getByText('目前顯示 201 - 林怡君 的日誌；列表仍以最新房間資料為準。')).toBeTruthy();
     expect(screen.getByRole('radio', { name: '維修工作區' })).toBeTruthy();
     expect(apiMocks.listPropertyTenantLeaseRoster).toHaveBeenCalledWith(
       'property-1',
@@ -462,7 +462,7 @@ describe('JournalPage', () => {
     });
 
     expect(await screen.findByText('浴室漏水')).toBeTruthy();
-    expect(screen.getByText('目前顯示 201 - 林怡君 的維修單；列表仍以後端回傳的房間標籤為準。')).toBeTruthy();
+    expect(screen.getByText('目前顯示 201 - 林怡君 的維修單；列表仍以最新房間資料為準。')).toBeTruthy();
     expect(screen.getByRole('button', { name: '派工' })).toBeTruthy();
   }, 10000);
 

@@ -354,7 +354,7 @@ function renderFinalMeterReadingSummary(preview: CheckoutSettlementResponse) {
   }
 
   return hasElectricitySettlementLine(preview)
-    ? `${preview.final_meter_reading}（已納入後端電費結算）`
+    ? `${preview.final_meter_reading}（已納入本次電費結算）`
     : `${preview.final_meter_reading}（本次未產生電費結算項目）`;
 }
 
@@ -1008,7 +1008,7 @@ export default function CheckoutSettlementPage({
         setActionError({
           type: 'force',
           title: '強制退租已送出但缺少明細識別',
-          description: '後端未回傳 force termination id，無法安全導向明細頁。請重新整理審核清單確認狀態。',
+          description: '強制退租已送出，但目前無法開啟明細頁。請重新整理審核清單確認狀態。',
           retryable: true,
         });
         setForceConfirmOpen(false);
@@ -1135,7 +1135,7 @@ export default function CheckoutSettlementPage({
             <Button onClick={() => setReviewQuery({ status: 'all', page: defaultPage })}>
               顯示全部
             </Button>
-            <Typography.Text type="secondary">預設顯示已到期；清單順序以後端分頁回傳為準。</Typography.Text>
+            <Typography.Text type="secondary">預設顯示已到期；清單順序以目前資料為準。</Typography.Text>
           </Space>
           <Table
             rowKey={(record) => record.lease_id ?? `${record.room_id}-${record.tenant_id}`}
@@ -1271,10 +1271,10 @@ export default function CheckoutSettlementPage({
                 <Input.TextArea rows={2} />
               </Form.Item>
               <Typography.Paragraph type="secondary">
-                退租電表讀數會交由後端試算；若可對應最後一期待抄表帳單，會納入退租試算，若帳單週期不符則會回傳待處理項目。
+                退租電表讀數會用於系統試算；若可對應最後一期待抄表帳單，會納入退租試算，若帳單週期不符則會列為待處理項目。
               </Typography.Paragraph>
               <Typography.Paragraph type="secondary">
-                若結算生效日早於原租約結束日，請填寫人工未到期租金退款決策；前端只送出決策，不自行計算退款。
+                若結算生效日早於原租約結束日，請填寫人工未到期租金退款決策；系統會依填寫內容進行結算，不會自動推算退款。
               </Typography.Paragraph>
               <Form.Item name="notes" label="退租備註">
                 <Input.TextArea rows={3} />
@@ -1319,7 +1319,7 @@ export default function CheckoutSettlementPage({
               type="warning"
               showIcon
               message="強制退租是獨立危險流程"
-              description="此流程不使用正常退租試算、完成退租或結算書匯出控制；送出後會依後端規則建立強制退租記錄並處理未結清帳單。"
+              description="此流程不使用正常退租試算、完成退租或結算書匯出控制；送出後會依強制退租規則建立記錄並處理未結清帳單。"
             />
             <Descriptions bordered size="small" column={{ xs: 1, md: 2, xl: 3 }}>
               <Descriptions.Item label="物業">{getOptionalText(selectedLease.property_label)}</Descriptions.Item>
@@ -1340,7 +1340,7 @@ export default function CheckoutSettlementPage({
                 type="error"
                 showIcon
                 message="目前角色不能執行強制退租"
-                description="此入口僅供檢視權限限制；送出動作已停用，後端仍會回傳 403 作為最終授權判斷。"
+                description="此入口僅供檢視權限限制；送出動作已停用，實際送出時仍會再次確認權限。"
               />
             )}
             {!canSubmitForceTermination(selectedLease) && (

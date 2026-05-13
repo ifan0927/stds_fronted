@@ -566,7 +566,7 @@ export default function PropertyDashboardPage() {
           type="warning"
           showIcon
           message="物業資料不完整"
-          description="後端回應缺少可識別的物業資料，請重新整理後再試。"
+          description="目前物業資料缺少必要資訊，請重新整理後再試。"
         />
       )}
 

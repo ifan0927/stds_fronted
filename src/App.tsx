@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom';
 import AppShell from './app/AppShell';
+import BrandContentPage from './app/BrandContentPage';
 import BillingMeterPage from './app/BillingMeterPage';
 import CheckoutSettlementPage from './app/CheckoutSettlementPage';
 import CurrentUserProfilePage from './app/CurrentUserProfilePage';
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="properties/:propertyId/billing/meter-history" element={<MeterHistoryPage />} />
           <Route path="properties/:propertyId/journal" element={<JournalPage />} />
           <Route path="properties/:propertyId/reports" element={<PropertyReportsPage />} />
+          <Route path="admin/brand" element={<BrandContentPage />} />
           <Route path="admin/members" element={<UserManagementPage />} />
           <Route path="admin/members/:userId" element={<UserDetailPage />} />
         </Route>

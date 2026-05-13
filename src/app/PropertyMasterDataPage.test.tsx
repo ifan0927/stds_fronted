@@ -563,13 +563,15 @@ describe('Property master-data routes', () => {
     vi.mocked(createProperty).mockResolvedValue({
       id: 'property-1',
       name: '台北大安物業',
+      property_public_name: '大安共同生活館',
       address: '台北市大安區復興南路一段100號',
     });
 
     renderPropertyMasterDataPage('/properties/new');
 
     await screen.findByText('新增物業');
-    fireEvent.change(screen.getByLabelText('物業名稱（必填）'), { target: { value: ' 台北大安物業 ' } });
+    fireEvent.change(screen.getByLabelText('內部物業名稱（必填）'), { target: { value: ' 台北大安物業 ' } });
+    fireEvent.change(screen.getByLabelText('品牌頁公開名稱'), { target: { value: ' 大安共同生活館 ' } });
     fireEvent.change(screen.getByLabelText('副標'), { target: { value: ' 大安館 ' } });
     fireEvent.change(screen.getByLabelText('地址（必填）'), { target: { value: ' 台北市大安區復興南路一段100號 ' } });
     fireEvent.change(screen.getByLabelText('聯絡電話'), { target: { value: ' ' } });
@@ -585,6 +587,7 @@ describe('Property master-data routes', () => {
       expect(createProperty).toHaveBeenCalledWith(
         {
           name: '台北大安物業',
+          property_public_name: '大安共同生活館',
           subtitle: '大安館',
           address: '台北市大安區復興南路一段100號',
           electricity_unit_price: 4.5,
@@ -605,6 +608,7 @@ describe('Property master-data routes', () => {
     vi.mocked(getProperty).mockResolvedValue({
       id: 'property-1',
       name: '台北大安物業',
+      property_public_name: '台北大安物業',
       subtitle: '大安館',
       address: '台北市',
       electricity_unit_price: 4.5,
@@ -625,7 +629,8 @@ describe('Property master-data routes', () => {
     renderPropertyMasterDataPage('/properties/property-1/edit');
 
     await screen.findByText('編輯物業');
-    fireEvent.change(screen.getByLabelText('物業名稱（必填）'), { target: { value: '台北大安新名' } });
+    fireEvent.change(screen.getByLabelText('內部物業名稱（必填）'), { target: { value: '台北大安新名' } });
+    fireEvent.change(screen.getByLabelText('品牌頁公開名稱'), { target: { value: '大安共同生活館' } });
     fireEvent.change(screen.getByLabelText('聯絡電話'), { target: { value: '' } });
     fireEvent.change(screen.getByLabelText('常用設施'), { target: { value: '' } });
     fireEvent.click(screen.getByRole('button', { name: '儲存變更' }));
@@ -635,6 +640,7 @@ describe('Property master-data routes', () => {
         'property-1',
         expect.objectContaining({
           name: '台北大安新名',
+          property_public_name: '大安共同生活館',
           contact_phone: null,
           facilities: null,
         }),
@@ -665,7 +671,7 @@ describe('Property master-data routes', () => {
     renderPropertyMasterDataPage('/properties/new');
 
     await screen.findByText('新增物業');
-    fireEvent.change(screen.getByLabelText('物業名稱（必填）'), { target: { value: '台北大安物業' } });
+    fireEvent.change(screen.getByLabelText('內部物業名稱（必填）'), { target: { value: '台北大安物業' } });
     fireEvent.change(screen.getByLabelText('地址（必填）'), { target: { value: '台北市' } });
     fireEvent.change(screen.getByLabelText('電費單價（必填）'), { target: { value: '4.5' } });
     fireEvent.change(screen.getByLabelText('預設電費週期（必填）'), { target: { value: 'monthly' } });
@@ -712,7 +718,7 @@ describe('Property master-data routes', () => {
       expect(listUsers).toHaveBeenCalledTimes(2);
     });
 
-    fireEvent.change(screen.getByLabelText('物業名稱（必填）'), { target: { value: '台中西區物業' } });
+    fireEvent.change(screen.getByLabelText('內部物業名稱（必填）'), { target: { value: '台中西區物業' } });
     fireEvent.change(screen.getByLabelText('地址（必填）'), { target: { value: '台中市西區' } });
     fireEvent.change(screen.getByLabelText('電費單價（必填）'), { target: { value: '5' } });
     fireEvent.change(screen.getByLabelText('預設電費週期（必填）'), { target: { value: 'bimonthly' } });

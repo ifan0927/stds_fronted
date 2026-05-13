@@ -5,6 +5,7 @@ import {
   CarryOutOutlined,
   DashboardOutlined,
   FileTextOutlined,
+  GlobalOutlined,
   HomeOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
@@ -102,6 +103,14 @@ function createMenuItems(propertyId: string | undefined, role: string | undefine
     },
   ];
 
+  if (role === 'admin' || role === 'organizer') {
+    managementChildren.push({
+      key: '/admin/brand',
+      icon: <GlobalOutlined />,
+      label: <Link to="/admin/brand">品牌內容</Link>,
+    });
+  }
+
   if (role !== 'owner') {
     managementChildren.push({
       key: '/admin/members',
@@ -151,6 +160,10 @@ function getSelectedKey(pathname: string) {
 
   if (pathname.startsWith('/admin/members')) {
     return '/admin/members';
+  }
+
+  if (pathname.startsWith('/admin/brand')) {
+    return '/admin/brand';
   }
 
   return pathname;

@@ -15,6 +15,7 @@ import {
   listTenantLeases,
   listTenants,
   previewLeaseCheckoutSettlement,
+  replaceLease,
   updateLease,
   updateLeaseDeposit,
   updateTenant,
@@ -233,6 +234,59 @@ describe('tenant and lease API helpers', () => {
     expect(fetcher.mock.calls[0][1]?.body).toBe(JSON.stringify({
       rent_amount: 20000,
     }));
+  });
+
+  it('replaces lease with effective-date payload and no checkout-only fields', async () => {
+    const payload = {
+      reason: 'cadence_change' as const,
+      effective_start_date: '2026-07-01',
+      deposit_handling: 'carry_over' as const,
+      new_lease: {
+        end_date: '2027-06-30',
+        rent_amount: 22000,
+        rent_billing_cadence: 'quarterly' as const,
+        electricity_billing_cadence: 'bimonthly' as const,
+        notes: '調整為季繳後重建租約',
+      },
+    };
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        old_lease: { id: 'lease/with/slash', end_date: '2026-06-30' },
+        new_lease: { id: 'lease-new', start_date: '2026-07-01' },
+        replacement: {
+          reason: 'cadence_change',
+          effective_start_date: '2026-07-01',
+          deposit_handling: 'carry_over',
+        },
+      }),
+    );
+
+    const result = await replaceLease(
+      'lease/with/slash',
+      payload,
+      () => 'firebase-id-token',
+      { fetcher },
+    );
+    const requestBody = JSON.parse(String(fetcher.mock.calls[0][1]?.body));
+
+    expect(fetcher.mock.calls[0][0]).toBe('/api/v1/leases/lease%2Fwith%2Fslash/replace');
+    expect(fetcher.mock.calls[0][1]?.method).toBe('POST');
+    expect(requestBody).toEqual({
+      reason: 'cadence_change',
+      effective_start_date: '2026-07-01',
+      deposit_handling: 'carry_over',
+      new_lease: {
+        end_date: '2027-06-30',
+        rent_amount: 22000,
+        rent_billing_cadence: 'quarterly',
+        electricity_billing_cadence: 'bimonthly',
+        notes: '調整為季繳後重建租約',
+      },
+    });
+    expect(requestBody).not.toHaveProperty('actual_move_out_date');
+    expect(requestBody).not.toHaveProperty('manual_rent_refund_amount');
+    expect(requestBody).not.toHaveProperty('manual_rent_refund_reason');
+    expect(result.new_lease?.id).toBe('lease-new');
   });
 
   it('lists checkout review rows with backend-supported filters', async () => {

@@ -11,6 +11,8 @@ export type CreateTenantRequest = components['schemas']['CreateTenantRequest'];
 export type CreateLeaseRequest = components['schemas']['CreateLeaseRequest'];
 export type UpdateTenantRequest = components['schemas']['UpdateTenantRequest'];
 export type UpdateLeaseRequest = components['schemas']['UpdateLeaseRequest'];
+export type LeaseReplaceRequest = components['schemas']['LeaseReplaceRequest'];
+export type LeaseReplaceResponse = components['schemas']['LeaseReplaceResponse'];
 export type Bill = components['schemas']['BillResponse'];
 export type BillList = components['schemas']['BillListResponse'];
 export type LeaseCheckoutReview = components['schemas']['LeaseCheckoutReviewResponse'];
@@ -181,6 +183,22 @@ export function updateLease(
   return apiRequest<Lease>({
     method: 'PATCH',
     path: leasePath(leaseId),
+    body,
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function replaceLease(
+  leaseId: string,
+  body: LeaseReplaceRequest,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<LeaseReplaceResponse>({
+    method: 'POST',
+    path: `${leasePath(leaseId)}/replace`,
     body,
     tokenProvider,
     signal: options.signal,

@@ -7,6 +7,7 @@ import ForceTerminationDetailPage from './app/ForceTerminationDetailPage';
 import HomeDashboardPage from './app/HomeDashboardPage';
 import JournalPage from './app/JournalPage';
 import LeaseDetailPage from './app/LeaseDetailPage';
+import LeaseReplacementPage from './app/LeaseReplacementPage';
 import MeterHistoryPage from './app/MeterHistoryPage';
 import PropertyDashboardPage from './app/PropertyDashboardPage';
 import PropertyListPage from './app/PropertyListPage';
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="properties/:propertyId/rooms/:roomId" element={<RoomDetailPage />} />
           <Route path="properties/:propertyId/tenants" element={<TenantLeaseRosterPage />} />
           <Route path="properties/:propertyId/tenants/:tenantId" element={<TenantDetailPage />} />
+          <Route path="properties/:propertyId/leases/:leaseId/replace" element={<LeaseReplacementPage />} />
           <Route path="properties/:propertyId/leases/:leaseId" element={<LeaseDetailPage />} />
           <Route path="properties/:propertyId/checkout" element={<CheckoutSettlementPage />} />
           <Route path="properties/:propertyId/force-terminations/:forceTerminationId" element={<ForceTerminationDetailPage />} />

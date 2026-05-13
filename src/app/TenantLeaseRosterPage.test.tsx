@@ -685,8 +685,7 @@ describe('TenantLeaseRosterPage', () => {
     expect(screen.getByRole('link', { name: /抄表歷史/ }).getAttribute('href'))
       .toBe(`/properties/property-1/billing/meter-history?roomId=room-1&year=${defaultHistoryYear}&month=${defaultHistoryMonth}`);
     expect(screen.getByRole('link', { name: /退租結算/ }).getAttribute('href')).toBe('/properties/property-1/tenants?roomId=room-1&leaseId=lease-1&tenantId=tenant-1&view=hub&mode=checkout');
-    expect(screen.getByText('租約更換')).toBeTruthy();
-    expect(screen.getByText('後續流程')).toBeTruthy();
+    expect(screen.getByRole('link', { name: /租約更換/ }).getAttribute('href')).toBe('/properties/property-1/leases/lease-1/replace');
     expect(screen.getByRole('link', { name: /強制退租/ }).getAttribute('href')).toBe('/properties/property-1/tenants?roomId=room-1&leaseId=lease-1&tenantId=tenant-1&view=hub&mode=force');
   });
 

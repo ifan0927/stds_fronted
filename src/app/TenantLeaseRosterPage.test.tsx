@@ -672,7 +672,7 @@ describe('TenantLeaseRosterPage', () => {
     expect(screen.getByRole('link', { name: /收款與收據/ }).getAttribute('href')).toBe('/properties/property-1/billing?roomId=room-1&leaseId=lease-1&tenantId=tenant-1&view=rent-payment');
     expect(screen.getByRole('link', { name: /抄表歷史/ }).getAttribute('href'))
       .toBe(`/properties/property-1/billing/meter-history?roomId=room-1&year=${defaultHistoryYear}&month=${defaultHistoryMonth}`);
-    expect(screen.getByRole('link', { name: /退租處理/ }).getAttribute('href')).toBe('/properties/property-1/checkout?roomId=room-1&leaseId=lease-1&tenantId=tenant-1');
+    expect(screen.getByRole('link', { name: /退租結算/ }).getAttribute('href')).toBe('/properties/property-1/checkout?roomId=room-1&leaseId=lease-1&tenantId=tenant-1');
   });
 
   it('corrects stale URL lease id to the roster active lease before loading bills', async () => {

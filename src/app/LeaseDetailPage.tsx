@@ -488,8 +488,8 @@ export default function LeaseDetailPage() {
             <Space size={12} align="start">
               <span className="property-link-icon"><FileTextOutlined /></span>
               <span>
-                <Typography.Text strong>退租處理</Typography.Text>
-                <Typography.Text type="secondary">前往退租入口；preview/finalize 由 checkout issue 承接。</Typography.Text>
+                <Typography.Text strong>退租結算</Typography.Text>
+                <Typography.Text type="secondary">從此租約建立退租試算，完成後可匯出結算書。</Typography.Text>
               </span>
             </Space>
           </Link>

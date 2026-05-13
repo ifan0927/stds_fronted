@@ -1933,6 +1933,11 @@ export type components = {
             start_date?: string;
             /** Format: date */
             end_date?: string;
+            /**
+             * Format: date
+             * @description Actual move-out or handover date. This is operational metadata only and does not affect lease end_date or accounting.
+             */
+            actual_move_out_date?: string | null;
             /** @enum {string} */
             electricity_billing_cadence?: "monthly" | "bimonthly";
             /** @description Move-in starting meter reading. Existing or legacy leases may be null. */
@@ -2068,12 +2073,17 @@ export type components = {
         CheckoutSettlementInput: {
             /**
              * Format: date
-             * @description 實際退租日；backend 以此計算並保存結算快照。
+             * @description Settlement effective date and lease termination date. The backend writes this value to lease end_date and stores it in the finalized settlement snapshot. It is not the actual move-out date.
              */
             checkout_date: string;
-            /** @description 退租原因。 */
+            /**
+             * Format: date
+             * @description Actual move-out or handover date. This is operational metadata only and does not affect lease end_date, accounting periods, or automatic rent calculation.
+             */
+            actual_move_out_date?: string | null;
+            /** @description Checkout settlement reason. */
             reason: string;
-            /** @description 退租電表讀數；v1 僅作為快照顯示輸入，不由 frontend 計算電費。 */
+            /** @description Final meter reading at checkout. When provided and resolvable by the backend, it is used as backend-owned input for the final electricity settlement calculation. Frontend must not calculate electricity fees locally. */
             final_meter_reading?: number | null;
             /** @default 0 */
             cleaning_fee: number;
@@ -2081,14 +2091,24 @@ export type components = {
             key_card_loss_fee: number;
             /** @default 0 */
             other_fee: number;
-            /** @description other_fee 大於 0 時建議提供。 */
+            /** @description Recommended when other_fee is greater than 0. */
             other_fee_reason?: string | null;
-            /** @description 退租結算備註。 */
+            /**
+             * @description Manually decided unexpired-rent refund amount. The backend never calculates a prorated rent refund automatically.
+             * @default 0
+             */
+            manual_rent_refund_amount: number;
+            /** @description Manual rent refund decision reason. Required when checkout_date is earlier than the original lease end_date or when manual_rent_refund_amount is greater than 0. Otherwise nullable. Amount 0 with a reason records an explicit decision not to refund unexpired rent. */
+            manual_rent_refund_reason?: string | null;
+            /** @description Checkout settlement notes. */
             notes?: string | null;
         };
         CheckoutSettlementPreviewRequest: components["schemas"]["CheckoutSettlementInput"];
         CheckoutSettlementLine: {
-            /** @enum {string} */
+            /**
+             * @description rent_refund means a manual rent refund decision accepted by the backend. It does not represent an automatically prorated unexpired-rent refund.
+             * @enum {string}
+             */
             kind: "deposit_refund" | "cleaning_fee" | "key_card_loss" | "other_fee" | "electricity_settlement" | "rent_refund";
             label: string;
             /** @enum {string} */
@@ -2096,19 +2116,28 @@ export type components = {
             /** @description Positive amount. Direction determines whether it adds to refund or charge. */
             amount: number;
             description?: string | null;
+            /** @description Optional backend-owned source details for the line. For electricity_settlement, this includes previous_reading, final_meter_reading, usage, unit_price, amount, nullable source_bill_id, and source_type so export/reprint can display the calculation without frontend recomputation. */
             source_ref?: {
                 [key: string]: unknown;
             } | null;
         };
         CheckoutSettlementBlocker: {
-            /** @enum {string} */
-            code: "unpaid_bill" | "pending_meter" | "lease_not_active" | "deposit_not_held" | "charge_exceeds_deposit" | "rent_refund_not_calculated";
+            /**
+             * @description Blocking condition code. unpaid_bill covers non-meter unpaid bills and non-resolvable unsettled bills. pending_meter is returned only for pending meter bills that checkout cannot resolve with the provided final meter reading; a resolvable final electricity period may instead produce an electricity_settlement charge line.
+             * @enum {string}
+             */
+            code: "unpaid_bill" | "pending_meter" | "lease_not_active" | "deposit_not_held" | "charge_exceeds_deposit" | "checkout_date_before_lease_start" | "manual_rent_refund_decision_required";
             message: string;
+            /** @description Optional related bill, lease, or source identifier for the blocker. */
             source_id?: string | null;
         };
         CheckoutSettlementWarning: {
-            /** @enum {string} */
-            code: "rent_refund_not_calculated" | "final_meter_snapshot_only";
+            /**
+             * @description Informational warning code. Warnings do not authorize frontend-side settlement calculation; frontend must display backend lines and totals as returned.
+             * @enum {string}
+             */
+            code: "manual_rent_refund_recorded" | "final_meter_snapshot_only";
+            /** @description Human-readable warning message for operator display. */
             message: string;
         };
         CheckoutSettlementResponse: {
@@ -2123,11 +2152,23 @@ export type components = {
             property_label: string;
             tenant_label: string;
             room_label: string;
-            /** Format: date */
+            /**
+             * Format: date
+             * @description Settlement effective date and lease termination date. This is not the actual move-out date.
+             */
             checkout_date: string;
+            /**
+             * Format: date
+             * @description Actual move-out or handover date. This is operational metadata only.
+             */
+            actual_move_out_date?: string | null;
             reason: string;
             final_meter_reading?: number | null;
             notes?: string | null;
+            /** @description Manually decided unexpired-rent refund amount. Amount 0 with a reason records an explicit no-refund decision. */
+            manual_rent_refund_amount?: number;
+            /** @description Manual rent refund decision reason. Required when checkout_date is earlier than the original lease end_date or when manual_rent_refund_amount is greater than 0. Otherwise nullable. */
+            manual_rent_refund_reason?: string | null;
             lines: components["schemas"]["CheckoutSettlementLine"][];
             blockers: components["schemas"]["CheckoutSettlementBlocker"][];
             warnings: components["schemas"]["CheckoutSettlementWarning"][];
@@ -2149,6 +2190,16 @@ export type components = {
             preview_token: string;
         };
         ForceTerminateRequest: {
+            /**
+             * Format: date
+             * @description Force-termination effective date. The backend writes this value to lease end_date.
+             */
+            termination_date: string;
+            /**
+             * Format: date
+             * @description Actual move-out or handover date. This is operational metadata only and does not affect write-off handling, deposit handling, or rent refund behavior.
+             */
+            actual_move_out_date?: string | null;
             reason: string;
             /**
              * @description Deposit handling decision during force termination; write_off marks the deposit as written_off, while keep_held leaves it held for later manual handling.
@@ -2317,7 +2368,7 @@ export type components = {
             /** Format: uuid */
             id?: string;
             /** @enum {string} */
-            detail?: "payment" | "journal_expense" | "deposit_refund" | "deposit_deduction";
+            detail?: "payment" | "journal_expense" | "deposit_refund" | "deposit_deduction" | "rent_refund";
         };
         FinancialReportEntryItem: {
             /**
@@ -2326,7 +2377,7 @@ export type components = {
              */
             entry_id?: string;
             /** @enum {string} */
-            category?: "rent_payment" | "electricity_payment" | "deposit_refund" | "deposit_deduction" | "journal_expense";
+            category?: "rent_payment" | "electricity_payment" | "deposit_refund" | "deposit_deduction" | "rent_refund" | "journal_expense";
             /** Format: uuid */
             accounting_title_id?: string;
             accounting_title_code?: string;

@@ -24,6 +24,9 @@
 
 - `POST /leases/{id}/checkout-settlement/preview`
   - backend owns settlement calculation, totals, itemized lines, blockers, warnings, labels, and export availability.
+  - `checkout_date` is the settlement effective / lease termination date; `actual_move_out_date` is nullable operational metadata.
+  - normal checkout should default `checkout_date` to lease `end_date`; earlier physical move-out belongs in `actual_move_out_date`.
+  - Early termination requires explicit `manual_rent_refund_amount` and `manual_rent_refund_reason`; amount `0` with a reason means no unexpired-rent refund.
   - frontend displays returned data as read-only preview and must not recalculate totals.
 - `POST /leases/{id}/checkout-settlement/finalize`
   - finalize uses preview token / optimistic lock semantics.
@@ -40,13 +43,16 @@
   - preflight support; `type` filter is available and list endpoints include pagination.
 - `POST /leases/{id}/force-terminate` and `GET /force-terminations/{id}`
   - force termination remains separate from normal settlement.
+  - force termination uses `termination_date` and optional `actual_move_out_date`; replacement remains unchanged and separate.
   - shared readable labels are available on relevant responses; use `*_label` fields instead of deriving names.
 
 Confirmed backend-owned rules:
 
-- Early checkout is blocked in v1 until backend rent refund support is defined.
-- Pending payment bills, overdue bills, and pending meter bills block finalization.
-- `final_meter_reading` is a non-negative snapshot/display input.
+- Early checkout is allowed only when the operator provides the backend-required manual rent refund decision.
+- Frontend must not calculate rent refund; submit the manual decision and display backend `rent_refund` lines/totals as returned.
+- Pending payment and overdue bills block finalization; pending meter bills block only when checkout cannot resolve the final electricity period.
+- `final_meter_reading` is backend-owned input for final electricity settlement. Frontend must not calculate electricity fees locally.
+- If checkout resolves final electricity, display returned `electricity_settlement` lines/totals and backend `source_ref` details.
 - Use backend `export_available`; do not infer export eligibility from status or local fields.
 - Backend dashboard summaries are authoritative where exposed; frontend should not aggregate its own summary.
 
@@ -96,7 +102,7 @@ Status: ready for UI template. Table filters should map directly to backend quer
 
 Purpose: handle bad-debt or exceptional termination without normal checkout preview.
 
-Backend contract: `POST /leases/{id}/force-terminate`; request fields include `reason` and `deposit_handling`. Backend writes off unsettled bills and emits forced termination effects.
+Backend contract: `POST /leases/{id}/force-terminate`; request fields include `termination_date`, optional `actual_move_out_date`, `reason`, and `deposit_handling`. Backend writes off unsettled bills and emits forced termination effects.
 
 Status: ready for UI template. Use danger styling and explicit confirmation; do not show normal checkout itemized settlement controls.
 

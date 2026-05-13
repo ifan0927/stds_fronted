@@ -84,6 +84,7 @@ const categoryLabels: Record<NonNullable<FinancialReportEntry['category']>, stri
   electricity_payment: '電費收入',
   deposit_refund: '押金退還',
   deposit_deduction: '押金扣抵',
+  rent_refund: '租金退回',
   journal_expense: '日誌支出',
 };
 

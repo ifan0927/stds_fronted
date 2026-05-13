@@ -197,7 +197,7 @@ function getLeaseStatusLabel(value: string | null | undefined) {
   }
 
   if (value === 'force_terminated') {
-    return '強制終止';
+    return '強制退租';
   }
 
   return '未提供';
@@ -1745,8 +1745,8 @@ function OccupiedRoomHub({
             )}
             {propertyId && lease.id && (
               <WorkflowLink
-                title="退租處理"
-                description="前往退租預留入口；checkout preview/finalize 不屬於 #51。"
+                title="退租結算"
+                description="從此租約建立退租試算，完成後可匯出結算書。"
                 path={buildPropertyPath(propertyId, '/checkout', buildActionQuery({
                   roomId: lease.room_id,
                   leaseId: lease.id,

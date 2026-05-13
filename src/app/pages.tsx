@@ -53,8 +53,8 @@ const pageContent = {
     tag: '租客與租約',
   },
   checkout: {
-    title: '退租處理',
-    description: '退租、checkout preview/finalize 與相關結算流程將由後續 issue 實作。',
+    title: '退租審核',
+    description: '退租審核、歷史資料與退租結算入口將由後續 issue 實作。',
     tag: '租客與租約',
   },
   billing: {

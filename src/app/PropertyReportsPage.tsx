@@ -11,6 +11,7 @@ import {
   DatePicker,
   Empty,
   message,
+  Modal,
   Row,
   Select,
   Space,
@@ -32,6 +33,7 @@ import {
   getPropertyFinancialReport,
   getPropertyFinancialReportSummary,
   openHtmlDocumentPreview,
+  sendPropertyFinancialReport,
   type FinancialReport,
   type FinancialReportEntry,
   type FinancialReportList,
@@ -39,7 +41,7 @@ import {
   type HtmlPreviewWindow,
   type UiErrorState,
 } from '../api';
-import { useAuth } from '../auth';
+import { hasRole, useAuth } from '../auth';
 import { formatTwd } from './format';
 import { abortRequest } from './requestAbort';
 import {
@@ -69,6 +71,8 @@ type ExportErrorState = {
   kind: ExportKind;
   state: UiErrorState;
 } | null;
+
+type SendErrorState = UiErrorState | null;
 
 const exportLabels: Record<ExportKind, string> = {
   cashflow: '收支表',
@@ -189,12 +193,28 @@ function getExportFailureDescription(state: UiErrorState) {
   return state.description;
 }
 
+function getSendFailureDescription(state: UiErrorState) {
+  if (state.kind === 'forbidden') {
+    return '目前帳號無法寄送此物業的財務報表。';
+  }
+
+  if (state.kind === 'not-found') {
+    return '此月份報表尚不存在，請更換月份或重新整理後再試一次。';
+  }
+
+  if (state.kind === 'validation') {
+    return '報表資料尚未通過寄送檢查，請重新確認月份與報表狀態。';
+  }
+
+  return state.description;
+}
+
 export default function PropertyReportsPage() {
   const { propertyId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { getAccessToken } = useAuth();
+  const { currentUser, getAccessToken } = useAuth();
   const [messageApi, contextHolder] = message.useMessage();
   const summaryRequestRef = useRef<{ id: number; controller: AbortController } | null>(null);
   const detailRequestRef = useRef<{ id: number; controller: AbortController } | null>(null);
@@ -204,6 +224,9 @@ export default function PropertyReportsPage() {
   const [detailState, setDetailState] = useState<DetailLoadState>({ status: 'loading', data: null });
   const [exporting, setExporting] = useState<ExportKind | null>(null);
   const [exportError, setExportError] = useState<ExportErrorState>(null);
+  const [sendModalOpen, setSendModalOpen] = useState(false);
+  const [sendingReport, setSendingReport] = useState(false);
+  const [sendError, setSendError] = useState<SendErrorState>(null);
   const [tenantRosterAsOf, setTenantRosterAsOf] = useState(() => getDefaultAsOfDate());
   const [tenantRosterIncludeVacant, setTenantRosterIncludeVacant] = useState(true);
   const rawYear = searchParams.get('year');
@@ -452,6 +475,69 @@ export default function PropertyReportsPage() {
   const selectedReport = detailState.status === 'ready' ? detailState.data : null;
   const selectedEntries = selectedReport?.entries ?? [];
   const selectedMonthLabel = getMonthLabel(selectedYear, selectedMonth);
+  const canSendReport = hasRole(currentUser, ['admin', 'organizer']);
+  const sendDisabledReason = !canSendReport
+    ? '目前角色只能查看報表，無法寄送業主。'
+    : !selectedReport
+      ? '報表明細載入後才能寄送。'
+      : null;
+
+  const openSendModal = useCallback(() => {
+    if (sendDisabledReason) {
+      return;
+    }
+
+    setSendError(null);
+    setSendModalOpen(true);
+  }, [sendDisabledReason]);
+
+  const submitSendReport = useCallback(async () => {
+    if (!propertyId || sendDisabledReason || sendingReport) {
+      return;
+    }
+
+    setSendingReport(true);
+    setSendError(null);
+
+    try {
+      const response = await sendPropertyFinancialReport(
+        propertyId,
+        selectedYear,
+        selectedMonth,
+        getAccessToken,
+      );
+      setDetailState({ status: 'ready', data: response });
+      setSendModalOpen(false);
+      void messageApi.success('財務報表寄送流程已送出。');
+      loadDetail();
+      loadSummary();
+    } catch (error: unknown) {
+      const errorState = classifyApiErrorForUi(error);
+
+      if (errorState.kind === 'unauthorized') {
+        navigate(getReportsReturnTo(location.pathname, location.search), { replace: true });
+        return;
+      }
+
+      setSendModalOpen(false);
+      setSendError(errorState);
+    } finally {
+      setSendingReport(false);
+    }
+  }, [
+    getAccessToken,
+    loadDetail,
+    loadSummary,
+    location.pathname,
+    location.search,
+    messageApi,
+    navigate,
+    propertyId,
+    selectedMonth,
+    selectedYear,
+    sendDisabledReason,
+    sendingReport,
+  ]);
 
   const summaryColumns = useMemo<TableColumnsType<FinancialReportSummaryItem>>(() => [
     {
@@ -652,8 +738,10 @@ export default function PropertyReportsPage() {
           <Button loading={exporting === 'operation'} onClick={() => void openReportExport('operation')}>
             營運報告
           </Button>
-          <Tooltip title="寄送業主流程尚未開放，此階段只保留入口位置。">
-            <Button disabled>寄送業主</Button>
+          <Tooltip title={sendDisabledReason ?? '送出前會再次確認報表月份與資料狀態。'}>
+            <Button disabled={Boolean(sendDisabledReason)} loading={sendingReport} onClick={openSendModal}>
+              寄送業主
+            </Button>
           </Tooltip>
         </Space>
       </div>
@@ -667,6 +755,20 @@ export default function PropertyReportsPage() {
           action={
             exportError.state.retryable
               ? <Button size="small" onClick={() => void openReportExport(exportError.kind)}>重試</Button>
+              : undefined
+          }
+        />
+      )}
+
+      {sendError && (
+        <Alert
+          type="error"
+          showIcon
+          message="財務報表無法寄送"
+          description={getSendFailureDescription(sendError)}
+          action={
+            sendError.retryable
+              ? <Button size="small" onClick={() => void submitSendReport()}>重試</Button>
               : undefined
           }
         />
@@ -738,14 +840,14 @@ export default function PropertyReportsPage() {
         )}
       </Card>
 
-      <Card title="其他報表入口">
+      <Card title="其他匯出">
         <div className="property-link-grid">
           <div className="property-link-row">
             <Space size={12} align="start">
               <span className="property-link-icon"><FileTextOutlined /></span>
               <span className="property-link-content">
-                <Typography.Text strong>房客名冊匯出</Typography.Text>
-                <Typography.Text type="secondary">開啟後端產生的物業房客名冊 HTML 文件。</Typography.Text>
+                <Typography.Text strong>房客名冊</Typography.Text>
+                <Typography.Text type="secondary">依指定基準日開啟物業房客名冊。</Typography.Text>
                 <Space size={8} wrap className="inline-action-controls">
                   <DatePicker
                     aria-label="房客名冊基準日"
@@ -774,26 +876,34 @@ export default function PropertyReportsPage() {
               </span>
             </Space>
           </div>
-          <span className="property-link-row disabled-link-row" aria-disabled="true">
-            <Space size={12} align="start">
-              <span className="property-link-icon"><FileTextOutlined /></span>
-              <span>
-                <Typography.Text strong>帳單收據</Typography.Text>
-                <Typography.Text type="secondary">收據預覽屬於帳單收款流程，本輪不實作內容。</Typography.Text>
-              </span>
-            </Space>
-          </span>
-          <span className="property-link-row disabled-link-row" aria-disabled="true">
-            <Space size={12} align="start">
-              <span className="property-link-icon"><FileTextOutlined /></span>
-              <span>
-                <Typography.Text strong>退租結算匯出</Typography.Text>
-                <Typography.Text type="secondary">退租結算與 finalization 由後續流程承接，本輪只保留入口位置。</Typography.Text>
-              </span>
-            </Space>
-          </span>
         </div>
       </Card>
+
+      <Modal
+        title="確認寄送財務報表"
+        open={sendModalOpen}
+        okText="送出寄送流程"
+        cancelText="取消"
+        okButtonProps={{ loading: sendingReport, disabled: Boolean(sendDisabledReason) }}
+        onOk={() => void submitSendReport()}
+        onCancel={() => {
+          if (!sendingReport) {
+            setSendModalOpen(false);
+          }
+        }}
+      >
+        <Space direction="vertical" size={12}>
+          <Typography.Paragraph>
+            將送出 {selectedMonthLabel} 的財務報表寄送流程。
+          </Typography.Paragraph>
+          <Typography.Paragraph>
+            目前資料狀態：{selectedReport?.is_finalized ? '已月結' : '即時資料'}
+          </Typography.Paragraph>
+          <Typography.Paragraph type="secondary">
+            系統會送出寄送作業；此畫面不顯示收件人名單或寄送進度。
+          </Typography.Paragraph>
+        </Space>
+      </Modal>
     </Space>
   );
 }

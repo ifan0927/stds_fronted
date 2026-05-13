@@ -13,9 +13,18 @@ const apiMocks = vi.hoisted(() => ({
   getPropertyFinancialReport: vi.fn(),
   getPropertyFinancialReportSummary: vi.fn(),
   openHtmlDocumentPreview: vi.fn(),
+  sendPropertyFinancialReport: vi.fn(),
 }));
 
 const authMocks = vi.hoisted(() => ({
+  currentUser: {
+    id: 'admin-1',
+    firebase_uid: 'admin-uid',
+    email: 'admin@example.com',
+    name: '系統管理員',
+    role: 'admin' as 'admin' | 'organizer' | 'staff' | 'owner',
+    assigned_property_ids: ['property-1'],
+  },
   getAccessToken: vi.fn(() => 'firebase-token'),
 }));
 
@@ -26,6 +35,10 @@ vi.mock('@ant-design/icons', () => ({
 }));
 
 vi.mock('../auth', () => ({
+  hasRole: (
+    currentUser: typeof authMocks.currentUser | null,
+    roles: Array<typeof authMocks.currentUser.role>,
+  ) => Boolean(currentUser?.role && roles.includes(currentUser.role)),
   useAuth: () => authMocks,
 }));
 
@@ -43,6 +56,7 @@ vi.mock('../api', () => ({
   getPropertyFinancialReport: apiMocks.getPropertyFinancialReport,
   getPropertyFinancialReportSummary: apiMocks.getPropertyFinancialReportSummary,
   openHtmlDocumentPreview: apiMocks.openHtmlDocumentPreview,
+  sendPropertyFinancialReport: apiMocks.sendPropertyFinancialReport,
 }));
 
 vi.mock('./routeState', () => ({
@@ -128,6 +142,35 @@ vi.mock('antd', async () => {
     message: {
       useMessage: () => [{ success: vi.fn(), warning: vi.fn() }, null],
     },
+    Modal: ({
+      cancelText,
+      children,
+      okButtonProps,
+      okText,
+      onCancel,
+      onOk,
+      open,
+      title,
+    }: React.PropsWithChildren<{
+      cancelText?: React.ReactNode;
+      okButtonProps?: { disabled?: boolean; loading?: boolean };
+      okText?: React.ReactNode;
+      onCancel?: () => void;
+      onOk?: () => void;
+      open?: boolean;
+      title?: React.ReactNode;
+    }>) => (
+      open ? (
+        <section aria-label={String(title)}>
+          <h2>{title}</h2>
+          {children}
+          <button onClick={onCancel} type="button">{cancelText ?? '取消'}</button>
+          <button disabled={okButtonProps?.disabled || okButtonProps?.loading} onClick={onOk} type="button">
+            {okText ?? '確定'}
+          </button>
+        </section>
+      ) : null
+    ),
     Row: ({ children }: React.PropsWithChildren) => <div>{children}</div>,
     Select: ({
       'aria-label': ariaLabel,
@@ -206,7 +249,7 @@ function renderReportsPage(initialEntry = '/properties/property-1/reports?year=2
   );
 }
 
-function mockReportData() {
+function mockReportData(options: { finalized?: boolean } = {}) {
   apiMocks.getPropertyFinancialReportSummary.mockResolvedValue({
     data: [
       {
@@ -232,7 +275,7 @@ function mockReportData() {
     total_income: 185000,
     total_expense: 12000,
     net: 173000,
-    is_finalized: false,
+    is_finalized: options.finalized ?? false,
     entries: [
       {
         entry_id: 'entry-1',
@@ -257,6 +300,14 @@ afterEach(() => {
   Object.values(apiMocks).forEach((mock) => mock.mockReset());
   authMocks.getAccessToken.mockReset();
   authMocks.getAccessToken.mockReturnValue('firebase-token');
+  authMocks.currentUser = {
+    id: 'admin-1',
+    firebase_uid: 'admin-uid',
+    email: 'admin@example.com',
+    name: '系統管理員',
+    role: 'admin',
+    assigned_property_ids: ['property-1'],
+  };
 });
 
 describe('PropertyReportsPage', () => {
@@ -312,10 +363,10 @@ describe('PropertyReportsPage', () => {
     expect(screen.getAllByText('2026 年 5 月').length).toBeGreaterThan(0);
     expect(screen.getAllByText('NT$185,000').length).toBeGreaterThan(0);
     expect(screen.getByText('五月租金')).toBeTruthy();
-    expect((screen.getByRole('button', { name: '寄送業主' }) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText('房客名冊匯出')).toBeTruthy();
-    expect(screen.getByText('帳單收據')).toBeTruthy();
-    expect(screen.getByText('退租結算匯出')).toBeTruthy();
+    expect((screen.getByRole('button', { name: '寄送業主' }) as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.getByText('房客名冊')).toBeTruthy();
+    expect(screen.queryByText('帳單收據')).toBeNull();
+    expect(screen.queryByText('退租結算匯出')).toBeNull();
   });
 
   it('opens selected month HTML exports through the shared preview helper', async () => {
@@ -448,5 +499,149 @@ describe('PropertyReportsPage', () => {
 
     expect(await screen.findByText('收支表無法開啟')).toBeTruthy();
     expect(screen.getByText('此月份報表尚不存在，請更換月份或回到年度列表重新確認。')).toBeTruthy();
+  });
+
+  it.each(['admin', 'organizer'] as const)('lets %s confirm and submit the selected monthly report send flow', async (role) => {
+    authMocks.currentUser = {
+      ...authMocks.currentUser,
+      role,
+    };
+    mockReportData();
+    apiMocks.sendPropertyFinancialReport.mockResolvedValue({
+      property_id: 'property-1',
+      year: 2026,
+      month: 5,
+      total_income: 185000,
+      total_expense: 12000,
+      net: 173000,
+      is_finalized: false,
+      entries: [],
+    });
+
+    renderReportsPage();
+    await screen.findByText('五月租金');
+
+    fireEvent.click(screen.getByRole('button', { name: '寄送業主' }));
+
+    expect(screen.getByText('確認寄送財務報表')).toBeTruthy();
+    expect(screen.getByText('將送出 2026 年 5 月 的財務報表寄送流程。')).toBeTruthy();
+    expect(screen.getByText('目前資料狀態：即時資料')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: '送出寄送流程' }));
+
+    await waitFor(() => {
+      expect(apiMocks.sendPropertyFinancialReport).toHaveBeenCalledWith(
+        'property-1',
+        2026,
+        5,
+        authMocks.getAccessToken,
+      );
+      expect(apiMocks.getPropertyFinancialReport).toHaveBeenCalledTimes(2);
+      expect(apiMocks.getPropertyFinancialReportSummary).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it.each(['staff', 'owner'] as const)('keeps the send entry visible but disabled for %s', async (role) => {
+    authMocks.currentUser = {
+      ...authMocks.currentUser,
+      role,
+    };
+    mockReportData();
+
+    renderReportsPage();
+    await screen.findByText('五月租金');
+
+    const sendButton = screen.getByRole('button', { name: '寄送業主' }) as HTMLButtonElement;
+    expect(sendButton.disabled).toBe(true);
+
+    fireEvent.click(sendButton);
+
+    expect(screen.queryByText('確認寄送財務報表')).toBeNull();
+    expect(apiMocks.sendPropertyFinancialReport).not.toHaveBeenCalled();
+  });
+
+  it('shows finalized context in the send confirmation modal', async () => {
+    mockReportData({ finalized: true });
+
+    renderReportsPage();
+    await screen.findByText('五月租金');
+
+    fireEvent.click(screen.getByRole('button', { name: '寄送業主' }));
+
+    expect(screen.getByText('目前資料狀態：已月結')).toBeTruthy();
+  });
+
+  it('redirects to login with returnTo when report send receives unauthorized', async () => {
+    mockReportData();
+    apiMocks.sendPropertyFinancialReport.mockRejectedValue({
+      uiState: {
+        kind: 'unauthorized',
+        title: '需要重新登入',
+        description: '登入狀態已失效，請重新登入。',
+        retryable: false,
+      },
+    });
+
+    renderReportsPage('/properties/property-1/reports?year=2026&month=5&tab=detail');
+    await screen.findByText('五月租金');
+
+    fireEvent.click(screen.getByRole('button', { name: '寄送業主' }));
+    fireEvent.click(screen.getByRole('button', { name: '送出寄送流程' }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('目前路徑').textContent)
+        .toBe('/login?reason=session-expired&returnTo=%2Fproperties%2Fproperty-1%2Freports%3Fyear%3D2026%26month%3D5%26tab%3Ddetail');
+    });
+  });
+
+  it('keeps send failures visible at page level without exposing backend internals', async () => {
+    mockReportData();
+    apiMocks.sendPropertyFinancialReport.mockRejectedValue({
+      uiState: {
+        kind: 'forbidden',
+        title: '沒有權限',
+        description: 'Forbidden.',
+        retryable: false,
+      },
+    });
+
+    renderReportsPage();
+    await screen.findByText('五月租金');
+
+    fireEvent.click(screen.getByRole('button', { name: '寄送業主' }));
+    fireEvent.click(screen.getByRole('button', { name: '送出寄送流程' }));
+
+    expect(await screen.findByText('財務報表無法寄送')).toBeTruthy();
+    expect(screen.getByText('目前帳號無法寄送此物業的財務報表。')).toBeTruthy();
+    expect(screen.queryByText('確認寄送財務報表')).toBeNull();
+  });
+
+  it('disables duplicate report send submits while the request is loading', async () => {
+    mockReportData();
+    let resolveSend: (value: unknown) => void = () => {};
+    apiMocks.sendPropertyFinancialReport.mockReturnValue(new Promise((resolve) => {
+      resolveSend = resolve;
+    }));
+
+    renderReportsPage();
+    await screen.findByText('五月租金');
+
+    fireEvent.click(screen.getByRole('button', { name: '寄送業主' }));
+    fireEvent.click(screen.getByRole('button', { name: '送出寄送流程' }));
+    fireEvent.click(screen.getByRole('button', { name: '送出寄送流程' }));
+
+    expect(apiMocks.sendPropertyFinancialReport).toHaveBeenCalledTimes(1);
+
+    resolveSend({
+      property_id: 'property-1',
+      year: 2026,
+      month: 5,
+      is_finalized: false,
+      entries: [],
+    });
+
+    await waitFor(() => {
+      expect(apiMocks.getPropertyFinancialReport).toHaveBeenCalledTimes(2);
+    });
   });
 });

@@ -664,9 +664,9 @@ describe('TenantLeaseRosterPage', () => {
     renderTenantLeaseRosterPage('/properties/property-1/tenants');
 
     await screen.findAllByText('101 室');
-    fireEvent.click(screen.getByRole('button', { name: '進入 Hub' }));
+    fireEvent.click(screen.getByRole('button', { name: '房間總覽' }));
 
-    await screen.findByText('出租中房間 Hub');
+    await screen.findByText('出租中房間總覽');
     await screen.findByText('租金帳單摘要');
 
     expect(listLeases).not.toHaveBeenCalled();

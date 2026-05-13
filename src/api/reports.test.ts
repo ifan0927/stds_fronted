@@ -6,6 +6,7 @@ import {
   exportPropertyTenantRoster,
   getPropertyFinancialReport,
   getPropertyFinancialReportSummary,
+  sendPropertyFinancialReport,
 } from './reports';
 
 function jsonResponse(body: unknown) {
@@ -46,6 +47,18 @@ describe('reports API helpers', () => {
       expect.stringContaining('/properties/property%2F1/financial-report/2026/5'),
       expect.objectContaining({ method: 'GET' }),
     );
+  });
+
+  it('sends one monthly financial report by explicit encoded property, year, and month without a request body', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ year: 2026, month: 5 }));
+
+    await sendPropertyFinancialReport('property/1', 2026, 5, () => 'token', { fetcher });
+
+    expect(fetcher).toHaveBeenCalledWith(
+      expect.stringContaining('/properties/property%2F1/financial-report/2026/5/send'),
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(fetcher.mock.calls[0]?.[1]).not.toHaveProperty('body');
   });
 
   it('opens the cashflow export through the HTML response path', async () => {

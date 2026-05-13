@@ -238,7 +238,7 @@ describe('TenantDetailPage', () => {
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
     expect(screen.getByRole('link', { name: '租約詳情' }).getAttribute('href')).toBe('/properties/property-1/leases/lease-1?roomId=room-1&tenantId=tenant-1');
-    expect(screen.getByText(/租客備註、付款、收據與附件上傳由後續工作流承接/)).toBeTruthy();
+    expect(screen.getByText(/租客備註、付款、收據與附件上傳會由相關功能處理/)).toBeTruthy();
     expect(screen.getByLabelText('租客附件').textContent).toContain('tenant-1');
   });
 });

@@ -310,7 +310,7 @@ export default function PropertyMasterDataPage() {
         await loadOwners(owner.id);
       } else {
         await loadOwners();
-        void message.warning('業主已建立，但回應缺少識別資料，請重新選擇業主。');
+        void message.warning('業主已建立，但資料暫時不完整，請重新選擇業主。');
       }
     } catch (error) {
       const errorState = classifyApiErrorForUi(error);
@@ -546,7 +546,7 @@ export default function PropertyMasterDataPage() {
         type="info"
         showIcon
         message="附件與權限管理入口"
-        description="本頁只維護物業主檔；附件上傳與權限指派會在後續工作流提供。"
+        description="本頁只維護物業主檔；附件上傳與權限指派會在後續功能提供。"
       />
 
       <Drawer

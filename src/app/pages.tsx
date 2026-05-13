@@ -19,57 +19,57 @@ import {
 const pageContent = {
   dashboard: {
     title: '工作台',
-    description: '顯示營運摘要、近期事件與常用入口；實際資料會在後續 API foundation 接上。',
+    description: '顯示營運摘要、近期事件與常用入口；完整資料會隨後續功能逐步開放。',
     tag: '總覽',
   },
   properties: {
     title: '物業管理',
-    description: '管理物業清單與物業層級入口；此階段僅保留 route 與 shell 位置。',
+    description: '管理物業清單與物業層級入口。',
     tag: '管理',
   },
   propertyDashboard: {
     title: '物業工作台',
-    description: '物業 context 由 route 決定，後續頁面不應只依賴側邊切換器。',
+    description: '目前物業由頁面位置決定，相關作業會帶入同一個物業範圍。',
     tag: '目前物業',
   },
   rooms: {
     title: '房間管理',
-    description: '房間、設備與狀態工作流的入口 placeholder。',
+    description: '房間、設備與狀態管理入口。',
     tag: '日常作業',
   },
   tenants: {
     title: '租客與租約',
-    description: '租客資料、租約與搬遷流程的入口 placeholder。',
+    description: '租客資料、租約與搬遷流程入口。',
     tag: '日常作業',
   },
   tenantDetail: {
     title: '租客詳情',
-    description: '租客 detail/edit 將由後續 issue 實作；此頁先保留導覽入口與路由位置。',
+    description: '查看與維護租客資料。',
     tag: '租客與租約',
   },
   leaseDetail: {
     title: '租約詳情',
-    description: '租約 detail/edit 與租金調整將由後續 issue 實作；此頁先保留導覽入口與路由位置。',
+    description: '查看租約資料並處理租金調整。',
     tag: '租客與租約',
   },
   checkout: {
     title: '退租審核',
-    description: '退租審核、歷史資料與退租結算入口將由後續 issue 實作。',
+    description: '查看退租審核、歷史資料與結算入口。',
     tag: '租客與租約',
   },
   billing: {
     title: '抄表與帳單',
-    description: '抄表、帳單、收款與收據流程的入口 placeholder。',
+    description: '抄表、帳單、收款與收據流程入口。',
     tag: '日常作業',
   },
   journal: {
     title: '日誌與維修',
-    description: '營運日誌與維修單工作流的入口 placeholder。',
+    description: '營運日誌與維修單入口。',
     tag: '日常作業',
   },
   reports: {
     title: '財務報表',
-    description: '報表查詢與 runtime HTML export 行為的入口 placeholder。',
+    description: '報表查詢與匯出入口。',
     tag: '報表',
   },
 } as const;
@@ -89,7 +89,7 @@ export function PlaceholderPage({ pageKey }: PlaceholderPageProps) {
         <div>
           <Space size={8} wrap>
             <Tag color="blue">{content.tag}</Tag>
-            <Tag>Foundation</Tag>
+            <Tag>預覽</Tag>
           </Space>
           <Typography.Title level={1}>{content.title}</Typography.Title>
           <Typography.Paragraph type="secondary">{content.description}</Typography.Paragraph>
@@ -101,9 +101,9 @@ export function PlaceholderPage({ pageKey }: PlaceholderPageProps) {
       </div>
 
       <Card>
-        <Typography.Title level={2}>Route 狀態樣式</Typography.Title>
+        <Typography.Title level={2}>頁面狀態</Typography.Title>
         <Typography.Paragraph type="secondary">
-          此頁只建立 shell 與可重用的視覺語言。真實 API、授權與錯誤碼映射會由後續 foundation issues 接上。
+          此頁展示載入、空資料、錯誤與權限限制時的畫面狀態。
         </Typography.Paragraph>
         <Row gutter={[16, 16]}>
           <Col xs={24} md={12} xl={6}>

@@ -507,7 +507,7 @@ describe('BillingMeterPage', () => {
 
     expect(await screen.findByLabelText('確認收款')).toBeTruthy();
     expect(screen.getByText('必填欄位')).toBeTruthy();
-    expect(screen.getByText('收款方式為必填；收款金額固定使用後端帳單金額，不提供手動輸入。收款時間不需填寫，系統會以後端時間記錄。')).toBeTruthy();
+    expect(screen.getByText('收款方式為必填；收款金額固定使用帳單金額，不提供手動輸入。收款時間不需填寫，系統會自動記錄。')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: '確認收款' }));
     expect(recordBillPayment).not.toHaveBeenCalled();

@@ -118,7 +118,7 @@ async function refreshSessionIfNeeded(
     setOperationAlert({
       type: 'warning',
       message: '資料已更新，頁首帳號暫時無法同步',
-      description: '請重新整理或重新登入後確認目前帳號權限。下一次後端請求仍會以後端授權資料為準。',
+      description: '請重新整理或重新登入後確認目前帳號權限。後續操作仍會再次確認權限。',
     });
   }
 }
@@ -448,7 +448,7 @@ export default function UserDetailPage() {
           type="warning"
           showIcon
           message="物業名稱暫時無法讀取"
-          description="成員詳情仍可查看；物業指派會先以筆數摘要顯示，避免將識別碼作為主要資訊。"
+          description="成員詳情仍可查看；物業名稱暫時無法讀取，先以指派筆數顯示。"
         />
       )}
 
@@ -466,7 +466,7 @@ export default function UserDetailPage() {
 
       <Card
         title="管理資料"
-        extra={adminDisabledReason ? <Tag color="default">{adminDisabledReason}</Tag> : <Tag color="blue">Admin only</Tag>}
+        extra={adminDisabledReason ? <Tag color="default">{adminDisabledReason}</Tag> : <Tag color="blue">限系統管理員</Tag>}
       >
         {editError && (
           <Alert
@@ -527,7 +527,7 @@ export default function UserDetailPage() {
 
       <Card
         title="物業指派"
-        extra={assignmentDisabledReason ? <Tag color="default">{assignmentDisabledReason}</Tag> : <Tag color="blue">Admin only</Tag>}
+        extra={assignmentDisabledReason ? <Tag color="default">{assignmentDisabledReason}</Tag> : <Tag color="blue">限系統管理員</Tag>}
       >
         {assignmentDisabledReason && (
           <Alert
@@ -559,7 +559,7 @@ export default function UserDetailPage() {
               showIcon
               message={propertyOptionsState.status === 'error' ? '物業名稱暫時無法讀取' : '物業名稱載入中'}
               description={propertyOptionsState.status === 'error'
-                ? `此成員目前有 ${user.assigned_property_ids?.length ?? 0} 筆物業指派；為避免以識別碼作為主要資訊，暫不顯示指派欄位。`
+                ? `此成員目前有 ${user.assigned_property_ids?.length ?? 0} 筆物業指派；物業名稱載入失敗，請稍後重試。`
                 : '物業指派欄位會在可讀名稱載入後顯示。'}
             />
           )}

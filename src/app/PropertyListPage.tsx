@@ -293,7 +293,7 @@ export default function PropertyListPage() {
       fixed: 'right',
       render: (_value, record) => {
         if (!record.id) {
-          return <Tag color="warning">缺少物業識別資料</Tag>;
+          return <Tag color="warning">物業資料不完整</Tag>;
         }
 
         return (

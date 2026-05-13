@@ -568,7 +568,7 @@ describe('CheckoutSettlementPage', () => {
     expect(rows[0].textContent).toContain('A101');
     expect(rows[1].textContent).toContain('B202');
     expect(screen.getByLabelText('退租狀態')).toHaveProperty('value', 'expired');
-    expect(screen.getByText('預設顯示已到期；清單順序以後端分頁回傳為準。')).toBeTruthy();
+    expect(screen.getByText('預設顯示已到期；清單順序以目前資料為準。')).toBeTruthy();
   });
 
   it('allows expired leases from the review list to generate checkout previews', async () => {
@@ -763,7 +763,7 @@ describe('CheckoutSettlementPage', () => {
 
       expect(checkoutDate.format?.('YYYY-MM-DD')).toBe('2026-06-15');
     });
-    expect(screen.getByText('退租電表讀數會交由後端試算；若可對應最後一期待抄表帳單，會納入退租試算，若帳單週期不符則會回傳待處理項目。')).toBeTruthy();
+    expect(screen.getByText('退租電表讀數會用於系統試算；若可對應最後一期待抄表帳單，會納入退租試算，若帳單週期不符則會列為待處理項目。')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: '產生退租試算' }));
 
@@ -1137,7 +1137,7 @@ describe('CheckoutSettlementPage', () => {
           label: '最後一期電費',
           direction: 'charge',
           amount: 750,
-          description: '由後端依最後一期待抄表帳單結算',
+          description: '由系統依最後一期待抄表帳單結算',
           source_ref: {
             previous_reading: 1200,
             final_meter_reading: 1350,
@@ -1155,7 +1155,7 @@ describe('CheckoutSettlementPage', () => {
     fireEvent.click(screen.getByRole('button', { name: '產生退租試算' }));
 
     expect(await screen.findByText('最後一期電費')).toBeTruthy();
-    expect(screen.getByText('由後端依最後一期待抄表帳單結算')).toBeTruthy();
+    expect(screen.getByText('由系統依最後一期待抄表帳單結算')).toBeTruthy();
     expect(screen.getByText('前次讀數 1200 / 退租讀數 1350 / 用電 150 度 / 單價 5')).toBeTruthy();
     expect(screen.getByText('NT$750')).toBeTruthy();
   });

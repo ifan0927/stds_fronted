@@ -919,7 +919,7 @@ export default function BillingMeterPage() {
         type: 'warning',
         message: '此帳單目前不能收款',
         description: canOperatePayment
-          ? '收款只適用於待收款或逾期帳單，且金額必須由後端提供。'
+          ? '收款只適用於待收款或逾期帳單，且需已有系統確認的金額。'
           : '目前角色只能查看帳單，不能確認收款。',
       });
       return;
@@ -1084,7 +1084,7 @@ export default function BillingMeterPage() {
               </span>
             </Tooltip>
           )}
-          <Tooltip title="電表歷史由 #55 實作；此處先保留入口。">
+          <Tooltip title="電表歷史已移至專屬頁面查看。">
             <Button size="small" icon={<HistoryOutlined />} disabled>
               歷史
             </Button>
@@ -1391,7 +1391,7 @@ export default function BillingMeterPage() {
           </Space>
           <Typography.Title level={1}>帳單與抄表</Typography.Title>
           <Typography.Paragraph type="secondary">
-            查看租金與電費帳單、開啟帳單詳情，並處理抄表、收款與後端產生的收據預覽。
+            查看租金與電費帳單、開啟帳單詳情，並處理抄表、收款與收據預覽。
           </Typography.Paragraph>
         </div>
         <Space wrap>
@@ -1431,7 +1431,7 @@ export default function BillingMeterPage() {
           type="info"
           showIcon
           message="目前角色為查看模式"
-          description="可查看允許的帳單資訊，但抄表送出按鈕不會開放；實際授權仍由後端判定。"
+          description="可查看允許的帳單資訊，但抄表送出按鈕不會開放；送出時仍會再次確認權限。"
         />
       )}
 
@@ -1529,7 +1529,7 @@ export default function BillingMeterPage() {
                 type="info"
                 showIcon
                 message="此帳單已進入待收款"
-                description="可從下方收款按鈕確認完整收款；金額固定使用後端帳單金額。"
+                description="可從下方收款按鈕確認完整收款；金額固定使用帳單金額。"
               />
             )}
             {detailState.data.status === 'overdue' && (
@@ -1537,7 +1537,7 @@ export default function BillingMeterPage() {
                 type="warning"
                 showIcon
                 message="此帳單已逾期"
-                description="仍可確認完整收款；送出後以後端回傳的已付款狀態為準。"
+                description="仍可確認完整收款；送出後會重新讀取最新付款狀態。"
               />
             )}
             {detailState.data.status === 'paid' && (
@@ -1545,7 +1545,7 @@ export default function BillingMeterPage() {
                 type="success"
                 showIcon
                 message="此帳單已付款"
-                description="可開啟後端產生的收據 HTML；前端不重建收據內容或金額。"
+                description="可開啟系統收據；收據內容與金額以帳單資料為準。"
               />
             )}
           </Space>
@@ -1581,7 +1581,7 @@ export default function BillingMeterPage() {
               showIcon
               className="form-alert"
               message="金額由系統計算"
-              description="前端只送出本期度數；用電量、金額與狀態以後端回傳為準。"
+              description="送出本期度數後，系統會更新用電量、金額與帳單狀態。"
             />
 
             {submitError && (
@@ -1674,7 +1674,7 @@ export default function BillingMeterPage() {
               showIcon
               className="form-alert"
               message="必填欄位"
-              description="收款方式為必填；收款金額固定使用後端帳單金額，不提供手動輸入。收款時間不需填寫，系統會以後端時間記錄。"
+              description="收款方式為必填；收款金額固定使用帳單金額，不提供手動輸入。收款時間不需填寫，系統會自動記錄。"
             />
 
             {paymentError && (

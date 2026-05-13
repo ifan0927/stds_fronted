@@ -352,7 +352,7 @@ export default function LeaseReplacementPage() {
           icon={<CheckCircleOutlined />}
           status="success"
           title="租約更換已完成"
-          subTitle="後端已終止舊租約並建立新租約；本頁只顯示後端回傳摘要。"
+          subTitle="系統已終止舊租約並建立新租約；下方顯示本次更換摘要。"
           extra={(
             <Space wrap>
               {newLease?.id && (
@@ -360,7 +360,7 @@ export default function LeaseReplacementPage() {
                   前往新租約
                 </Button>
               )}
-              <Button onClick={() => navigate(rosterPath)}>回租客與租約 Hub</Button>
+              <Button onClick={() => navigate(rosterPath)}>回租客與租約</Button>
             </Space>
           )}
         />
@@ -393,7 +393,7 @@ export default function LeaseReplacementPage() {
           </Space>
           <Typography.Title level={1}>租約更換</Typography.Title>
           <Typography.Paragraph type="secondary">
-            用於續約、週期變更或重發合約；生效日後的新條件由後端建立新租約承接。
+            用於續約、週期變更或重發合約；生效日後的新條件會由新租約承接。
           </Typography.Paragraph>
         </div>
         <Space wrap>
@@ -411,7 +411,7 @@ export default function LeaseReplacementPage() {
           type="warning"
           showIcon
           message="目前角色不可執行租約更換"
-          description="租約更換需由 admin、organizer 或 staff 執行；即使直接進入此頁，後端仍會再次檢查權限。"
+          description="租約更換需由系統管理員、營運管理或工作室成員執行；即使直接進入此頁，送出時仍會再次確認權限。"
         />
       )}
 
@@ -423,7 +423,7 @@ export default function LeaseReplacementPage() {
           type="warning"
           showIcon
           message="這不是退租、強制退租或押金結算"
-          description="送出後後端會以生效日終止舊租約並建立新租約；本流程固定押金沿用，不處理實際搬出日 / 點交日、租金退款或押金扣抵。"
+          description="送出後系統會以生效日終止舊租約並建立新租約；本流程固定押金沿用，不處理實際搬出日 / 點交日、租金退款或押金扣抵。"
         />
         {submitError && (
           <Alert

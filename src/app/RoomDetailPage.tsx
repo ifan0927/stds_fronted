@@ -113,19 +113,19 @@ function getPlaceholderLinks(propertyId: string | undefined, room: Room) {
     },
     {
       title: '抄表與帳單',
-      description: '前往帳單或抄表頁面，內容由帳務 issue 承接。',
+      description: '前往帳單或抄表頁面處理此房間的帳務作業。',
       path: `/properties/${propertyId}/billing?roomId=${encodeURIComponent(roomId)}`,
       icon: <AuditOutlined />,
     },
     {
       title: '抄表歷史',
-      description: '前往房間抄表歷史入口，內容由抄表歷史 issue 承接。',
+      description: '前往房間抄表歷史入口查看過往讀數。',
       path: `/properties/${propertyId}/billing/meter-history?roomId=${encodeURIComponent(roomId)}&year=${defaultHistoryPeriod.getFullYear()}&month=${defaultHistoryPeriod.getMonth() + 1}`,
       icon: <FileSearchOutlined />,
     },
     {
       title: '日誌與維修',
-      description: '前往日誌與維修工作區，完整生命週期由維修 issue 承接。',
+      description: '前往日誌與維修工作區查看或處理相關紀錄。',
       path: `/properties/${propertyId}/journal?roomId=${encodeURIComponent(roomId)}`,
       icon: <ToolOutlined />,
     },

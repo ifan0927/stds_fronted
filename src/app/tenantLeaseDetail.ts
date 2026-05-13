@@ -66,7 +66,7 @@ export function getLeaseStatusLabel(status: Lease['status']) {
   }
 
   if (status === 'force_terminated') {
-    return '強制終止';
+    return '強制退租';
   }
 
   return '未提供';

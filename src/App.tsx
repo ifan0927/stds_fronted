@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom';
 import AppShell from './app/AppShell';
 import BillingMeterPage from './app/BillingMeterPage';
+import CheckoutSettlementPage from './app/CheckoutSettlementPage';
 import CurrentUserProfilePage from './app/CurrentUserProfilePage';
 import HomeDashboardPage from './app/HomeDashboardPage';
 import JournalPage from './app/JournalPage';
@@ -17,7 +18,7 @@ import RoomInventoryPage from './app/RoomInventoryPage';
 import TenantLeaseRosterPage from './app/TenantLeaseRosterPage';
 import UserDetailPage from './app/UserDetailPage';
 import UserManagementPage from './app/UserManagementPage';
-import { ForbiddenPage, LoginPage, NotFoundPage, PlaceholderPage } from './app/pages';
+import { ForbiddenPage, LoginPage, NotFoundPage } from './app/pages';
 import { ProtectedRoute } from './auth';
 
 export default function App() {
@@ -39,7 +40,7 @@ export default function App() {
           <Route path="properties/:propertyId/tenants" element={<TenantLeaseRosterPage />} />
           <Route path="properties/:propertyId/tenants/:tenantId" element={<TenantDetailPage />} />
           <Route path="properties/:propertyId/leases/:leaseId" element={<LeaseDetailPage />} />
-          <Route path="properties/:propertyId/checkout" element={<PlaceholderPage pageKey="checkout" />} />
+          <Route path="properties/:propertyId/checkout" element={<CheckoutSettlementPage />} />
           <Route path="properties/:propertyId/billing" element={<BillingMeterPage />} />
           <Route path="properties/:propertyId/billing/meter-history" element={<MeterHistoryPage />} />
           <Route path="properties/:propertyId/journal" element={<JournalPage />} />

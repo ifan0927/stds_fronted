@@ -18,6 +18,7 @@ vi.mock('@ant-design/icons', () => ({
   AppstoreOutlined: () => null,
   AuditOutlined: () => null,
   BankOutlined: () => null,
+  CarryOutOutlined: () => null,
   DashboardOutlined: () => null,
   FileTextOutlined: () => null,
   HomeOutlined: () => null,
@@ -159,6 +160,12 @@ afterEach(() => {
 });
 
 describe('AppShell user management navigation', () => {
+  it('shows the checkout workspace entry for the active property', () => {
+    renderShell('organizer');
+
+    expect(screen.getByRole('link', { name: '退租審核' }).getAttribute('href')).toBe('/properties/property-1/checkout');
+  });
+
   it.each(['admin', 'organizer', 'staff'] as const)(
     'shows the member management entry for %s',
     (role) => {

@@ -13,6 +13,11 @@ export type UpdateTenantRequest = components['schemas']['UpdateTenantRequest'];
 export type UpdateLeaseRequest = components['schemas']['UpdateLeaseRequest'];
 export type Bill = components['schemas']['BillResponse'];
 export type BillList = components['schemas']['BillListResponse'];
+export type LeaseCheckoutReview = components['schemas']['LeaseCheckoutReviewResponse'];
+export type LeaseCheckoutReviewList = components['schemas']['LeaseCheckoutReviewListResponse'];
+export type CheckoutSettlementPreviewRequest = components['schemas']['CheckoutSettlementPreviewRequest'];
+export type CheckoutSettlementFinalizeRequest = components['schemas']['CheckoutSettlementFinalizeRequest'];
+export type CheckoutSettlementResponse = components['schemas']['CheckoutSettlementResponse'];
 
 export type ListPropertyTenantLeaseRosterQuery = {
   include_vacant?: boolean;
@@ -47,6 +52,13 @@ export type ListBillsQuery = {
   status?: Bill['status'];
   type?: Bill['type'];
   month?: string;
+  page?: number;
+  limit?: number;
+};
+
+export type ListLeaseCheckoutReviewsQuery = {
+  property_id?: string;
+  status?: LeaseCheckoutReview['lease_status'];
   page?: number;
   limit?: number;
 };
@@ -222,6 +234,67 @@ export function listBills(
   return apiRequest<BillList>({
     path: '/bills',
     query,
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function listLeaseCheckoutReviews(
+  tokenProvider: AccessTokenProvider,
+  query: ListLeaseCheckoutReviewsQuery = {},
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<LeaseCheckoutReviewList>({
+    path: '/lease-checkout-reviews',
+    query,
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function previewLeaseCheckoutSettlement(
+  leaseId: string,
+  body: CheckoutSettlementPreviewRequest,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<CheckoutSettlementResponse>({
+    method: 'POST',
+    path: `${leasePath(leaseId)}/checkout-settlement/preview`,
+    body,
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function finalizeLeaseCheckoutSettlement(
+  leaseId: string,
+  body: CheckoutSettlementFinalizeRequest,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<CheckoutSettlementResponse>({
+    method: 'POST',
+    path: `${leasePath(leaseId)}/checkout-settlement/finalize`,
+    body,
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
+export function exportLeaseCheckoutSettlement(
+  leaseId: string,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest({
+    path: `${leasePath(leaseId)}/checkout-settlement/export`,
+    query: { format: 'html' },
+    responseType: 'html',
     tokenProvider,
     signal: options.signal,
     fetcher: options.fetcher,

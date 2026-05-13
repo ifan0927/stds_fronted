@@ -2,13 +2,17 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createLease,
   createTenant,
+  exportLeaseCheckoutSettlement,
+  finalizeLeaseCheckoutSettlement,
   getLease,
   getTenant,
   listBills,
+  listLeaseCheckoutReviews,
   listLeases,
   listPropertyTenantLeaseRoster,
   listTenantLeases,
   listTenants,
+  previewLeaseCheckoutSettlement,
   updateLease,
   updateTenant,
 } from './tenants';
@@ -226,5 +230,84 @@ describe('tenant and lease API helpers', () => {
     expect(fetcher.mock.calls[0][1]?.body).toBe(JSON.stringify({
       rent_amount: 20000,
     }));
+  });
+
+  it('lists checkout review rows with backend-supported filters', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse({
+        data: [{ lease_id: 'lease-1', room_label: 'A101', lease_status: 'terminated' }],
+        pagination: { page: 2, limit: 20, total: 30, total_pages: 2, has_next: false },
+      }),
+    );
+
+    const result = await listLeaseCheckoutReviews(
+      () => 'firebase-id-token',
+      { property_id: 'property/with/slash', status: 'terminated', page: 2, limit: 20 },
+      { fetcher },
+    );
+
+    expect(fetcher.mock.calls[0][0]).toBe('/api/v1/lease-checkout-reviews?property_id=property%2Fwith%2Fslash&status=terminated&page=2&limit=20');
+    expect(result.data?.[0]?.room_label).toBe('A101');
+  });
+
+  it('previews and finalizes checkout settlement with backend-owned payloads', async () => {
+    const previewPayload = {
+      checkout_date: '2026-05-31',
+      actual_move_out_date: '2026-05-30',
+      reason: '合約到期退租',
+      final_meter_reading: 360,
+      cleaning_fee: 1000,
+      key_card_loss_fee: 0,
+      other_fee: 500,
+      other_fee_reason: '牆面修補',
+      manual_rent_refund_amount: 0,
+      manual_rent_refund_reason: '合約到期，不需退未到期租金',
+      notes: '現場已點交',
+    };
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ lease_id: 'lease/with/slash', preview_token: 'preview-token' }))
+      .mockResolvedValueOnce(jsonResponse({ lease_id: 'lease/with/slash', finalized_at: '2026-05-31T10:00:00Z' }));
+
+    await previewLeaseCheckoutSettlement(
+      'lease/with/slash',
+      previewPayload,
+      () => 'firebase-id-token',
+      { fetcher },
+    );
+    await finalizeLeaseCheckoutSettlement(
+      'lease/with/slash',
+      { ...previewPayload, preview_token: 'preview-token' },
+      () => 'firebase-id-token',
+      { fetcher },
+    );
+
+    expect(fetcher.mock.calls[0][0]).toBe('/api/v1/leases/lease%2Fwith%2Fslash/checkout-settlement/preview');
+    expect(fetcher.mock.calls[0][1]?.method).toBe('POST');
+    expect(fetcher.mock.calls[0][1]?.body).toBe(JSON.stringify(previewPayload));
+    expect(fetcher.mock.calls[1][0]).toBe('/api/v1/leases/lease%2Fwith%2Fslash/checkout-settlement/finalize');
+    expect(fetcher.mock.calls[1][1]?.body).toBe(JSON.stringify({
+      ...previewPayload,
+      preview_token: 'preview-token',
+    }));
+  });
+
+  it('exports finalized checkout settlement as backend-owned HTML', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response('<!doctype html><title>退租結算</title>', {
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Content-Disposition': 'inline; filename="checkout.html"',
+        },
+      }),
+    );
+
+    const result = await exportLeaseCheckoutSettlement(
+      'lease/with/slash',
+      () => 'firebase-id-token',
+      { fetcher },
+    );
+
+    expect(fetcher.mock.calls[0][0]).toBe('/api/v1/leases/lease%2Fwith%2Fslash/checkout-settlement/export?format=html');
+    expect(result.filename).toBe('checkout.html');
   });
 });

@@ -47,6 +47,7 @@ export {
   exportPropertyTenantRoster,
   getPropertyFinancialReport,
   getPropertyFinancialReportSummary,
+  sendPropertyFinancialReport,
 } from './reports';
 export {
   createJournalLog,

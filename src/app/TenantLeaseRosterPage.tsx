@@ -959,7 +959,7 @@ export default function TenantLeaseRosterPage() {
                 leaseId: record.lease_id ?? null,
               })}
             >
-              進入 Hub
+              房間總覽
             </Button>
             <Button
               size="small"
@@ -1018,7 +1018,7 @@ export default function TenantLeaseRosterPage() {
           </Space>
           <Typography.Title level={1}>租客與租約名冊</Typography.Title>
           <Typography.Paragraph type="secondary">
-            查看後端名冊 read model，並從出租中房間進入租客、租約、帳單、抄表、維修與退租工作入口。
+            查看物業租客與租約名冊，並從出租中房間進入租客、租約、帳單、抄表、維修與退租工作入口。
           </Typography.Paragraph>
         </div>
         <Space wrap>
@@ -1571,8 +1571,8 @@ function MoveInDrawer({
               <Alert
                 type="info"
                 showIcon
-                message="文件與附件將由 P2 接手"
-                description="入住後的租客與租約附件不在本流程上傳；P2 roadmap #33 會承接 real upload 與文件補齊。"
+                message="文件與附件可於詳情頁補齊"
+                description="入住後若需要補上租客或租約附件，請至租客或租約詳情頁處理。"
               />
               <Space wrap>
                 <Button onClick={onClose}>取消</Button>
@@ -1597,7 +1597,7 @@ function OccupiedRoomHub({
   onRetry,
   onClose,
 }: OccupiedRoomHubProps) {
-  const hubTitle = '出租中房間 Hub';
+  const hubTitle = '出租中房間總覽';
 
   if (state.status === 'inconsistent') {
     return (
@@ -1740,7 +1740,7 @@ function OccupiedRoomHub({
             {propertyId && lease.tenant_id && (
               <WorkflowLink
                 title="租客詳情"
-                description="前往租客 detail/edit 預留頁；實際維護流程由 #53 承接。"
+                description="查看租客基本資料與聯絡資訊，可在詳情頁調整資料。"
                 path={buildPropertyPath(propertyId, `/tenants/${lease.tenant_id}`, buildActionQuery({
                   roomId: lease.room_id,
                   leaseId: lease.id,
@@ -1750,7 +1750,7 @@ function OccupiedRoomHub({
             {propertyId && lease.id && (
               <WorkflowLink
                 title="租約詳情"
-                description="前往租約 detail/edit 預留頁；租金調整由 #53 承接。"
+                description="查看租約期間、租金、押金與帳單摘要。"
                 path={buildPropertyPath(propertyId, `/leases/${lease.id}`, buildActionQuery({
                   roomId: lease.room_id,
                   tenantId: lease.tenant_id,
@@ -1760,7 +1760,7 @@ function OccupiedRoomHub({
             {propertyId && lease.id && (
               <WorkflowLink
                 title="收款與收據"
-                description="前往帳務入口並帶租約脈絡；付款與收據流程不屬於 #51。"
+                description="處理租金收款，並在完成收款後開啟收據。"
                 path={buildPropertyPath(propertyId, '/billing', buildActionQuery({
                   roomId: lease.room_id,
                   leaseId: lease.id,
@@ -1785,7 +1785,7 @@ function OccupiedRoomHub({
             {propertyId && lease.id && canReplaceLease && (
               <WorkflowLink
                 title="租約更換"
-                description="續約、週期變更或重發合約，會以新租約承接舊租約條件。"
+                description="處理續約、收款週期調整或重新建立合約。"
                 icon={<SwapOutlined />}
                 path={buildPropertyPath(propertyId, `/leases/${lease.id}/replace`)}
               />
@@ -1796,7 +1796,7 @@ function OccupiedRoomHub({
                   <span className="property-link-icon"><SwapOutlined /></span>
                   <span>
                     <Typography.Text strong>租約更換</Typography.Text>
-                    <Typography.Text type="secondary">目前角色不可執行租約更換；後端仍會再次檢查權限。</Typography.Text>
+                    <Typography.Text type="secondary">目前角色不可執行租約更換。</Typography.Text>
                   </span>
                 </Space>
               </div>
@@ -1804,7 +1804,7 @@ function OccupiedRoomHub({
             {propertyId && lease.id && canForceTerminate && (
               <WorkflowLink
                 title="強制退租"
-                description="特殊危險流程；送出前會重新載入租約並要求確認。"
+                description="需特殊處理時使用；送出前會重新確認租約資料。"
                 icon={<WarningOutlined />}
                 path={buildPropertyPath(propertyId, '/tenants', buildActionQuery({
                   roomId: lease.room_id,
@@ -1821,7 +1821,7 @@ function OccupiedRoomHub({
                   <span className="property-link-icon"><WarningOutlined /></span>
                   <span>
                     <Typography.Text strong>強制退租</Typography.Text>
-                    <Typography.Text type="secondary">目前角色不可執行強制退租；後端仍會再次檢查權限。</Typography.Text>
+                    <Typography.Text type="secondary">目前角色不可執行強制退租。</Typography.Text>
                   </span>
                 </Space>
               </div>
@@ -1838,7 +1838,7 @@ function OccupiedRoomHub({
                   <span className="property-link-icon"><AuditOutlined /></span>
                   <span>
                     <Typography.Text strong>抄表與帳單</Typography.Text>
-                    <Typography.Text type="secondary">前往帳務工作區，實際抄表/帳單流程由 #54/#55 承接。</Typography.Text>
+                    <Typography.Text type="secondary">查看並處理此房間的抄表、帳單與收款。</Typography.Text>
                   </span>
                 </Space>
               </Link>
@@ -1856,7 +1856,7 @@ function OccupiedRoomHub({
                   <span className="property-link-icon"><HistoryOutlined /></span>
                   <span>
                     <Typography.Text strong>抄表歷史</Typography.Text>
-                    <Typography.Text type="secondary">前往此房間的電表歷史，內容由 #55 承接。</Typography.Text>
+                    <Typography.Text type="secondary">查看此房間各月份電表讀數與用電紀錄。</Typography.Text>
                   </span>
                 </Space>
               </Link>
@@ -1870,7 +1870,7 @@ function OccupiedRoomHub({
                   <span className="property-link-icon"><ToolOutlined /></span>
                   <span>
                     <Typography.Text strong>日誌與維修</Typography.Text>
-                    <Typography.Text type="secondary">前往日誌/維修工作區，實際 lifecycle 由 #57/#58 承接。</Typography.Text>
+                    <Typography.Text type="secondary">查看或新增此房間的日誌與維修紀錄。</Typography.Text>
                   </span>
                 </Space>
               </Link>
@@ -1881,7 +1881,7 @@ function OccupiedRoomHub({
                   <span className="property-link-icon"><FileTextOutlined /></span>
                   <span>
                     <Typography.Text strong>報表與匯出</Typography.Text>
-                    <Typography.Text type="secondary">前往報表入口；runtime HTML preview 由 #56 承接。</Typography.Text>
+                    <Typography.Text type="secondary">查看此物業的報表、名冊與匯出文件。</Typography.Text>
                   </span>
                 </Space>
               </Link>

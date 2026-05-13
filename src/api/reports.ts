@@ -59,6 +59,22 @@ export function getPropertyFinancialReport(
   });
 }
 
+export function sendPropertyFinancialReport(
+  propertyId: string,
+  year: number,
+  month: number,
+  tokenProvider: AccessTokenProvider,
+  options: ApiHelperOptions = {},
+) {
+  return apiRequest<FinancialReport>({
+    method: 'POST',
+    path: financialReportMonthPath(propertyId, year, month, '/send'),
+    tokenProvider,
+    signal: options.signal,
+    fetcher: options.fetcher,
+  });
+}
+
 export function exportPropertyFinancialReportCashflow(
   propertyId: string,
   year: number,

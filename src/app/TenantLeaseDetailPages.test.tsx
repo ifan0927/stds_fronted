@@ -281,7 +281,7 @@ describe('LeaseDetailPage', () => {
     expect(screen.getByLabelText('租約附件').textContent).toContain('lease-1');
   });
 
-  it('keeps lease adjustment disabled for staff while preserving deferred workflow entries', async () => {
+  it('keeps lease adjustment disabled for staff while exposing the lease replacement entry', async () => {
     authMocks.currentUser.role = 'staff';
     vi.mocked(getLease).mockResolvedValue({
       id: 'lease-1',
@@ -298,7 +298,7 @@ describe('LeaseDetailPage', () => {
     const adjustButton = await screen.findByRole('button', { name: '調整租金' });
 
     expect(adjustButton.hasAttribute('disabled')).toBe(true);
-    expect(screen.getByText('租約更換')).toBeTruthy();
+    expect(screen.getByRole('link', { name: /租約更換/ }).getAttribute('href')).toBe('/properties/property-1/leases/lease-1/replace');
     expect(screen.getByLabelText('租約附件').textContent).toContain('lease-1');
   });
 });

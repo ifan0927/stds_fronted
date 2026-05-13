@@ -209,6 +209,7 @@ export default function LeaseDetailPage() {
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
   const canAdjustLease = hasRole(currentUser, ['admin', 'organizer']);
+  const canReplaceLease = hasRole(currentUser, ['admin', 'organizer', 'staff']);
 
   const billStatus = searchParams.get('status') as Bill['status'] | null;
   const validBillStatus = billStatusOptions.some((option) => option.value === billStatus)
@@ -521,15 +522,27 @@ export default function LeaseDetailPage() {
               </Space>
             </div>
           )}
-          <div className="property-link-row disabled-link-row">
-            <Space size={12} align="start">
-              <span className="property-link-icon"><SwapOutlined /></span>
-              <span>
-                <Typography.Text strong>租約更換</Typography.Text>
-                <Typography.Text type="secondary">續約、週期變更與重發合約需獨立 workflow，這裡先保留入口。</Typography.Text>
-              </span>
-            </Space>
-          </div>
+          {canReplaceLease ? (
+            <Link className="property-link-row" to={buildPropertyPath(propertyId, `/leases/${lease.id}/replace`)}>
+              <Space size={12} align="start">
+                <span className="property-link-icon"><SwapOutlined /></span>
+                <span>
+                  <Typography.Text strong>租約更換</Typography.Text>
+                  <Typography.Text type="secondary">續約、週期變更或重發合約，會以新租約承接舊租約條件。</Typography.Text>
+                </span>
+              </Space>
+            </Link>
+          ) : (
+            <div className="property-link-row disabled-link-row">
+              <Space size={12} align="start">
+                <span className="property-link-icon"><SwapOutlined /></span>
+                <span>
+                  <Typography.Text strong>租約更換</Typography.Text>
+                  <Typography.Text type="secondary">目前角色不可執行租約更換；後端仍會再次檢查權限。</Typography.Text>
+                </span>
+              </Space>
+            </div>
+          )}
         </div>
       </Card>
 

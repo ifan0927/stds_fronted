@@ -1178,6 +1178,7 @@ export default function TenantLeaseRosterPage() {
           roomId={selectedRoomId}
           state={hubState}
           canForceTerminate={hasRole(currentUser, ['admin', 'organizer'])}
+          canReplaceLease={hasRole(currentUser, ['admin', 'organizer', 'staff'])}
           onRetry={() => loadHub()}
           onClose={() => setRosterQuery({ roomId: null, view: null, mode: null, leaseId: null })}
         />
@@ -1222,6 +1223,7 @@ type OccupiedRoomHubProps = {
   roomId: string;
   state: HubLoadState;
   canForceTerminate: boolean;
+  canReplaceLease: boolean;
   onRetry: () => void;
   onClose: () => void;
 };
@@ -1591,6 +1593,7 @@ function OccupiedRoomHub({
   roomId,
   state,
   canForceTerminate,
+  canReplaceLease,
   onRetry,
   onClose,
 }: OccupiedRoomHubProps) {
@@ -1779,16 +1782,21 @@ function OccupiedRoomHub({
                 }))}
               />
             )}
-            {propertyId && lease.id && (
+            {propertyId && lease.id && canReplaceLease && (
+              <WorkflowLink
+                title="租約更換"
+                description="續約、週期變更或重發合約，會以新租約承接舊租約條件。"
+                icon={<SwapOutlined />}
+                path={buildPropertyPath(propertyId, `/leases/${lease.id}/replace`)}
+              />
+            )}
+            {propertyId && lease.id && !canReplaceLease && (
               <div className="property-link-row disabled-link-row">
                 <Space size={12} align="start">
                   <span className="property-link-icon"><SwapOutlined /></span>
                   <span>
-                    <Space size={6} wrap>
-                      <Typography.Text strong>租約更換</Typography.Text>
-                      <Tag color="blue">後續流程</Tag>
-                    </Space>
-                    <Typography.Text type="secondary">續約、週期變更與重發合約需獨立 workflow，這裡先保留入口。</Typography.Text>
+                    <Typography.Text strong>租約更換</Typography.Text>
+                    <Typography.Text type="secondary">目前角色不可執行租約更換；後端仍會再次檢查權限。</Typography.Text>
                   </span>
                 </Space>
               </div>

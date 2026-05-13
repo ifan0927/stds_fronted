@@ -504,6 +504,13 @@ a {
   background: #fafafa;
 }
 
+.lease-replacement-form-grid,
+.lease-replacement-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+
 .filter-select {
   min-width: 160px;
 }
@@ -698,7 +705,9 @@ button.property-link-row {
   }
 
   .property-form-grid,
-  .room-form-grid {
+  .room-form-grid,
+  .lease-replacement-form-grid,
+  .lease-replacement-summary-grid {
     grid-template-columns: 1fr;
   }
 

@@ -169,6 +169,54 @@ function getSelectedKey(pathname: string) {
   return pathname;
 }
 
+function getPropertySwitchPath(pathname: string, nextPropertyId: string) {
+  const basePath = `/properties/${nextPropertyId}`;
+  const match = pathname.match(/^\/properties\/[^/]+(?:\/(.+))?$/);
+  const suffix = match?.[1] ?? '';
+
+  if (suffix === 'rooms') {
+    return `${basePath}/rooms`;
+  }
+
+  if (suffix === 'tenants') {
+    return `${basePath}/tenants`;
+  }
+
+  if (suffix === 'checkout') {
+    return `${basePath}/checkout`;
+  }
+
+  if (suffix === 'billing') {
+    return `${basePath}/billing`;
+  }
+
+  if (suffix === 'billing/meter-history') {
+    return `${basePath}/billing/meter-history`;
+  }
+
+  if (suffix === 'journal') {
+    return `${basePath}/journal`;
+  }
+
+  if (suffix === 'reports') {
+    return `${basePath}/reports`;
+  }
+
+  if (suffix === 'rooms/new' || suffix.startsWith('rooms/')) {
+    return `${basePath}/rooms`;
+  }
+
+  if (suffix.startsWith('tenants/') || suffix.startsWith('leases/')) {
+    return `${basePath}/tenants`;
+  }
+
+  if (suffix.startsWith('force-terminations/')) {
+    return `${basePath}/checkout`;
+  }
+
+  return basePath;
+}
+
 export default function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -249,7 +297,7 @@ export default function AppShell() {
       disabled={selectorDisabled}
       options={propertyOptions}
       onChange={(value) => {
-        navigate(`/properties/${value}`);
+        navigate(getPropertySwitchPath(location.pathname, value));
         setDrawerOpen(false);
       }}
     />
@@ -268,7 +316,7 @@ export default function AppShell() {
         <Typography.Text className="property-context-note">
           {propertyOptionsState.status === 'error'
             ? '物業清單暫時無法讀取。'
-            : '選擇後會進入該物業工作台。'}
+            : '選擇後會切換目前物業。'}
         </Typography.Text>
       </div>
       <Menu

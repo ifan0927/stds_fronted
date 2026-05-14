@@ -1,0 +1,97 @@
+name: Staging Frontend Deploy
+
+on:
+  push:
+    branches:
+      - staging
+  workflow_dispatch:
+    inputs:
+      backend_ref:
+        description: Backend ref used only for OpenAPI check.
+        required: true
+        default: dev
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    name: Submit frontend staging Cloud Build
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout frontend
+        uses: actions/checkout@v6
+
+      - name: Checkout backend OpenAPI source
+        uses: actions/checkout@v6
+        with:
+          repository: ifan0927/STDS_backend_go
+          ref: ${{ github.event.inputs.backend_ref || 'dev' }}
+          path: backend-openapi
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.STAGING_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.STAGING_GITHUB_DEPLOY_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Submit Cloud Build
+        env:
+          STAGING_GCP_PROJECT_ID: ${{ vars.STAGING_GCP_PROJECT_ID }}
+          STAGING_CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL: ${{ vars.STAGING_CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL }}
+          STAGING_API_BASE_URL: ${{ vars.STAGING_API_BASE_URL }}
+          STAGING_FIREBASE_API_KEY: ${{ vars.STAGING_FIREBASE_API_KEY }}
+          STAGING_FIREBASE_AUTH_DOMAIN: ${{ vars.STAGING_FIREBASE_AUTH_DOMAIN }}
+          STAGING_FIREBASE_PROJECT_ID: ${{ vars.STAGING_FIREBASE_PROJECT_ID }}
+          STAGING_FIREBASE_APP_ID: ${{ vars.STAGING_FIREBASE_APP_ID }}
+          STAGING_FIREBASE_SITE: ${{ vars.STAGING_FIREBASE_SITE }}
+          STAGING_BACKEND_CLOUD_RUN_SERVICE: ${{ vars.STAGING_BACKEND_CLOUD_RUN_SERVICE }}
+          STAGING_BACKEND_CLOUD_RUN_REGION: ${{ vars.STAGING_BACKEND_CLOUD_RUN_REGION }}
+          STAGING_FRONTEND_URL: ${{ vars.STAGING_FRONTEND_URL }}
+          STAGING_FIREBASE_TOOLS_VERSION: ${{ vars.STAGING_FIREBASE_TOOLS_VERSION }}
+        run: |
+          set -euo pipefail
+
+          required_vars="
+          STAGING_GCP_PROJECT_ID
+          STAGING_CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL
+          STAGING_FIREBASE_API_KEY
+          STAGING_FIREBASE_AUTH_DOMAIN
+          STAGING_FIREBASE_PROJECT_ID
+          STAGING_FIREBASE_APP_ID
+          STAGING_FIREBASE_SITE
+          STAGING_BACKEND_CLOUD_RUN_SERVICE
+          STAGING_BACKEND_CLOUD_RUN_REGION
+          STAGING_FRONTEND_URL
+          "
+          for name in ${required_vars}; do
+            if [ -z "${!name}" ]; then
+              echo "${name} is required" >&2
+              exit 1
+            fi
+          done
+
+          substitutions="_OPENAPI_SPEC_PATH=backend-openapi/docs/spec/openapi.yaml"
+          substitutions="${substitutions},_VITE_API_BASE_URL=${STAGING_API_BASE_URL:-/api/v1}"
+          substitutions="${substitutions},_VITE_FIREBASE_API_KEY=${STAGING_FIREBASE_API_KEY}"
+          substitutions="${substitutions},_VITE_FIREBASE_AUTH_DOMAIN=${STAGING_FIREBASE_AUTH_DOMAIN}"
+          substitutions="${substitutions},_VITE_FIREBASE_PROJECT_ID=${STAGING_FIREBASE_PROJECT_ID}"
+          substitutions="${substitutions},_VITE_FIREBASE_APP_ID=${STAGING_FIREBASE_APP_ID}"
+          substitutions="${substitutions},_VITE_FIREBASE_USE_EMULATOR=false"
+          substitutions="${substitutions},_FIREBASE_HOSTING_SITE=${STAGING_FIREBASE_SITE}"
+          substitutions="${substitutions},_BACKEND_CLOUD_RUN_SERVICE=${STAGING_BACKEND_CLOUD_RUN_SERVICE}"
+          substitutions="${substitutions},_BACKEND_CLOUD_RUN_REGION=${STAGING_BACKEND_CLOUD_RUN_REGION}"
+          substitutions="${substitutions},_STAGING_FRONTEND_URL=${STAGING_FRONTEND_URL}"
+          substitutions="${substitutions},_FIREBASE_TOOLS_VERSION=${STAGING_FIREBASE_TOOLS_VERSION:-latest}"
+
+          gcloud builds submit . \
+            --project="${STAGING_GCP_PROJECT_ID}" \
+            --config=cloudbuild.staging.yaml \
+            --service-account="projects/${STAGING_GCP_PROJECT_ID}/serviceAccounts/${STAGING_CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL}" \
+            --substitutions="${substitutions}"

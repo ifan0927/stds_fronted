@@ -137,6 +137,13 @@ Local development uses `/Users/cheni-fan/stds_backend/docs/spec/openapi.yaml` by
 This gate intentionally does not include Playwright E2E, deployment, backend E2E orchestration,
 coverage thresholds, visual regression, or performance budgets.
 
+Frontend E2E belongs to the second-phase `dev` -> `staging` branch promotion
+line. Use
+`docs/staging-environment-contract.md` as the staging variable, secret, URL, and
+credential boundary before wiring deployment or deployed E2E workflows. Use
+`docs/staging-observability-baseline.md` for the first staging log, alert, and
+cost-control baseline.
+
 If tests are deferred after implementation, keep that follow-up inside the same issue unless the user explicitly splits it.
 
 ## Local Verification Before CI Exists

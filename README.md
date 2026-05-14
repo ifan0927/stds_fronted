@@ -12,7 +12,7 @@ This repository does not maintain its own OpenAPI contract. Frontend API work sh
 
 The repository now has the initial React + Vite + TypeScript + Ant Design app scaffold, canonical app shell, API boundary, Firebase auth bootstrap, route-state primitives, operation/error helpers, runtime HTML preview helper, and local logging policy.
 
-Feature-page implementation should start from `docs/codex/frontend-implementation-reference.md`. Production deployment config and full E2E setup belong to later issues. See `docs/codex/frontend-principles.md` for the current architecture principles and package-manager tradeoffs.
+Feature-page implementation should start from `docs/codex/frontend-implementation-reference.md`. Production deployment config and full E2E setup belong to later issues. The frontend staging environment contract lives in `docs/staging-environment-contract.md`; the staging observability baseline lives in `docs/staging-observability-baseline.md`. See `docs/codex/frontend-principles.md` for the current architecture principles and package-manager tradeoffs.
 
 Do not assume implementation details from backend tooling. The backend is Go/Gin/PostgreSQL/Firebase; frontend choices should be verified in this repo when implementation begins.
 
@@ -200,6 +200,8 @@ Before frontend API work:
 Frontend work should start from GitHub issues. Issues are expected to define goal, out of scope, implementation scope, DoD, and reference docs.
 
 During active feature development, do not add CI just to slow down iteration. Use implementation verification, PR code review, and same-issue test follow-up for quality hardening. E2E should be added later for high-value flows once the core screens and harness shape are stable.
+
+Frontend E2E is not part of the feature branch -> `dev` PR gate initially. It belongs to the later `dev` -> `staging` branch promotion line described in `docs/staging-environment-contract.md`. The first repo-side staging deploy entry points are `.github/workflows/staging-frontend-deploy.yml` and `cloudbuild.staging.yaml`.
 
 For legacy refresh areas, first survey the old page, map it to backend OpenAPI boundaries, create a phase backlog, then produce a reviewable UI design template before implementation. A standalone HTML template is acceptable as the review artifact before the React scaffold or final component structure exists.
 

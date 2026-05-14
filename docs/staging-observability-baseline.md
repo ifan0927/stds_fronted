@@ -37,7 +37,7 @@ Use GCP-native logs for the first staging version:
 | Firebase Hosting requests | Firebase Hosting / Cloud Logging, if Hosting log export is enabled. |
 | Backend API requests | Cloud Run service logs and Cloud Logging Logs Explorer. |
 | Backend runtime failures | Cloud Run stdout/stderr, request logs, and revision logs. |
-| Staging E2E failures | Later Playwright traces/screenshots/videos from #106/#107. |
+| Staging E2E failures | Playwright screenshots/videos and HTML report uploaded by the #107 staging workflow. |
 
 The React app should continue to show user-visible error states. Do not add
 client-side log ingestion under #108.
@@ -81,7 +81,7 @@ Recommended widgets:
 - Cloud SQL CPU, storage, and connection count.
 - Firebase Hosting request and error visibility when log export is enabled.
 - Cloud Build staging deploy status.
-- Later #107 post-deploy E2E status.
+- #107 post-deploy E2E status.
 
 ## Minimum Alerts
 

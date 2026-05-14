@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "typecheck": "tsc -b",
     "test": "vitest run",
+    "e2e:staging": "playwright test --config=playwright.staging.config.ts",
     "openapi:generate": "openapi-typescript ${OPENAPI_SPEC_PATH:-/Users/cheni-fan/stds_backend/docs/spec/openapi.yaml} -o src/api/generated/schema.ts --export-type",
     "openapi:check": "openapi-typescript ${OPENAPI_SPEC_PATH:-/Users/cheni-fan/stds_backend/docs/spec/openapi.yaml} -o src/api/generated/schema.ts --export-type --check"
   },
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.16.0",
+    "@playwright/test": "^1.60.0",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/react": "^18.3.12",

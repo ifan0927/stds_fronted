@@ -1,7 +1,8 @@
 # Frontend Staging Environment Contract
 
-Status: repo-side contract for #104, #105, and #108. Operator-side Firebase/GCP
-setup happens later as one coordinated staging setup pass.
+Status: repo-side contract for #104, #105, #106, #107, and #108.
+Operator-side Firebase/GCP setup happens later as one coordinated staging setup
+pass.
 
 This document defines the frontend `dev` -> staging environment contract. It
 does not create Firebase Hosting, Cloud Build, Playwright, Secret Manager, or
@@ -27,12 +28,10 @@ In scope:
 
 Out of scope for this combined repo-side pass:
 
-- Playwright test implementation.
 - Production deployment.
 - Firebase preview-channel PR environments.
 - Backend Cloud Run, Cloud SQL, migration, or scheduler setup.
-- Post-deploy frontend E2E wiring, which depends on the #106 Playwright
-  staging harness.
+- Browser trace artifact upload before a redaction policy exists.
 
 ## Pipeline Placement
 
@@ -49,13 +48,14 @@ npm run build
 
 Frontend E2E must not run in that feature PR gate initially.
 
-Frontend E2E belongs to the second-phase `dev` -> `staging` line. The expected
-promotion flow is: merge feature PRs into `dev`, promote the selected `dev`
-state to the `staging` branch, run valuable pre-deploy checks on that staging
-branch result, deploy, then run post-deploy E2E after #106 provides the
-Playwright harness. The staging line may use GitHub Actions as the trigger and
-status-reporting entry point, but deployment-layer work should run in GCP Cloud
-Build where practical.
+Frontend E2E belongs to the second-phase `dev` -> `staging` line. The first
+wave uses a manual GitHub Actions trigger: merge feature PRs into `dev`, choose
+the backend OpenAPI ref for the staging run, run pre-deploy checks, deploy, then
+optionally run post-deploy E2E after #106 provides the Playwright harness.
+Automatic `staging` branch push deployment is a later hardening step after the
+first setup evidence is reviewed. The staging line may use GitHub Actions as the
+trigger and status-reporting entry point, but deployment-layer work should run
+in GCP Cloud Build where practical.
 
 ## Staging Targets
 
@@ -170,7 +170,9 @@ Keep staging IAM least-privilege and environment-scoped. Do not grant broad
 The GitHub deploy service account identified by
 `STAGING_GITHUB_DEPLOY_SERVICE_ACCOUNT` should only be able to authenticate
 through the configured Workload Identity provider, submit Cloud Build builds in
-the staging project, and act as the configured Cloud Build service account.
+the staging project, act as the configured Cloud Build service account, and
+read only the configured staging E2E password secret when the #107 post-deploy
+Playwright step is enabled.
 
 The Cloud Build service account identified by
 `STAGING_CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL` should only receive the permissions
@@ -180,10 +182,10 @@ needed for this frontend deploy line:
 - deploy to the configured Firebase Hosting site
 - read project/resource metadata needed by Firebase Hosting deploy
 
-It does not need staging E2E secrets until #106/#107 add the Playwright smoke
-and post-deploy E2E wiring. It also does not need backend Cloud Run deploy,
-Cloud SQL, GCS object, Resend, database migration, or production project
-permissions for this frontend-only staging deploy.
+It does not need staging E2E secrets because the #107 post-deploy Playwright
+step runs in GitHub Actions after Cloud Build completes. It also does not need
+backend Cloud Run deploy, Cloud SQL, GCS object, Resend, database migration, or
+production project permissions for this frontend-only staging deploy.
 
 ### Cloud Build Substitutions
 
@@ -213,10 +215,12 @@ The GitHub workflow checks out the backend repository only to provide the
 current OpenAPI file to Cloud Build. The frontend repository still does not
 copy or maintain an OpenAPI contract.
 
-The first staging deploy workflow runs from the `staging` branch and also
-supports manual `workflow_dispatch` reruns. It submits `cloudbuild.staging.yaml`
-after GitHub authenticates to GCP through Workload Identity Federation. Cloud
-Build then runs these pre-deploy checks before the Firebase Hosting deploy step:
+The first staging deploy workflow uses a manual `workflow_dispatch` trigger. Do
+not enable automatic `push` deployment from the `staging` branch until the first
+GCP setup, deploy, and E2E evidence have been reviewed. The workflow submits
+`cloudbuild.staging.yaml` after GitHub authenticates to GCP through Workload
+Identity Federation. Cloud Build then runs these pre-deploy checks before the
+Firebase Hosting deploy step:
 
 ```text
 npm ci
@@ -230,9 +234,9 @@ npm run build
 Only after those checks pass does Cloud Build run
 `firebase deploy --only hosting`.
 
-When #106/#107 are implemented, the focused Playwright smoke should be added
-after the deploy step in this `dev` -> `staging` line. It should not be added to
-the feature branch -> `dev` PR gate.
+The focused Playwright smoke can be enabled from the manual workflow with
+`run_e2e=true`. It runs after the deploy step in this `dev` -> `staging` line.
+It must not be added to the feature branch -> `dev` PR gate.
 
 The generated Firebase Hosting config uses:
 
@@ -243,7 +247,7 @@ The generated Firebase Hosting config uses:
 ### Secret Manager
 
 Use Secret Manager for staging E2E credentials and any later deployment secrets
-that Cloud Build must read at runtime:
+that the staging workflow or Cloud Build must read at runtime:
 
 ```text
 frontend-staging-e2e-password
@@ -272,14 +276,45 @@ Initial expected variables for #106/#107:
 
 | Contract value | Meaning | Storage |
 | --- | --- | --- |
-| `STAGING_E2E_BASE_URL` | Browser-facing URL used by Playwright. Usually the same as `STAGING_FRONTEND_URL`. | GitHub repository variable or Cloud Build substitution |
+| `STAGING_E2E_BASE_URL` | Browser-facing URL used by Playwright. Usually the same as `STAGING_FRONTEND_URL`. | GitHub repository variable |
 | `STAGING_E2E_USER_EMAIL` | Dedicated staging smoke user email. | GitHub repository variable |
 | `STAGING_E2E_USER_PASSWORD` | Dedicated staging smoke user password. | Secret Manager |
+| `STAGING_E2E_USER_PASSWORD_SECRET` | Secret Manager secret name for the dedicated staging smoke user password. Defaults to `frontend-staging-e2e-password` when omitted. | GitHub repository variable |
 
 The E2E harness must target the deployed staging frontend URL, not a local Vite
-server. Test artifacts may include traces, screenshots, and videos, but they
-must not expose passwords, Firebase ID tokens, bearer tokens, or full request
-headers.
+server. Test artifacts may include screenshots, videos, and the Playwright HTML
+report, but they must not expose passwords, Firebase ID tokens, bearer tokens,
+or full request headers. Playwright trace is disabled in the first repo-side
+pass because authenticated traces can expose action or network details that are
+too easy to mishandle without a redaction policy.
+
+The repo-side #107 workflow follows the backend staging deployment pattern:
+GitHub Actions remains the trigger and status-reporting entry point, while
+Cloud Build performs the Firebase Hosting deployment. After Cloud Build
+completes, GitHub Actions retrieves the E2E password from Secret Manager,
+masks it, runs `npm run e2e:staging`, and uploads Playwright screenshots,
+videos, and the HTML report as short-retention GitHub Actions artifacts when
+available. The password value must not be stored in GitHub repository
+variables, Cloud Build substitutions, logs, pull requests, or issue evidence.
+
+## Staging E2E Rerun And Failure Handling
+
+Run the manual `Staging Frontend Deploy` workflow from GitHub Actions with the
+desired backend OpenAPI ref. Enable `run_e2e=true` when the operator wants the
+post-deploy Playwright smoke to run after Firebase Hosting deploy completes.
+
+Inspect failures in this order:
+
+1. GitHub Actions job status and `Run Playwright staging E2E` logs.
+2. Cloud Build build id and logs when deploy fails before E2E starts.
+3. `staging-playwright-artifacts` for Playwright HTML report, screenshots, and
+   videos when E2E fails.
+
+Fix repo-side failures from `dev`, merge through the normal PR gate, then rerun
+the staging deployment workflow with `run_e2e=true`. Do not patch the `staging`
+branch directly for E2E failures. Operator-side Firebase/GCP/IAM/secret issues
+should be fixed in the coordinated staging setup pass, then the same workflow
+should be rerun and non-secret evidence attached to the issue.
 
 ## Operator Evidence
 

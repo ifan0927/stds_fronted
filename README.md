@@ -35,6 +35,21 @@ npm run build
 npm run openapi:check
 ```
 
+The staging Playwright smoke is opt-in locally and targets a deployed staging
+URL, not a local Vite server:
+
+```text
+npx playwright install chromium
+
+STAGING_E2E_BASE_URL=https://<staging-frontend-url> \
+STAGING_E2E_USER_EMAIL=<staging-smoke-user-email> \
+STAGING_E2E_USER_PASSWORD=<staging-smoke-user-password> \
+npm run e2e:staging
+```
+
+Do not print or commit the staging smoke password, Firebase ID tokens, bearer
+tokens, full request headers, or Playwright artifacts containing those values.
+
 ## Pull Request CI
 
 Pull requests targeting `dev` run the basic frontend CI gate from `.github/workflows/pr-ci.yml`.

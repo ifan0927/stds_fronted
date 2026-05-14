@@ -1,15 +1,17 @@
 name: Staging Frontend Deploy
 
 on:
-  push:
-    branches:
-      - staging
   workflow_dispatch:
     inputs:
       backend_ref:
         description: Backend ref used only for OpenAPI check.
         required: true
         default: dev
+      run_e2e:
+        description: Run Playwright staging E2E after deploy.
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -95,3 +97,52 @@ jobs:
             --config=cloudbuild.staging.yaml \
             --service-account="projects/${STAGING_GCP_PROJECT_ID}/serviceAccounts/${STAGING_CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL}" \
             --substitutions="${substitutions}"
+
+      - name: Set up Node for staging E2E
+        if: ${{ inputs.run_e2e }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install frontend dependencies for staging E2E
+        if: ${{ inputs.run_e2e }}
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        if: ${{ inputs.run_e2e }}
+        run: npx playwright install --with-deps chromium
+
+      - name: Load staging E2E password
+        if: ${{ inputs.run_e2e }}
+        env:
+          STAGING_GCP_PROJECT_ID: ${{ vars.STAGING_GCP_PROJECT_ID }}
+          STAGING_E2E_USER_PASSWORD_SECRET: ${{ vars.STAGING_E2E_USER_PASSWORD_SECRET || 'frontend-staging-e2e-password' }}
+        run: |
+          set -euo pipefail
+
+          password="$(gcloud secrets versions access latest --project="${STAGING_GCP_PROJECT_ID}" --secret="${STAGING_E2E_USER_PASSWORD_SECRET}")"
+          echo "::add-mask::${password}"
+          {
+            echo "STAGING_E2E_USER_PASSWORD<<EOF_STAGING_E2E_PASSWORD"
+            printf '%s\n' "$password"
+            echo "EOF_STAGING_E2E_PASSWORD"
+          } >> "$GITHUB_ENV"
+
+      - name: Run Playwright staging E2E
+        if: ${{ inputs.run_e2e }}
+        env:
+          STAGING_E2E_BASE_URL: ${{ vars.STAGING_E2E_BASE_URL || vars.STAGING_FRONTEND_URL }}
+          STAGING_E2E_USER_EMAIL: ${{ vars.STAGING_E2E_USER_EMAIL }}
+        run: npm run e2e:staging
+
+      - name: Upload Playwright staging artifacts
+        if: ${{ always() && inputs.run_e2e }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-playwright-artifacts
+          path: |
+            playwright-report/staging/
+            test-results/staging/
+          if-no-files-found: ignore
+          retention-days: 7

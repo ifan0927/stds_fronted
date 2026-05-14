@@ -1,9 +1,9 @@
 // @vitest-environment happy-dom
 
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { listProperties } from '../api';
 import type { CurrentUser } from '../api/auth';
 import AppShell from './AppShell';
@@ -81,15 +81,22 @@ vi.mock('antd', async () => {
     Select: ({
       'aria-label': ariaLabel,
       disabled,
+      onChange,
       options,
       value,
     }: {
       'aria-label'?: string;
       disabled?: boolean;
+      onChange?: (value: string) => void;
       options?: Array<{ value: string; label: ReactNode }>;
       value?: string;
     }) => (
-      <select aria-label={ariaLabel} disabled={disabled} value={value ?? ''} onChange={() => undefined}>
+      <select
+        aria-label={ariaLabel}
+        disabled={disabled}
+        value={value ?? ''}
+        onChange={(event) => onChange?.(event.target.value)}
+      >
         <option value="" />
         {options?.map((option) => (
           <option key={option.value} value={option.value}>{option.label}</option>
@@ -137,17 +144,27 @@ function makeUser(role: NonNullable<CurrentUser['role']>): CurrentUser {
   };
 }
 
-function renderShell(role: NonNullable<CurrentUser['role']>) {
+function LocationProbe() {
+  const location = useLocation();
+
+  return <output aria-label="目前路徑">{`${location.pathname}${location.search}`}</output>;
+}
+
+function renderShell(role: NonNullable<CurrentUser['role']>, initialEntry = '/') {
   authMocks.currentUser = makeUser(role);
   vi.mocked(listProperties).mockResolvedValue({
-    data: [{ id: 'property-1', name: '大安物業' }],
+    data: [
+      { id: 'property-1', name: '大安物業' },
+      { id: 'property-2', name: '信義物業' },
+    ],
   });
 
   return render(
-    <MemoryRouter initialEntries={['/']}>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
         <Route element={<AppShell />}>
-          <Route index element={<div>工作台內容</div>} />
+          <Route index element={<><div>工作台內容</div><LocationProbe /></>} />
+          <Route path="*" element={<LocationProbe />} />
         </Route>
       </Routes>
     </MemoryRouter>,
@@ -198,5 +215,56 @@ describe('AppShell user management navigation', () => {
     renderShell('owner');
 
     expect(screen.queryByRole('link', { name: '成員與權限' })).toBeNull();
+  });
+});
+
+describe('AppShell property switch navigation', () => {
+  async function switchPropertyFrom(initialEntry: string) {
+    renderShell('organizer', initialEntry);
+
+    const selector = await screen.findByRole('combobox', { name: '選擇物業' });
+    await waitFor(() => expect((selector as HTMLSelectElement).disabled).toBe(false));
+    fireEvent.change(selector, { target: { value: 'property-2' } });
+
+    return screen.getByLabelText('目前路徑').textContent;
+  }
+
+  it.each([
+    ['/properties/property-1/rooms', '/properties/property-2/rooms'],
+    ['/properties/property-1/tenants', '/properties/property-2/tenants'],
+    ['/properties/property-1/checkout', '/properties/property-2/checkout'],
+    ['/properties/property-1/billing', '/properties/property-2/billing'],
+    ['/properties/property-1/billing/meter-history?year=2026&roomId=room-1', '/properties/property-2/billing/meter-history'],
+    ['/properties/property-1/journal?roomId=room-1', '/properties/property-2/journal'],
+    ['/properties/property-1/reports?year=2026&month=5', '/properties/property-2/reports'],
+  ])(
+    'keeps list-level property workspaces when switching from %s',
+    async (initialEntry, expectedPath) => {
+      await expect(switchPropertyFrom(initialEntry)).resolves.toBe(expectedPath);
+    },
+  );
+
+  it.each([
+    ['/properties/property-1/rooms/new', '/properties/property-2/rooms'],
+    ['/properties/property-1/rooms/room-1?tab=attachments', '/properties/property-2/rooms'],
+    ['/properties/property-1/tenants/tenant-1', '/properties/property-2/tenants'],
+    ['/properties/property-1/leases/lease-1', '/properties/property-2/tenants'],
+    ['/properties/property-1/leases/lease-1/replace', '/properties/property-2/tenants'],
+    ['/properties/property-1/force-terminations/force-1', '/properties/property-2/checkout'],
+  ])(
+    'falls back from property-specific resource routes when switching from %s',
+    async (initialEntry, expectedPath) => {
+      await expect(switchPropertyFrom(initialEntry)).resolves.toBe(expectedPath);
+    },
+  );
+
+  it('falls back to the next property dashboard outside mapped daily routes', async () => {
+    await expect(switchPropertyFrom('/admin/members')).resolves.toBe('/properties/property-2');
+  });
+
+  it('uses neutral selector copy for the switch behavior', () => {
+    renderShell('organizer');
+
+    expect(screen.getByText('選擇後會切換目前物業。')).not.toBeNull();
   });
 });

@@ -1,0 +1,106 @@
+substitutions:
+  _OPENAPI_SPEC_PATH: backend-openapi/docs/spec/openapi.yaml
+  _VITE_API_BASE_URL: /api/v1
+  _VITE_FIREBASE_API_KEY: ""
+  _VITE_FIREBASE_AUTH_DOMAIN: ""
+  _VITE_FIREBASE_PROJECT_ID: ""
+  _VITE_FIREBASE_APP_ID: ""
+  _VITE_FIREBASE_USE_EMULATOR: "false"
+  _FIREBASE_HOSTING_SITE: ""
+  _BACKEND_CLOUD_RUN_SERVICE: ""
+  _BACKEND_CLOUD_RUN_REGION: ""
+  _STAGING_FRONTEND_URL: ""
+  _FIREBASE_TOOLS_VERSION: latest
+
+steps:
+  - id: install
+    name: node:22
+    entrypoint: npm
+    args: ["ci"]
+
+  - id: openapi-check
+    name: node:22
+    entrypoint: npm
+    args: ["run", "openapi:check"]
+    env:
+      - "OPENAPI_SPEC_PATH=${_OPENAPI_SPEC_PATH}"
+
+  - id: typecheck
+    name: node:22
+    entrypoint: npm
+    args: ["run", "typecheck"]
+
+  - id: lint
+    name: node:22
+    entrypoint: npm
+    args: ["run", "lint"]
+
+  - id: test
+    name: node:22
+    entrypoint: npm
+    args: ["run", "test"]
+
+  - id: build
+    name: node:22
+    entrypoint: npm
+    args: ["run", "build"]
+    env:
+      - "VITE_API_BASE_URL=${_VITE_API_BASE_URL}"
+      - "VITE_FIREBASE_API_KEY=${_VITE_FIREBASE_API_KEY}"
+      - "VITE_FIREBASE_AUTH_DOMAIN=${_VITE_FIREBASE_AUTH_DOMAIN}"
+      - "VITE_FIREBASE_PROJECT_ID=${_VITE_FIREBASE_PROJECT_ID}"
+      - "VITE_FIREBASE_APP_ID=${_VITE_FIREBASE_APP_ID}"
+      - "VITE_FIREBASE_USE_EMULATOR=${_VITE_FIREBASE_USE_EMULATOR}"
+
+  - id: write-firebase-hosting-config
+    name: node:22
+    entrypoint: node
+    args:
+      - -e
+      - |
+        const fs = require("fs");
+        const required = [
+          "FIREBASE_HOSTING_SITE",
+          "BACKEND_CLOUD_RUN_SERVICE",
+          "BACKEND_CLOUD_RUN_REGION",
+        ];
+        for (const key of required) {
+          if (!process.env[key]) {
+            throw new Error(`${key} is required`);
+          }
+        }
+        const config = {
+          hosting: {
+            site: process.env.FIREBASE_HOSTING_SITE,
+            public: "dist",
+            ignore: ["firebase.json", "**/.*", "**/node_modules/**"],
+            rewrites: [
+              {
+                source: "/api/**",
+                run: {
+                  serviceId: process.env.BACKEND_CLOUD_RUN_SERVICE,
+                  region: process.env.BACKEND_CLOUD_RUN_REGION,
+                },
+              },
+              { source: "**", destination: "/index.html" },
+            ],
+          },
+        };
+        fs.writeFileSync("firebase.generated.staging.json", JSON.stringify(config, null, 2));
+    env:
+      - "FIREBASE_HOSTING_SITE=${_FIREBASE_HOSTING_SITE}"
+      - "BACKEND_CLOUD_RUN_SERVICE=${_BACKEND_CLOUD_RUN_SERVICE}"
+      - "BACKEND_CLOUD_RUN_REGION=${_BACKEND_CLOUD_RUN_REGION}"
+
+  - id: deploy-firebase-hosting
+    name: node:22
+    entrypoint: npx
+    args:
+      - "firebase-tools@${_FIREBASE_TOOLS_VERSION}"
+      - deploy
+      - "--project=${_VITE_FIREBASE_PROJECT_ID}"
+      - "--config=firebase.generated.staging.json"
+      - "--only=hosting"
+
+options:
+  logging: CLOUD_LOGGING_ONLY

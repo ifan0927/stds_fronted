@@ -6,7 +6,9 @@ pass.
 
 This document defines the frontend `dev` -> staging environment contract. It
 does not create Firebase Hosting, Cloud Build, Playwright, Secret Manager, or
-GCP resources by itself.
+GCP resources by itself. Operator handbook steps belong in the backend repo
+[GitHub Wiki](https://github.com/ifan0927/STDS_backend_go/wiki/Staging-v1-Operator-Handbook-2026-05-15-v1);
+this frontend document should stay a contract reference.
 
 It is aligned with the backend staging architecture baseline in
 `/Users/cheni-fan/stds_backend/docs/cloud-architecture.md`: Firebase Hosting is
@@ -334,5 +336,8 @@ database connection strings.
 
 - `docs/staging-observability-baseline.md`: minimum staging logging, dashboard,
   alert, and cost-control baseline.
+- Backend repo
+  [GitHub Wiki operator handbook](https://github.com/ifan0927/STDS_backend_go/wiki/Staging-v1-Operator-Handbook-2026-05-15-v1):
+  operator-side staging setup steps and evidence checklist.
 - `/Users/cheni-fan/stds_backend/docs/cloud-architecture.md`: backend staging
   architecture baseline.

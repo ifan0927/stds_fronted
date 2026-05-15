@@ -91,7 +91,6 @@ jobs:
           substitutions="${substitutions},_FIREBASE_HOSTING_SITE=${STAGING_FIREBASE_SITE}"
           substitutions="${substitutions},_BACKEND_CLOUD_RUN_SERVICE=${STAGING_BACKEND_CLOUD_RUN_SERVICE}"
           substitutions="${substitutions},_BACKEND_CLOUD_RUN_REGION=${STAGING_BACKEND_CLOUD_RUN_REGION}"
-          substitutions="${substitutions},_STAGING_FRONTEND_URL=${STAGING_FRONTEND_URL}"
           substitutions="${substitutions},_FIREBASE_TOOLS_VERSION=${STAGING_FIREBASE_TOOLS_VERSION:-latest}"
 
           gcloud builds submit . \

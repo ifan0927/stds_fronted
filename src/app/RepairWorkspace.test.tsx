@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
+import type React from 'react';
 import RepairWorkspace from './RepairWorkspace';
 
 const apiMocks = vi.hoisted(() => ({
@@ -31,6 +32,298 @@ vi.mock('@ant-design/icons', () => ({
   StopOutlined: () => null,
   UserSwitchOutlined: () => null,
 }));
+
+vi.mock('antd', async () => {
+  const ReactModule = await vi.importActual<typeof import('react')>('react');
+  const FormContext = ReactModule.createContext<{
+    form: {
+      values: Record<string, unknown>;
+      onFinish?: (values: Record<string, unknown>) => void;
+    };
+  } | null>(null);
+
+  function createForm() {
+    return {
+      values: {} as Record<string, unknown>,
+      onFinish: undefined as ((values: Record<string, unknown>) => void) | undefined,
+      resetFields() {
+        this.values = {};
+      },
+      setFields() {},
+      setFieldsValue(nextValues: Record<string, unknown>) {
+        this.values = { ...this.values, ...nextValues };
+      },
+      submit() {
+        this.onFinish?.(this.values);
+      },
+    };
+  }
+
+  const FormComponent = ({
+    children,
+    form,
+    onFinish,
+  }: {
+    children?: React.ReactNode;
+    form?: ReturnType<typeof createForm>;
+    onFinish?: (values: Record<string, unknown>) => void;
+  }) => {
+    const currentForm = form ?? createForm();
+    currentForm.onFinish = onFinish;
+
+    return (
+      <FormContext.Provider value={{ form: currentForm }}>
+        <form>{children}</form>
+      </FormContext.Provider>
+    );
+  };
+
+  const FormItem = ({
+    children,
+    label,
+    name,
+  }: {
+    children?: React.ReactNode;
+    label?: React.ReactNode;
+    name?: string;
+  }) => {
+    const context = ReactModule.useContext(FormContext);
+    const controlId = typeof label === 'string' ? label : undefined;
+    const child = ReactModule.isValidElement(children) && name && context
+      ? ReactModule.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
+        'aria-label': controlId,
+        defaultValue: context.form.values[name] as string | number | readonly string[] | undefined,
+        onChange: (event: { target?: { value?: unknown } }) => {
+          context.form.values[name] = event.target?.value;
+        },
+      })
+      : children;
+
+    return (
+      <label>
+        {label}
+        {child}
+      </label>
+    );
+  };
+
+  const Form = Object.assign(FormComponent, {
+    Item: FormItem,
+    useForm: () => {
+      const formRef = ReactModule.useRef<ReturnType<typeof createForm> | null>(null);
+      if (!formRef.current) {
+        formRef.current = createForm();
+      }
+
+      return [formRef.current];
+    },
+  });
+
+  const Descriptions = Object.assign(
+    ({ children }: { children?: React.ReactNode }) => <dl>{children}</dl>,
+    {
+      Item: ({ children, label }: { children?: React.ReactNode; label?: React.ReactNode }) => (
+        <div>
+          <dt>{label}</dt>
+          <dd>{children}</dd>
+        </div>
+      ),
+    },
+  );
+  const Empty = Object.assign(
+    ({ children, description }: { children?: React.ReactNode; description?: React.ReactNode }) => (
+      <div>
+        {description}
+        {children}
+      </div>
+    ),
+    { PRESENTED_IMAGE_SIMPLE: 'simple' },
+  );
+  const Input = Object.assign(
+    (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
+    {
+      TextArea: (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} />,
+    },
+  );
+  const Typography = {
+    Paragraph: ({ children }: { children?: React.ReactNode }) => <p>{children}</p>,
+    Text: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
+    Title: ({ children }: { children?: React.ReactNode }) => <h3>{children}</h3>,
+  };
+
+  return {
+    Alert: ({ description, message }: { description?: React.ReactNode; message?: React.ReactNode }) => (
+      <div>
+        <span>{message}</span>
+        <span>{description}</span>
+      </div>
+    ),
+    Button: ({
+      children,
+      disabled,
+      icon,
+      loading,
+      onClick,
+    }: {
+      children?: React.ReactNode;
+      disabled?: boolean;
+      icon?: React.ReactNode;
+      loading?: boolean;
+      onClick?: () => void;
+    }) => (
+      <button type="button" disabled={disabled || loading} onClick={onClick}>
+        {icon}
+        {children}
+      </button>
+    ),
+    Descriptions,
+    Drawer: ({
+      children,
+      footer,
+      open,
+      title,
+    }: {
+      children?: React.ReactNode;
+      footer?: React.ReactNode;
+      open?: boolean;
+      title?: React.ReactNode;
+    }) => (open ? (
+      <section role="dialog" aria-label={typeof title === 'string' ? title : undefined}>
+        <h2>{title}</h2>
+        {children}
+        {footer}
+      </section>
+    ) : null),
+    Empty,
+    Form,
+    Input,
+    Modal: ({
+      cancelText = '取消',
+      children,
+      okButtonProps,
+      okText = '確定',
+      onCancel,
+      onOk,
+      open,
+      title,
+    }: {
+      cancelText?: React.ReactNode;
+      children?: React.ReactNode;
+      okButtonProps?: { disabled?: boolean; loading?: boolean };
+      okText?: React.ReactNode;
+      onCancel?: () => void;
+      onOk?: () => void;
+      open?: boolean;
+      title?: React.ReactNode;
+    }) => (open ? (
+      <section role="dialog" aria-label={typeof title === 'string' ? title : undefined}>
+        <h2>{title}</h2>
+        {children}
+        <button type="button" onClick={onCancel}>
+          {cancelText}
+        </button>
+        <button
+          type="button"
+          disabled={okButtonProps?.disabled || okButtonProps?.loading}
+          onClick={onOk}
+        >
+          {okText}
+        </button>
+      </section>
+    ) : null),
+    Select: ({
+      'aria-label': ariaLabel,
+      disabled,
+      onChange,
+      options,
+      value,
+    }: {
+      'aria-label'?: string;
+      disabled?: boolean;
+      onChange?: (value?: string) => void;
+      options?: Array<{ label: React.ReactNode; value: string }>;
+      value?: string;
+    }) => (
+      <select
+        aria-label={ariaLabel}
+        disabled={disabled}
+        value={value ?? ''}
+        onChange={(event) => onChange?.(event.target.value || undefined)}
+      >
+        <option value="" />
+        {(options ?? []).map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    ),
+    Space: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+    Spin: () => <span>loading</span>,
+    Result: ({
+      extra,
+      subTitle,
+      title,
+    }: {
+      extra?: React.ReactNode;
+      subTitle?: React.ReactNode;
+      title?: React.ReactNode;
+    }) => (
+      <section>
+        <h2>{title}</h2>
+        <p>{subTitle}</p>
+        {extra}
+      </section>
+    ),
+    Table: ({
+      columns,
+      dataSource,
+      rowKey,
+    }: {
+      columns: Array<{
+        dataIndex?: string;
+        key?: string;
+        render?: (value: unknown, record: Record<string, unknown>, index: number) => React.ReactNode;
+      }>;
+      dataSource?: Array<Record<string, unknown>>;
+      rowKey?: ((record: Record<string, unknown>) => React.Key) | string;
+    }) => (
+      <table>
+        <tbody>
+          {(dataSource ?? []).map((record, rowIndex) => {
+            const key = typeof rowKey === 'function'
+              ? rowKey(record)
+              : rowKey
+                ? record[rowKey]
+                : rowIndex;
+
+            return (
+              <tr key={String(key)}>
+                {columns.map((column, columnIndex) => {
+                  const value = column.dataIndex ? record[column.dataIndex] : undefined;
+                  const content = column.render
+                    ? column.render(value, record, rowIndex)
+                    : value as React.ReactNode;
+
+                  return (
+                    <td key={column.key ?? column.dataIndex ?? columnIndex}>
+                      {content}
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    ),
+    Tag: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
+    Typography,
+    message: {
+      useMessage: () => [{ success: vi.fn() }, null],
+    },
+  };
+});
 
 vi.mock('../auth', () => ({
   useAuth: () => authMocks,

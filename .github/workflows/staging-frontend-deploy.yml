@@ -46,6 +46,7 @@ jobs:
       - name: Submit Cloud Build
         env:
           STAGING_GCP_PROJECT_ID: ${{ vars.STAGING_GCP_PROJECT_ID }}
+          STAGING_REGION: ${{ vars.STAGING_REGION }}
           STAGING_CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL: ${{ vars.STAGING_CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL }}
           STAGING_API_BASE_URL: ${{ vars.STAGING_API_BASE_URL }}
           STAGING_FIREBASE_API_KEY: ${{ vars.STAGING_FIREBASE_API_KEY }}
@@ -62,6 +63,7 @@ jobs:
 
           required_vars="
           STAGING_GCP_PROJECT_ID
+          STAGING_REGION
           STAGING_CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL
           STAGING_FIREBASE_API_KEY
           STAGING_FIREBASE_AUTH_DOMAIN
@@ -94,6 +96,8 @@ jobs:
 
           gcloud builds submit . \
             --project="${STAGING_GCP_PROJECT_ID}" \
+            --region="${STAGING_REGION}" \
+            --gcs-source-staging-dir="gs://${STAGING_GCP_PROJECT_ID}_cloudbuild/source" \
             --config=cloudbuild.staging.yaml \
             --service-account="projects/${STAGING_GCP_PROJECT_ID}/serviceAccounts/${STAGING_CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL}" \
             --substitutions="${substitutions}"

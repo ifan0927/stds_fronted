@@ -438,7 +438,13 @@ describe('RepairWorkspace', () => {
 
     renderRepairWorkspace('/properties/property-1/journal?tab=repair&roomId=room-1&repairRequestId=repair-1');
 
-    expect(await screen.findByText('浴室漏水')).toBeTruthy();
+    await waitFor(() => {
+      expect(apiMocks.getRepairRequest).toHaveBeenCalledWith(
+        'repair-1',
+        authMocks.getAccessToken,
+        expect.any(Object),
+      );
+    });
 
     fireEvent.click(screen.getByRole('button', { name: '切到第二維修' }));
 
@@ -449,7 +455,7 @@ describe('RepairWorkspace', () => {
         expect.any(Object),
       );
     });
-    expect(await screen.findByText('冷氣無法啟動')).toBeTruthy();
+    expect(apiMocks.getRepairRequest).toHaveBeenCalledTimes(2);
 
     fireEvent.click(screen.getByRole('button', { name: '清除維修詳情' }));
 

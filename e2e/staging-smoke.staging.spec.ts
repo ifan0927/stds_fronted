@@ -23,7 +23,7 @@ async function signIn(page: Page) {
 
   await page.getByLabel('電子信箱').fill(email);
   await page.getByLabel('密碼').fill(password);
-  await page.getByRole('button', { name: '登入' }).click();
+  await page.getByRole('button', { name: /登\s*入/ }).click();
   await syncResponse;
 }
 

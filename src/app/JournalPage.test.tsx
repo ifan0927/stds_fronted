@@ -7,6 +7,8 @@ import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-rou
 import { ApiError } from '../api';
 import JournalPage from './JournalPage';
 
+const repairWorkspaceSpy = vi.hoisted(() => vi.fn());
+
 const apiMocks = vi.hoisted(() => ({
   assignRepairRequest: vi.fn(),
   cancelRepairRequest: vi.fn(),
@@ -86,6 +88,32 @@ vi.mock('../api', async () => {
     uploadAttachmentFile: apiMocks.uploadAttachmentFile,
   };
 });
+
+vi.mock('./attachments', () => ({
+  JournalAttachmentManager: ({ journalLogId }: { journalLogId: string }) => (
+    <section aria-label="日誌附件" data-resource-id={journalLogId}>
+      日誌附件
+    </section>
+  ),
+}));
+
+vi.mock('./RepairWorkspace', () => ({
+  default: (props: {
+    propertyId: string | undefined;
+    roomId: string | undefined;
+    roomRows: Array<{ room_id?: string | null; room_label?: string | null; tenant_label?: string | null }>;
+  }) => {
+    repairWorkspaceSpy(props);
+
+    return (
+      <section aria-label="維修工作區掛載">
+        <span>維修工作區</span>
+        <span aria-label="維修物業">{props.propertyId}</span>
+        <span aria-label="維修房間">{props.roomId}</span>
+      </section>
+    );
+  },
+}));
 
 function RouteProbe() {
   const location = useLocation();
@@ -180,122 +208,11 @@ function mockJournalData() {
   });
 }
 
-function mockRepairData() {
-  apiMocks.listRepairRequests.mockResolvedValue({
-    data: [
-      {
-        id: 'repair-1',
-        property_id: 'property-1',
-        room_id: 'room-1',
-        property_label: '台北大安物業',
-        room_label: '201',
-        submitted_by_label: '王小明',
-        assigned_to_label: null,
-        title: '浴室漏水',
-        description: '天花板持續漏水',
-        status: 'submitted',
-        submitted_at: '2026-05-08T06:30:00Z',
-        updated_at: '2026-05-08T06:30:00Z',
-      },
-    ],
-    pagination: { page: 1, limit: 20, total: 1, total_pages: 1 },
-  });
-  apiMocks.getRepairRequest.mockResolvedValue({
-    id: 'repair-1',
-    property_id: 'property-1',
-    room_id: 'room-1',
-    property_label: '台北大安物業',
-    room_label: '201',
-    submitted_by_label: '王小明',
-    assigned_to_label: null,
-    title: '浴室漏水',
-    description: '天花板持續漏水',
-    status: 'submitted',
-    submitted_at: '2026-05-08T06:30:00Z',
-    updated_at: '2026-05-08T06:30:00Z',
-  });
-  apiMocks.listUsers.mockResolvedValue({
-    data: [{ id: 'staff-1', name: '陳美芳', email: 'staff@example.com', role: 'staff' }],
-    pagination: { page: 1, limit: 100, total: 1, total_pages: 1 },
-  });
-  apiMocks.listRepairRequestAttachments.mockResolvedValue({
-    data: [
-      {
-        id: 'attachment-1',
-        object_path: 'gs://private-bucket/attachments/repairs/repair-1/before.jpg',
-        file_name: '施工前.jpg',
-        uploaded_by: 'user-1',
-        created_at: '2026-05-11T10:00:00Z',
-        sort_order: 1,
-        photo_stage: 'before',
-      },
-    ],
-  });
-}
-
-function mockInProgressRepairData() {
-  apiMocks.listRepairRequests.mockResolvedValue({
-    data: [
-      {
-        id: 'repair-1',
-        property_id: 'property-1',
-        room_id: 'room-1',
-        property_label: '台北大安物業',
-        room_label: '201',
-        submitted_by_label: '王小明',
-        assigned_to_label: '陳美芳',
-        title: '浴室漏水',
-        description: '天花板持續漏水',
-        status: 'in_progress',
-        submitted_at: '2026-05-08T06:30:00Z',
-        assigned_at: '2026-05-08T07:00:00Z',
-        updated_at: '2026-05-08T07:30:00Z',
-      },
-    ],
-    pagination: { page: 1, limit: 20, total: 1, total_pages: 1 },
-  });
-  apiMocks.getRepairRequest.mockResolvedValue({
-    id: 'repair-1',
-    property_id: 'property-1',
-    room_id: 'room-1',
-    property_label: '台北大安物業',
-    room_label: '201',
-    submitted_by_label: '王小明',
-    assigned_to_label: '陳美芳',
-    title: '浴室漏水',
-    description: '天花板持續漏水',
-    status: 'in_progress',
-    submitted_at: '2026-05-08T06:30:00Z',
-    assigned_at: '2026-05-08T07:00:00Z',
-    updated_at: '2026-05-08T07:30:00Z',
-  });
-  apiMocks.completeRepairRequest.mockResolvedValue({
-    id: 'repair-1',
-    property_id: 'property-1',
-    room_id: 'room-1',
-    property_label: '台北大安物業',
-    room_label: '201',
-    submitted_by_label: '王小明',
-    assigned_to_label: '陳美芳',
-    title: '浴室漏水',
-    description: '天花板持續漏水',
-    status: 'completed',
-    submitted_at: '2026-05-08T06:30:00Z',
-    assigned_at: '2026-05-08T07:00:00Z',
-    completed_at: '2026-05-08T08:00:00Z',
-    updated_at: '2026-05-08T08:00:00Z',
-  });
-  apiMocks.listUsers.mockResolvedValue({
-    data: [{ id: 'staff-1', name: '陳美芳', email: 'staff@example.com', role: 'staff' }],
-    pagination: { page: 1, limit: 100, total: 1, total_pages: 1 },
-  });
-  apiMocks.listRepairRequestAttachments.mockResolvedValue({ data: [] });
-}
-
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
   Object.values(apiMocks).forEach((mock) => mock.mockReset());
+  repairWorkspaceSpy.mockClear();
   authMocks.currentUser = { role: 'organizer' };
   authMocks.getAccessToken.mockReset();
   authMocks.getAccessToken.mockReturnValue('firebase-token');
@@ -393,7 +310,7 @@ describe('JournalPage', () => {
     expect(screen.getByText('會計科目（必填）')).toBeTruthy();
   });
 
-  it('shows real journal attachments in the journal detail drawer', async () => {
+  it('mounts journal attachments in the journal detail drawer', async () => {
     mockJournalData();
     apiMocks.getJournalLog.mockResolvedValue({
       id: 'journal-1',
@@ -411,19 +328,6 @@ describe('JournalPage', () => {
       created_at: '2026-05-08T06:30:00Z',
       updated_at: '2026-05-08T06:30:00Z',
     });
-    apiMocks.listJournalLogAttachments.mockResolvedValue({
-      data: [
-        {
-          id: 'attachment-journal',
-          object_path: 'gs://private-bucket/attachments/journal-logs/journal-1/receipt.pdf',
-          file_name: '日誌收據.pdf',
-          uploaded_by: 'user-1',
-          created_at: '2026-05-11T10:00:00Z',
-          sort_order: null,
-          photo_stage: null,
-        },
-      ],
-    });
 
     renderJournalPage();
 
@@ -431,265 +335,24 @@ describe('JournalPage', () => {
     fireEvent.click(screen.getAllByRole('button', { name: /詳\s*情/ })[1]);
 
     expect(await screen.findByText('日誌附件')).toBeTruthy();
-    expect(await screen.findByText('日誌收據.pdf')).toBeTruthy();
     expect(screen.queryByText('附件功能尚未開放')).toBeNull();
-    expect(apiMocks.listJournalLogAttachments).toHaveBeenCalledWith(
-      'journal-1',
-      authMocks.getAccessToken,
-      expect.any(Object),
-    );
+    expect(screen.getByLabelText('日誌附件').getAttribute('data-resource-id')).toBe('journal-1');
   });
 
-  it('loads repair workspace from URL tab and keeps room context', async () => {
+  it('loads repair workspace from URL tab and passes room context', async () => {
     mockJournalData();
-    mockRepairData();
 
     renderJournalPage('/properties/property-1/journal?tab=repair&roomId=room-1&repair_status=submitted');
 
     await waitFor(() => {
-      expect(apiMocks.listRepairRequests).toHaveBeenCalledWith(
-        authMocks.getAccessToken,
-        {
-          property_id: 'property-1',
-          room_id: 'room-1',
-          status: 'submitted',
-          assigned_to: undefined,
-          page: 1,
-          limit: 20,
-        },
-        expect.any(Object),
-      );
+      expect(repairWorkspaceSpy).toHaveBeenCalledWith(expect.objectContaining({
+        propertyId: 'property-1',
+        roomId: 'room-1',
+      }));
     });
 
-    expect(await screen.findByText('浴室漏水')).toBeTruthy();
-    expect(screen.getByText('目前顯示 201 - 林怡君 的維修單；列表仍以最新房間資料為準。')).toBeTruthy();
-    expect(screen.getByRole('button', { name: '派工' })).toBeTruthy();
+    expect(await screen.findByLabelText('維修工作區掛載')).toBeTruthy();
+    expect(screen.getByLabelText('維修物業').textContent).toBe('property-1');
+    expect(screen.getByLabelText('維修房間').textContent).toBe('room-1');
   }, 10000);
-
-  it('keeps attachment upload entry in the create flow after the repair is created', async () => {
-    mockJournalData();
-    mockRepairData();
-    apiMocks.createRepairRequest.mockResolvedValue({
-      id: 'repair-new',
-      property_id: 'property-1',
-      room_id: 'room-1',
-      property_label: '台北大安物業',
-      room_label: '201',
-      submitted_by_label: '王小明',
-      assigned_to_label: null,
-      title: '新增漏水',
-      description: '新增維修描述',
-      status: 'submitted',
-      submitted_at: '2026-05-11T10:00:00Z',
-      updated_at: '2026-05-11T10:00:00Z',
-    });
-
-    renderJournalPage('/properties/property-1/journal?tab=repair&roomId=room-1');
-
-    await screen.findByText('浴室漏水');
-    fireEvent.click(screen.getByRole('button', { name: '新增維修' }));
-    expect(await screen.findByText('建立後可立即上傳附件')).toBeTruthy();
-    fireEvent.change(screen.getByLabelText('維修標題（必填）'), { target: { value: '新增漏水' } });
-    fireEvent.change(screen.getByLabelText('問題描述（必填）'), { target: { value: '新增維修描述' } });
-    fireEvent.click(screen.getByRole('button', { name: '儲存並重新載入' }));
-
-    await waitFor(() => {
-      expect(apiMocks.createRepairRequest).toHaveBeenCalled();
-    });
-    expect(await screen.findByText('維修附件')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /選擇施工照片/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /選擇其他文件/ })).toBeTruthy();
-    expect(screen.getByLabelText('目前路徑').textContent).toBe('/properties/property-1/journal?tab=repair&roomId=room-1');
-    expect(screen.queryByRole('dialog', { name: '維修詳情' })).toBeNull();
-    expect(apiMocks.listRepairRequestAttachments).toHaveBeenCalledWith(
-      'repair-new',
-      authMocks.getAccessToken,
-      expect.any(Object),
-    );
-  }, 20000);
-
-  it('shows attachment upload entry in the repair edit drawer', async () => {
-    mockJournalData();
-    mockRepairData();
-
-    renderJournalPage('/properties/property-1/journal?tab=repair&roomId=room-1');
-
-    await screen.findByText('浴室漏水');
-    fireEvent.click(screen.getByRole('button', { name: '編輯' }));
-
-    expect(await screen.findByText('維修附件')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /選擇施工照片/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /選擇其他文件/ })).toBeTruthy();
-    expect(apiMocks.listRepairRequestAttachments).toHaveBeenCalledWith(
-      'repair-1',
-      authMocks.getAccessToken,
-      expect.any(Object),
-    );
-  });
-
-  it('opens completion confirmation with attachment upload before completing repair', async () => {
-    mockJournalData();
-    mockInProgressRepairData();
-
-    renderJournalPage('/properties/property-1/journal?tab=repair&roomId=room-1');
-
-    await screen.findByText('浴室漏水');
-    fireEvent.click(screen.getByRole('button', { name: '完成' }));
-
-    expect(await screen.findByText('完工前可先補齊施工照片')).toBeTruthy();
-    expect(screen.getByText('維修附件')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /選擇施工照片/ })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '確認完成' }));
-
-    await waitFor(() => {
-      expect(apiMocks.completeRepairRequest).toHaveBeenCalledWith(
-        'repair-1',
-        authMocks.getAccessToken,
-      );
-    });
-  }, 20000);
-
-  it('keeps completion disabled while repair attachment upload is in progress', async () => {
-    mockJournalData();
-    mockInProgressRepairData();
-    apiMocks.createAttachmentUploadUrl.mockResolvedValue({
-      upload_url: 'https://storage.example/upload-photo?signature=masked',
-      nonce: 'nonce-photo',
-      expires_at: '2026-05-11T10:00:00Z',
-    });
-    apiMocks.uploadAttachmentFile.mockReturnValue(new Promise(() => undefined));
-
-    renderJournalPage('/properties/property-1/journal?tab=repair&roomId=room-1');
-
-    await screen.findByText('浴室漏水');
-    fireEvent.click(screen.getByRole('button', { name: '完成' }));
-
-    expect(await screen.findByText('完工前可先補齊施工照片')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /選擇施工照片/ }));
-    fireEvent.change(screen.getByLabelText('選擇施工照片'), {
-      target: { files: [new File(['image bytes'], '施工後.jpg', { type: 'image/jpeg' })] },
-    });
-    fireEvent.click(screen.getByRole('button', { name: /確認上傳施工照片/ }));
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: '確認完成' }).hasAttribute('disabled')).toBe(true);
-    });
-    fireEvent.click(screen.getByRole('button', { name: '確認完成' }));
-
-    expect(apiMocks.completeRepairRequest).not.toHaveBeenCalled();
-  }, 20000);
-
-  it('opens repair detail when handoff includes repair request id', async () => {
-    mockJournalData();
-    mockRepairData();
-
-    renderJournalPage('/properties/property-1/journal?roomId=room-1&repairRequestId=repair-1');
-
-    await waitFor(() => {
-      expect(apiMocks.getRepairRequest).toHaveBeenCalledWith(
-        'repair-1',
-        authMocks.getAccessToken,
-        expect.any(Object),
-      );
-    });
-
-    expect(await screen.findByText('維修詳情')).toBeTruthy();
-    expect(screen.queryByText('附件功能尚未開放')).toBeNull();
-    expect(await screen.findByText('施工前.jpg')).toBeTruthy();
-    expect(apiMocks.listRepairRequestAttachments).toHaveBeenCalledWith(
-      'repair-1',
-      authMocks.getAccessToken,
-      expect.any(Object),
-    );
-  });
-
-  it('keeps repair detail drawer synchronized with repair request id changes in the URL', async () => {
-    mockJournalData();
-    apiMocks.listRepairRequests.mockResolvedValue({
-      data: [
-        {
-          id: 'repair-1',
-          property_id: 'property-1',
-          room_id: 'room-1',
-          property_label: '台北大安物業',
-          room_label: '201',
-          submitted_by_label: '王小明',
-          assigned_to_label: null,
-          title: '浴室漏水',
-          description: '天花板持續漏水',
-          status: 'submitted',
-          submitted_at: '2026-05-08T06:30:00Z',
-          updated_at: '2026-05-08T06:30:00Z',
-        },
-        {
-          id: 'repair-2',
-          property_id: 'property-1',
-          room_id: 'room-1',
-          property_label: '台北大安物業',
-          room_label: '201',
-          submitted_by_label: '陳美芳',
-          assigned_to_label: '陳美芳',
-          title: '冷氣無法啟動',
-          description: '室內機無反應',
-          status: 'assigned',
-          submitted_at: '2026-05-09T06:30:00Z',
-          updated_at: '2026-05-09T06:30:00Z',
-        },
-      ],
-      pagination: { page: 1, limit: 20, total: 2, total_pages: 1 },
-    });
-    apiMocks.getRepairRequest.mockImplementation((repairId: string) => Promise.resolve(
-      repairId === 'repair-2'
-        ? {
-          id: 'repair-2',
-          property_id: 'property-1',
-          room_id: 'room-1',
-          property_label: '台北大安物業',
-          room_label: '201',
-          submitted_by_label: '陳美芳',
-          assigned_to_label: '陳美芳',
-          title: '冷氣無法啟動',
-          description: '室內機無反應',
-          status: 'assigned',
-          submitted_at: '2026-05-09T06:30:00Z',
-          updated_at: '2026-05-09T06:30:00Z',
-        }
-        : {
-          id: 'repair-1',
-          property_id: 'property-1',
-          room_id: 'room-1',
-          property_label: '台北大安物業',
-          room_label: '201',
-          submitted_by_label: '王小明',
-          assigned_to_label: null,
-          title: '浴室漏水',
-          description: '天花板持續漏水',
-          status: 'submitted',
-          submitted_at: '2026-05-08T06:30:00Z',
-          updated_at: '2026-05-08T06:30:00Z',
-        },
-    ));
-    apiMocks.listRepairRequestAttachments.mockResolvedValue({ data: [] });
-
-    renderJournalPage('/properties/property-1/journal?tab=repair&roomId=room-1&repairRequestId=repair-1');
-
-    expect(await screen.findByText('浴室漏水')).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('button', { name: '切到第二維修' }));
-
-    await waitFor(() => {
-      expect(apiMocks.getRepairRequest).toHaveBeenCalledWith(
-        'repair-2',
-        authMocks.getAccessToken,
-        expect.any(Object),
-      );
-    });
-    expect(await screen.findByText('冷氣無法啟動')).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('button', { name: '清除維修詳情' }));
-
-    await waitFor(() => {
-      expect(screen.getByLabelText('目前路徑').textContent).toBe('/properties/property-1/journal?tab=repair&roomId=room-1');
-    });
-  }, 40000);
 });

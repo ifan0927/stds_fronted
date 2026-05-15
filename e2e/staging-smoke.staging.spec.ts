@@ -47,5 +47,5 @@ test('staging smoke verifies auth, property dashboard, and room inventory', asyn
   await page.getByRole('link', { name: /房間管理/ }).first().click();
   await expect(page).toHaveURL(/\/properties\/[^/?#]+\/rooms(?:[?#].*)?$/);
   await expect(page.getByRole('heading', { name: '房間清冊' })).toBeVisible();
-  await expect(page.getByLabel('房況')).toBeVisible();
+  await expect(page.getByRole('combobox', { name: '房況' })).toBeVisible();
 });

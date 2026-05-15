@@ -37,7 +37,7 @@ steps:
   - id: test
     name: node:22
     entrypoint: npm
-    args: ["run", "test"]
+    args: ["run", "test", "--", "--maxWorkers=2"]
 
   - id: build
     name: node:22

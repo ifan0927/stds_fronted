@@ -263,6 +263,66 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/public/brand/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 取得公開品牌基本資料
+         * @description Public readonly brand profile for the brand site build-time data fetch. No Firebase JWT is required.
+         */
+        get: operations["getPublicBrandProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/brand/faqs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 列出公開品牌 FAQ
+         * @description Public readonly active brand FAQ items for the brand site build-time data fetch. No Firebase JWT is required.
+         */
+        get: operations["listPublicBrandFAQs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/properties/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 列出公開物業空房狀態
+         * @description Public readonly property availability for the brand site build-time data fetch. No Firebase JWT is required.
+         */
+        get: operations["listPublicPropertyAvailability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/properties": {
         parameters: {
             query?: never;
@@ -1791,6 +1851,36 @@ export type components = {
         };
         DeactivateBrandFAQItemRequest: {
             version: number;
+        };
+        PublicBrandProfile: {
+            brand_name: string;
+            contact_phone: string | null;
+            /** Format: email */
+            contact_email: string | null;
+            contact_address: string | null;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        PublicBrandProfileResponse: {
+            profile: components["schemas"]["PublicBrandProfile"] | null;
+        };
+        PublicBrandFAQItem: {
+            question: string;
+            answer: string;
+            sort_order: number;
+        };
+        PublicBrandFAQListResponse: {
+            items: components["schemas"]["PublicBrandFAQItem"][];
+        };
+        PublicPropertyAvailabilityItem: {
+            /** Format: uuid */
+            property_id: string;
+            property_public_name: string;
+            address: string;
+            has_vacant_room: boolean;
+        };
+        PublicPropertyAvailabilityListResponse: {
+            items: components["schemas"]["PublicPropertyAvailabilityItem"][];
         };
         PropertyResponse: {
             /** Format: uuid */
@@ -3559,6 +3649,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getPublicBrandProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 公開品牌基本資料 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicBrandProfileResponse"];
+                };
+            };
+        };
+    };
+    listPublicBrandFAQs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 公開品牌 FAQ 清單 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicBrandFAQListResponse"];
+                };
+            };
+        };
+    };
+    listPublicPropertyAvailability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 公開物業空房狀態清單 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicPropertyAvailabilityListResponse"];
                 };
             };
         };

@@ -216,7 +216,7 @@ Frontend work should start from GitHub issues. Issues are expected to define goa
 
 During active feature development, do not add CI just to slow down iteration. Use implementation verification, PR code review, and same-issue test follow-up for quality hardening. E2E should be added later for high-value flows once the core screens and harness shape are stable.
 
-Frontend E2E is not part of the feature branch -> `dev` PR gate initially. It belongs to the later `dev` -> `staging` branch promotion line described in `docs/staging-environment-contract.md`. The first repo-side staging deploy entry points are `.github/workflows/staging-frontend-deploy.yml` and `cloudbuild.staging.yaml`.
+Frontend E2E is not part of the feature branch -> `dev` PR gate initially. It belongs to the later `dev` -> `staging` branch promotion line described in `docs/staging-environment-contract.md`. The current repo-side staging deploy entry points are `.github/workflows/staging-frontend-deploy.yml` and `cloudbuild.staging.deploy.yaml`.
 
 For legacy refresh areas, first survey the old page, map it to backend OpenAPI boundaries, create a phase backlog, then produce a reviewable UI design template before implementation. A standalone HTML template is acceptable as the review artifact before the React scaffold or final component structure exists.
 

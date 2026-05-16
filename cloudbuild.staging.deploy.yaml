@@ -1,0 +1,81 @@
+substitutions:
+  _FIREBASE_PROJECT_ID: ""
+  _FIREBASE_HOSTING_SITE: ""
+  _BACKEND_CLOUD_RUN_SERVICE: ""
+  _BACKEND_CLOUD_RUN_REGION: ""
+  _FIREBASE_TOOLS_VERSION: latest
+  _DEPLOY_SOURCE_SHA: ""
+  _GITHUB_RUN_ID: ""
+
+steps:
+  - id: verify-deploy-artifact
+    name: node:22
+    entrypoint: node
+    args:
+      - -e
+      - |
+        const fs = require("fs");
+        const required = [
+          "dist/index.html",
+        ];
+        for (const path of required) {
+          if (!fs.existsSync(path)) {
+            throw new Error(`${path} is required for deploy-only Cloud Build`);
+          }
+        }
+
+  - id: write-firebase-hosting-config
+    name: node:22
+    entrypoint: node
+    args:
+      - -e
+      - |
+        const fs = require("fs");
+        const required = [
+          "FIREBASE_HOSTING_SITE",
+          "BACKEND_CLOUD_RUN_SERVICE",
+          "BACKEND_CLOUD_RUN_REGION",
+        ];
+        for (const key of required) {
+          if (!process.env[key]) {
+            throw new Error(`${key} is required`);
+          }
+        }
+        const config = {
+          hosting: {
+            site: process.env.FIREBASE_HOSTING_SITE,
+            public: "dist",
+            ignore: ["firebase.json", "**/.*", "**/node_modules/**"],
+            rewrites: [
+              {
+                source: "/api/**",
+                run: {
+                  serviceId: process.env.BACKEND_CLOUD_RUN_SERVICE,
+                  region: process.env.BACKEND_CLOUD_RUN_REGION,
+                },
+              },
+              { source: "**", destination: "/index.html" },
+            ],
+          },
+        };
+        fs.writeFileSync("firebase.generated.staging.json", JSON.stringify(config, null, 2));
+    env:
+      - "FIREBASE_HOSTING_SITE=${_FIREBASE_HOSTING_SITE}"
+      - "BACKEND_CLOUD_RUN_SERVICE=${_BACKEND_CLOUD_RUN_SERVICE}"
+      - "BACKEND_CLOUD_RUN_REGION=${_BACKEND_CLOUD_RUN_REGION}"
+
+  - id: deploy-firebase-hosting
+    name: node:22
+    entrypoint: npx
+    args:
+      - "-y"
+      - "firebase-tools@${_FIREBASE_TOOLS_VERSION}"
+      - deploy
+      - "--project=${_FIREBASE_PROJECT_ID}"
+      - "--config=firebase.generated.staging.json"
+      - "--only=hosting"
+      - "-m"
+      - "staging frontend ${_DEPLOY_SOURCE_SHA} github-run ${_GITHUB_RUN_ID}"
+
+options:
+  logging: CLOUD_LOGGING_ONLY

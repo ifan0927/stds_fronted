@@ -1,6 +1,6 @@
 # Frontend Staging Environment Contract
 
-Status: repo-side contract for #104, #105, #106, #107, and #108.
+Status: repo-side contract for #104, #105, #106, #107, #108, and #120.
 Operator-side Firebase/GCP setup happens later as one coordinated staging setup
 pass.
 
@@ -32,6 +32,28 @@ Out of scope for this combined repo-side pass:
 - Firebase preview-channel PR environments.
 - Backend Cloud Run, Cloud SQL, migration, or scheduler setup.
 - Browser trace artifact upload before a redaction policy exists.
+
+## Branch Governance
+
+The frontend `staging` branch is a deployment-intent branch, not a development
+branch. Feature work continues to target `dev` first.
+
+Normal staging promotion must use a `dev` -> `staging` pull request. Direct
+pushes to `staging` are not part of normal operation, and this project stage
+does not define a break-glass direct-push path.
+
+Pull requests targeting `staging` must run the frontend PR CI gate before they
+can merge. The required status check name is:
+
+```text
+Frontend checks
+```
+
+The GitHub `staging` Environment approval gate is only a deploy approval gate.
+It is not a substitute for PR CI, and it should run after predeploy checks in
+the deploy workflow. Automatic branch-triggered deploys, deploy job splitting,
+workflow concurrency, and rollback behavior belong to follow-up deploy workflow
+issues rather than this branch-governance issue.
 
 ## Pipeline Placement
 
@@ -319,6 +341,12 @@ should be rerun and non-secret evidence attached to the issue.
 
 After operator-side setup, attach only non-secret evidence to the issue or PR:
 
+- `staging` branch existence and source commit.
+- Branch ruleset or branch protection summary for `refs/heads/staging`.
+- Required staging PR status check names, including `Frontend checks`.
+- GitHub `staging` Environment required reviewer summary.
+- Example or dry-run evidence that a pull request targeting `staging` runs
+  frontend PR CI.
 - Firebase/GCP project id and Firebase Hosting site/target names.
 - Stable staging frontend URL.
 - Selected `VITE_API_BASE_URL` value.

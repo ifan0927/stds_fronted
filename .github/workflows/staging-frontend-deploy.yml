@@ -1,14 +1,17 @@
 name: Staging Frontend Deploy
 
 on:
+  push:
+    branches:
+      - staging
   workflow_dispatch:
     inputs:
       backend_ref:
         description: Backend ref used only for OpenAPI check.
         required: true
-        default: dev
+        default: staging
       run_e2e:
-        description: Run Playwright staging E2E after deploy.
+        description: Run optional Tier 2 Playwright staging E2E after Tier 1 smoke.
         required: true
         type: boolean
         default: false
@@ -17,11 +20,21 @@ permissions:
   contents: read
   id-token: write
 
+concurrency:
+  group: staging-frontend-deploy
+  cancel-in-progress: false
+
 jobs:
-  deploy:
-    name: Submit frontend staging Cloud Build
+  predeploy:
+    name: Predeploy frontend staging checks
     runs-on: ubuntu-latest
-    environment: staging
+    env:
+      VITE_API_BASE_URL: /api/v1
+      VITE_FIREBASE_API_KEY: predeploy-placeholder
+      VITE_FIREBASE_AUTH_DOMAIN: predeploy-placeholder.firebaseapp.com
+      VITE_FIREBASE_PROJECT_ID: predeploy-placeholder
+      VITE_FIREBASE_APP_ID: predeploy-placeholder
+      VITE_FIREBASE_USE_EMULATOR: "false"
 
     steps:
       - name: Checkout frontend
@@ -31,8 +44,114 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: ifan0927/STDS_backend_go
-          ref: ${{ github.event.inputs.backend_ref || 'dev' }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.backend_ref || 'staging' }}
           path: backend-openapi
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Check predeploy build-time invariants
+        run: |
+          set -euo pipefail
+
+          required_vars="
+          VITE_API_BASE_URL
+          VITE_FIREBASE_API_KEY
+          VITE_FIREBASE_AUTH_DOMAIN
+          VITE_FIREBASE_PROJECT_ID
+          VITE_FIREBASE_APP_ID
+          VITE_FIREBASE_USE_EMULATOR
+          "
+          for name in ${required_vars}; do
+            if [ -z "${!name}" ]; then
+              echo "${name} is required" >&2
+              exit 1
+            fi
+          done
+
+          if [ "${VITE_API_BASE_URL}" != "/api/v1" ]; then
+            echo "VITE_API_BASE_URL must stay same-origin /api/v1 for staging" >&2
+            exit 1
+          fi
+
+          if [ "${VITE_FIREBASE_USE_EMULATOR}" != "false" ]; then
+            echo "VITE_FIREBASE_USE_EMULATOR must be false for staging" >&2
+            exit 1
+          fi
+
+      - name: Check OpenAPI contract
+        env:
+          OPENAPI_SPEC_PATH: backend-openapi/docs/spec/openapi.yaml
+        run: npm run openapi:check
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test -- --maxWorkers=2
+
+      - name: Build
+        run: npm run build
+
+      - name: Check built staging artifact
+        run: |
+          set -euo pipefail
+
+          test -f dist/index.html
+          test -d dist/assets
+
+          if grep -R "localhost:9099" dist >/dev/null; then
+            echo "Staging build must not reference the Firebase Auth emulator" >&2
+            exit 1
+          fi
+
+  deploy:
+    name: Deploy frontend staging
+    runs-on: ubuntu-latest
+    needs: predeploy
+    environment: staging
+    env:
+      FIREBASE_TOOLS_VERSION: ${{ vars.STAGING_FIREBASE_TOOLS_VERSION || 'latest' }}
+
+    steps:
+      - name: Checkout frontend
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Check staging auth environment
+        env:
+          STAGING_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.STAGING_WORKLOAD_IDENTITY_PROVIDER }}
+          STAGING_GITHUB_DEPLOY_SERVICE_ACCOUNT: ${{ vars.STAGING_GITHUB_DEPLOY_SERVICE_ACCOUNT }}
+        run: |
+          set -euo pipefail
+
+          required_vars="
+          STAGING_WORKLOAD_IDENTITY_PROVIDER
+          STAGING_GITHUB_DEPLOY_SERVICE_ACCOUNT
+          "
+          for name in ${required_vars}; do
+            if [ -z "${!name}" ]; then
+              echo "${name} is required" >&2
+              exit 1
+            fi
+          done
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -43,7 +162,7 @@ jobs:
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Submit Cloud Build
+      - name: Check staging deploy environment
         env:
           STAGING_GCP_PROJECT_ID: ${{ vars.STAGING_GCP_PROJECT_ID }}
           STAGING_REGION: ${{ vars.STAGING_REGION }}
@@ -57,7 +176,6 @@ jobs:
           STAGING_BACKEND_CLOUD_RUN_SERVICE: ${{ vars.STAGING_BACKEND_CLOUD_RUN_SERVICE }}
           STAGING_BACKEND_CLOUD_RUN_REGION: ${{ vars.STAGING_BACKEND_CLOUD_RUN_REGION }}
           STAGING_FRONTEND_URL: ${{ vars.STAGING_FRONTEND_URL }}
-          STAGING_FIREBASE_TOOLS_VERSION: ${{ vars.STAGING_FIREBASE_TOOLS_VERSION }}
         run: |
           set -euo pipefail
 
@@ -65,6 +183,7 @@ jobs:
           STAGING_GCP_PROJECT_ID
           STAGING_REGION
           STAGING_CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL
+          STAGING_API_BASE_URL
           STAGING_FIREBASE_API_KEY
           STAGING_FIREBASE_AUTH_DOMAIN
           STAGING_FIREBASE_PROJECT_ID
@@ -81,43 +200,271 @@ jobs:
             fi
           done
 
-          substitutions="_OPENAPI_SPEC_PATH=backend-openapi/docs/spec/openapi.yaml"
-          substitutions="${substitutions},_VITE_API_BASE_URL=${STAGING_API_BASE_URL:-/api/v1}"
-          substitutions="${substitutions},_VITE_FIREBASE_API_KEY=${STAGING_FIREBASE_API_KEY}"
-          substitutions="${substitutions},_VITE_FIREBASE_AUTH_DOMAIN=${STAGING_FIREBASE_AUTH_DOMAIN}"
-          substitutions="${substitutions},_VITE_FIREBASE_PROJECT_ID=${STAGING_FIREBASE_PROJECT_ID}"
-          substitutions="${substitutions},_VITE_FIREBASE_APP_ID=${STAGING_FIREBASE_APP_ID}"
-          substitutions="${substitutions},_VITE_FIREBASE_USE_EMULATOR=false"
+          if [ "${STAGING_API_BASE_URL}" != "/api/v1" ]; then
+            echo "STAGING_API_BASE_URL must stay same-origin /api/v1 for staging" >&2
+            exit 1
+          fi
+
+      - name: Build approved staging artifact
+        env:
+          VITE_API_BASE_URL: ${{ vars.STAGING_API_BASE_URL }}
+          VITE_FIREBASE_API_KEY: ${{ vars.STAGING_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.STAGING_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.STAGING_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_APP_ID: ${{ vars.STAGING_FIREBASE_APP_ID }}
+          VITE_FIREBASE_USE_EMULATOR: "false"
+        run: npm run build
+
+      - name: Check approved staging artifact
+        run: |
+          set -euo pipefail
+
+          test -f dist/index.html
+          test -d dist/assets
+
+          if grep -R "localhost:9099" dist >/dev/null; then
+            echo "Staging build must not reference the Firebase Auth emulator" >&2
+            exit 1
+          fi
+
+      - name: Capture pre-deploy Firebase Hosting version
+        id: predeploy_hosting
+        env:
+          STAGING_GCP_PROJECT_ID: ${{ vars.STAGING_GCP_PROJECT_ID }}
+          STAGING_FIREBASE_SITE: ${{ vars.STAGING_FIREBASE_SITE }}
+        run: |
+          set -euo pipefail
+
+          token="$(gcloud auth print-access-token)"
+          url="https://firebasehosting.googleapis.com/v1beta1/sites/${STAGING_FIREBASE_SITE}/channels/live/releases?pageSize=1"
+          status="$(curl -sS -o /tmp/predeploy-hosting-release.json -w "%{http_code}" -H "Authorization: Bearer ${token}" "${url}" || true)"
+
+          if [ "${status}" != "200" ]; then
+            echo "Could not capture pre-deploy Hosting release; HTTP ${status}" >&2
+            echo "PRE_DEPLOY_HOSTING_VERSION=" >> "$GITHUB_ENV"
+            echo "PRE_DEPLOY_HOSTING_RELEASE=" >> "$GITHUB_ENV"
+            echo "version=" >> "$GITHUB_OUTPUT"
+            echo "release=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          node <<'NODE'
+          const fs = require('fs');
+          const data = JSON.parse(fs.readFileSync('/tmp/predeploy-hosting-release.json', 'utf8'));
+          const release = data.releases?.[0];
+          const releaseName = release?.name || '';
+          const versionName = release?.version?.name || '';
+          const versionId = versionName.split('/versions/')[1] || '';
+          fs.appendFileSync(process.env.GITHUB_ENV, `PRE_DEPLOY_HOSTING_RELEASE=${releaseName}\n`);
+          fs.appendFileSync(process.env.GITHUB_ENV, `PRE_DEPLOY_HOSTING_VERSION=${versionId}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `release=${releaseName}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `version=${versionId}\n`);
+          NODE
+
+      - name: Submit deploy-only Cloud Build
+        env:
+          STAGING_GCP_PROJECT_ID: ${{ vars.STAGING_GCP_PROJECT_ID }}
+          STAGING_REGION: ${{ vars.STAGING_REGION }}
+          STAGING_CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL: ${{ vars.STAGING_CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL }}
+          STAGING_FIREBASE_PROJECT_ID: ${{ vars.STAGING_FIREBASE_PROJECT_ID }}
+          STAGING_FIREBASE_SITE: ${{ vars.STAGING_FIREBASE_SITE }}
+          STAGING_BACKEND_CLOUD_RUN_SERVICE: ${{ vars.STAGING_BACKEND_CLOUD_RUN_SERVICE }}
+          STAGING_BACKEND_CLOUD_RUN_REGION: ${{ vars.STAGING_BACKEND_CLOUD_RUN_REGION }}
+        run: |
+          set -euo pipefail
+
+          substitutions="_FIREBASE_PROJECT_ID=${STAGING_FIREBASE_PROJECT_ID}"
           substitutions="${substitutions},_FIREBASE_HOSTING_SITE=${STAGING_FIREBASE_SITE}"
           substitutions="${substitutions},_BACKEND_CLOUD_RUN_SERVICE=${STAGING_BACKEND_CLOUD_RUN_SERVICE}"
           substitutions="${substitutions},_BACKEND_CLOUD_RUN_REGION=${STAGING_BACKEND_CLOUD_RUN_REGION}"
-          substitutions="${substitutions},_FIREBASE_TOOLS_VERSION=${STAGING_FIREBASE_TOOLS_VERSION:-latest}"
+          substitutions="${substitutions},_FIREBASE_TOOLS_VERSION=${FIREBASE_TOOLS_VERSION}"
+          substitutions="${substitutions},_DEPLOY_SOURCE_SHA=${GITHUB_SHA}"
+          substitutions="${substitutions},_GITHUB_RUN_ID=${GITHUB_RUN_ID}"
 
           gcloud builds submit . \
             --project="${STAGING_GCP_PROJECT_ID}" \
             --region="${STAGING_REGION}" \
             --gcs-source-staging-dir="gs://${STAGING_GCP_PROJECT_ID}_cloudbuild/source" \
-            --config=cloudbuild.staging.yaml \
+            --config=cloudbuild.staging.deploy.yaml \
             --service-account="projects/${STAGING_GCP_PROJECT_ID}/serviceAccounts/${STAGING_CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL}" \
             --substitutions="${substitutions}"
 
-      - name: Set up Node for staging E2E
-        if: ${{ inputs.run_e2e }}
+      - name: Capture deployed Firebase Hosting version
+        id: deployed_hosting
+        env:
+          STAGING_GCP_PROJECT_ID: ${{ vars.STAGING_GCP_PROJECT_ID }}
+          STAGING_FIREBASE_SITE: ${{ vars.STAGING_FIREBASE_SITE }}
+        run: |
+          set -euo pipefail
+
+          token="$(gcloud auth print-access-token)"
+          url="https://firebasehosting.googleapis.com/v1beta1/sites/${STAGING_FIREBASE_SITE}/channels/live/releases?pageSize=1"
+          status="$(curl -sS -o /tmp/deployed-hosting-release.json -w "%{http_code}" -H "Authorization: Bearer ${token}" "${url}" || true)"
+
+          if [ "${status}" != "200" ]; then
+            echo "Could not capture deployed Hosting release; HTTP ${status}" >&2
+            echo "DEPLOYED_HOSTING_VERSION=" >> "$GITHUB_ENV"
+            echo "DEPLOYED_HOSTING_RELEASE=" >> "$GITHUB_ENV"
+            echo "version=" >> "$GITHUB_OUTPUT"
+            echo "release=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          node <<'NODE'
+          const fs = require('fs');
+          const data = JSON.parse(fs.readFileSync('/tmp/deployed-hosting-release.json', 'utf8'));
+          const release = data.releases?.[0];
+          const releaseName = release?.name || '';
+          const versionName = release?.version?.name || '';
+          const versionId = versionName.split('/versions/')[1] || '';
+          fs.appendFileSync(process.env.GITHUB_ENV, `DEPLOYED_HOSTING_RELEASE=${releaseName}\n`);
+          fs.appendFileSync(process.env.GITHUB_ENV, `DEPLOYED_HOSTING_VERSION=${versionId}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `release=${releaseName}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `version=${versionId}\n`);
+          NODE
+
+      - name: Run mandatory Tier 1 staging smoke
+        id: tier1_smoke
+        continue-on-error: true
+        env:
+          STAGING_FRONTEND_URL: ${{ vars.STAGING_FRONTEND_URL }}
+          STAGING_TIER1_SMOKE_URL: ${{ vars.STAGING_TIER1_SMOKE_URL }}
+        run: |
+          set -euo pipefail
+
+          smoke_url="${STAGING_TIER1_SMOKE_URL:-${STAGING_FRONTEND_URL}}"
+          echo "tier1_smoke_url=${smoke_url}"
+
+          html="$(mktemp)"
+          curl -fsSL --retry 3 --retry-delay 5 "${smoke_url%/}/" -o "${html}"
+          grep -q '<div id="root"' "${html}"
+
+          assets="$(grep -Eo '(src|href)="/assets/[^"]+' "${html}" | cut -d'"' -f2)"
+          if [ -z "${assets}" ]; then
+            echo "No frontend assets found in staging HTML" >&2
+            exit 1
+          fi
+
+          for asset in ${assets}; do
+            curl -fsSL --retry 3 --retry-delay 5 "${smoke_url%/}${asset}" -o /dev/null
+          done
+
+      - name: Roll back Firebase Hosting after Tier 1 smoke failure
+        id: rollback
+        continue-on-error: true
+        if: ${{ steps.tier1_smoke.outcome == 'failure' && steps.predeploy_hosting.outputs.version != '' }}
+        env:
+          STAGING_FIREBASE_PROJECT_ID: ${{ vars.STAGING_FIREBASE_PROJECT_ID }}
+          STAGING_FIREBASE_SITE: ${{ vars.STAGING_FIREBASE_SITE }}
+        run: |
+          set -euo pipefail
+
+          npx -y "firebase-tools@${FIREBASE_TOOLS_VERSION}" hosting:clone \
+            "${STAGING_FIREBASE_SITE}:@${{ steps.predeploy_hosting.outputs.version }}" \
+            "${STAGING_FIREBASE_SITE}:live" \
+            --project="${STAGING_FIREBASE_PROJECT_ID}" \
+            --non-interactive
+
+      - name: Verify Firebase Hosting rollback target
+        id: rollback_verify
+        continue-on-error: true
+        if: ${{ steps.tier1_smoke.outcome == 'failure' && steps.predeploy_hosting.outputs.version != '' && steps.rollback.outcome == 'success' }}
+        env:
+          STAGING_FIREBASE_SITE: ${{ vars.STAGING_FIREBASE_SITE }}
+          EXPECTED_HOSTING_VERSION: ${{ steps.predeploy_hosting.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          token="$(gcloud auth print-access-token)"
+          url="https://firebasehosting.googleapis.com/v1beta1/sites/${STAGING_FIREBASE_SITE}/channels/live/releases?pageSize=1"
+          status="$(curl -sS -o /tmp/rollback-hosting-release.json -w "%{http_code}" -H "Authorization: Bearer ${token}" "${url}" || true)"
+
+          if [ "${status}" != "200" ]; then
+            echo "Could not capture rollback Hosting release; HTTP ${status}" >&2
+            exit 1
+          fi
+
+          node <<'NODE'
+          const fs = require('fs');
+          const data = JSON.parse(fs.readFileSync('/tmp/rollback-hosting-release.json', 'utf8'));
+          const release = data.releases?.[0];
+          const releaseName = release?.name || '';
+          const versionName = release?.version?.name || '';
+          const versionId = versionName.split('/versions/')[1] || '';
+          fs.appendFileSync(process.env.GITHUB_ENV, `ROLLBACK_HOSTING_RELEASE=${releaseName}\n`);
+          fs.appendFileSync(process.env.GITHUB_ENV, `ROLLBACK_HOSTING_VERSION=${versionId}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `release=${releaseName}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `version=${versionId}\n`);
+          if (versionId !== process.env.EXPECTED_HOSTING_VERSION) {
+            console.error(`Rollback live version ${versionId} did not match expected ${process.env.EXPECTED_HOSTING_VERSION}`);
+            process.exit(1);
+          }
+          NODE
+
+      - name: Print manual rollback instructions
+        if: ${{ steps.tier1_smoke.outcome == 'failure' && (steps.predeploy_hosting.outputs.version == '' || steps.rollback.outcome == 'failure' || steps.rollback_verify.outcome == 'failure') }}
+        env:
+          STAGING_FIREBASE_PROJECT_ID: ${{ vars.STAGING_FIREBASE_PROJECT_ID }}
+          STAGING_FIREBASE_SITE: ${{ vars.STAGING_FIREBASE_SITE }}
+        run: |
+          set -euo pipefail
+
+          echo "Tier 1 smoke failed and automatic Hosting rollback was not completed."
+          echo "Manual rollback: open Firebase Hosting release history for project ${STAGING_FIREBASE_PROJECT_ID}, site ${STAGING_FIREBASE_SITE}, then roll back to the previously live release."
+          echo "If a pre-deploy version is available in the logs, manual clone rollback can use:"
+          echo "npx -y firebase-tools@${FIREBASE_TOOLS_VERSION} hosting:clone ${STAGING_FIREBASE_SITE}:@<PRE_DEPLOY_HOSTING_VERSION> ${STAGING_FIREBASE_SITE}:live --project=${STAGING_FIREBASE_PROJECT_ID} --non-interactive"
+          echo "Do not mutate repository history from this workflow."
+
+      - name: Fail after Tier 1 smoke failure
+        if: ${{ steps.tier1_smoke.outcome == 'failure' }}
+        run: |
+          set -euo pipefail
+
+          echo "Tier 1 smoke failed."
+          echo "source_sha=${GITHUB_SHA}"
+          echo "github_run_id=${GITHUB_RUN_ID}"
+          echo "pre_deploy_hosting_release=${PRE_DEPLOY_HOSTING_RELEASE:-}"
+          echo "pre_deploy_hosting_version=${PRE_DEPLOY_HOSTING_VERSION:-}"
+          echo "deployed_hosting_release=${DEPLOYED_HOSTING_RELEASE:-}"
+          echo "deployed_hosting_version=${DEPLOYED_HOSTING_VERSION:-}"
+          echo "rollback_hosting_release=${ROLLBACK_HOSTING_RELEASE:-}"
+          echo "rollback_hosting_version=${ROLLBACK_HOSTING_VERSION:-}"
+          echo "rollback_step=${{ steps.rollback.outcome || 'skipped' }}"
+          echo "rollback_verify_step=${{ steps.rollback_verify.outcome || 'skipped' }}"
+          exit 1
+
+      - name: Print deployment evidence
+        run: |
+          set -euo pipefail
+
+          echo "source_sha=${GITHUB_SHA}"
+          echo "github_run_id=${GITHUB_RUN_ID}"
+          echo "backend_openapi_ref=${{ github.event_name == 'workflow_dispatch' && inputs.backend_ref || 'staging' }}"
+          echo "firebase_project_id=${{ vars.STAGING_FIREBASE_PROJECT_ID }}"
+          echo "firebase_hosting_site=${{ vars.STAGING_FIREBASE_SITE }}"
+          echo "pre_deploy_hosting_release=${PRE_DEPLOY_HOSTING_RELEASE:-}"
+          echo "pre_deploy_hosting_version=${PRE_DEPLOY_HOSTING_VERSION:-}"
+          echo "deployed_hosting_release=${DEPLOYED_HOSTING_RELEASE:-}"
+          echo "deployed_hosting_version=${DEPLOYED_HOSTING_VERSION:-}"
+          echo "tier1_smoke=passed"
+
+      - name: Set up Node for optional Tier 2 staging E2E
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_e2e }}
         uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
 
-      - name: Install frontend dependencies for staging E2E
-        if: ${{ inputs.run_e2e }}
+      - name: Install frontend dependencies for optional Tier 2 staging E2E
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_e2e }}
         run: npm ci
 
       - name: Install Playwright Chromium
-        if: ${{ inputs.run_e2e }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_e2e }}
         run: npx playwright install --with-deps chromium
 
       - name: Load staging E2E password
-        if: ${{ inputs.run_e2e }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_e2e }}
         env:
           STAGING_GCP_PROJECT_ID: ${{ vars.STAGING_GCP_PROJECT_ID }}
           STAGING_E2E_USER_PASSWORD_SECRET: ${{ vars.STAGING_E2E_USER_PASSWORD_SECRET || 'frontend-staging-e2e-password' }}
@@ -132,15 +479,15 @@ jobs:
             echo "EOF_STAGING_E2E_PASSWORD"
           } >> "$GITHUB_ENV"
 
-      - name: Run Playwright staging E2E
-        if: ${{ inputs.run_e2e }}
+      - name: Run optional Tier 2 Playwright staging E2E
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_e2e }}
         env:
           STAGING_E2E_BASE_URL: ${{ vars.STAGING_E2E_BASE_URL || vars.STAGING_FRONTEND_URL }}
           STAGING_E2E_USER_EMAIL: ${{ vars.STAGING_E2E_USER_EMAIL }}
         run: npm run e2e:staging
 
-      - name: Upload Playwright staging artifacts
-        if: ${{ always() && inputs.run_e2e }}
+      - name: Upload optional Tier 2 Playwright staging artifacts
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.run_e2e }}
         uses: actions/upload-artifact@v4
         with:
           name: staging-playwright-artifacts

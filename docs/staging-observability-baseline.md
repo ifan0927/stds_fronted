@@ -6,7 +6,10 @@ export setup happens later as part of coordinated staging setup.
 This document defines the minimum useful observability baseline for the
 frontend/backend staging line. It stays lightweight: the goal is to know whether
 staging is alive, whether deploy or smoke validation failed, where to inspect
-logs, and whether staging cost is under control.
+logs, and whether staging cost is under control. Operator handbook steps belong
+in the backend repo
+[GitHub Wiki](https://github.com/ifan0927/STDS_backend_go/wiki/Staging-v1-Operator-Handbook-2026-05-15-v1);
+this frontend document should stay a baseline reference.
 
 ## Scope
 
@@ -90,7 +93,7 @@ Configure only actionable staging alerts:
 | Alert | Initial threshold |
 | --- | --- |
 | Frontend staging uptime check fails | Operator-selected uptime check fails for two consecutive checks. |
-| Backend `/healthz` uptime check fails | HTTP 200 check fails for two consecutive checks. |
+| Backend `/health` uptime check fails | HTTP 200 check fails for two consecutive checks. |
 | Cloud Run 5xx rate is elevated | Placeholder threshold until staging traffic baseline exists. |
 | Staging deploy fails | GitHub Actions or Cloud Build reports failure. |
 | Post-deploy E2E fails | Later #107 workflow reports failure. |

@@ -2,6 +2,7 @@ import {
   AppstoreOutlined,
   AuditOutlined,
   BankOutlined,
+  BugOutlined,
   CarryOutOutlined,
   DashboardOutlined,
   FileTextOutlined,
@@ -246,6 +247,7 @@ export default function AppShell() {
   const selectorPlaceholder = propertyOptionsState.status === 'loading'
     ? '載入物業中'
     : '選擇物業';
+  const bugReportUrl = import.meta.env.VITE_BUG_REPORT_URL?.trim();
 
   useEffect(() => {
     if (!currentUser) {
@@ -326,6 +328,18 @@ export default function AppShell() {
         items={menuItems}
         onClick={() => setDrawerOpen(false)}
       />
+      {bugReportUrl && (
+        <a
+          className="bug-report-link"
+          href={bugReportUrl}
+          target="_blank"
+          rel="noreferrer"
+          onClick={() => setDrawerOpen(false)}
+        >
+          <BugOutlined className="bug-report-icon" />
+          <span className="bug-report-label">BUG 回報</span>
+        </a>
+      )}
     </div>
   );
 

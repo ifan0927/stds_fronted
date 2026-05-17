@@ -31,6 +31,36 @@ a {
   background: #001529;
 }
 
+.bug-report-link {
+  margin: 8px 16px 16px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 120, 117, 0.82);
+  border-radius: 6px;
+  background: rgba(255, 77, 79, 0.18);
+  color: #fff1f0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.bug-report-link:hover,
+.bug-report-link:focus {
+  color: #ffffff;
+  background: rgba(255, 77, 79, 0.28);
+}
+
+.bug-report-icon {
+  color: #ffccc7;
+  font-size: 16px;
+  flex: 0 0 auto;
+}
+
+.bug-report-label {
+  min-width: 0;
+}
+
 .shell-brand {
   min-height: 64px;
   padding: 16px 20px;

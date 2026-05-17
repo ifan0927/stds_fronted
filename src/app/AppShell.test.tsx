@@ -18,6 +18,7 @@ vi.mock('@ant-design/icons', () => ({
   AppstoreOutlined: () => null,
   AuditOutlined: () => null,
   BankOutlined: () => null,
+  BugOutlined: () => null,
   CarryOutOutlined: () => null,
   DashboardOutlined: () => null,
   FileTextOutlined: () => null,
@@ -174,6 +175,7 @@ function renderShell(role: NonNullable<CurrentUser['role']>, initialEntry = '/')
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.unstubAllEnvs();
   authMocks.currentUser = null;
 });
 
@@ -215,6 +217,25 @@ describe('AppShell user management navigation', () => {
     renderShell('owner');
 
     expect(screen.queryByRole('link', { name: '成員與權限' })).toBeNull();
+  });
+
+  it('shows the configured bug report link as an external navigation target', () => {
+    vi.stubEnv('VITE_BUG_REPORT_URL', 'https://forms.gle/SnkF6wcAMc8mfftC8');
+
+    renderShell('organizer');
+
+    const bugReportLink = screen.getByRole('link', { name: 'BUG 回報' });
+
+    expect(bugReportLink.getAttribute('href')).toBe('https://forms.gle/SnkF6wcAMc8mfftC8');
+    expect(bugReportLink.getAttribute('target')).toBe('_blank');
+  });
+
+  it('hides the bug report link when the URL is not configured', () => {
+    vi.stubEnv('VITE_BUG_REPORT_URL', '');
+
+    renderShell('organizer');
+
+    expect(screen.queryByRole('link', { name: 'BUG 回報' })).toBeNull();
   });
 });
 

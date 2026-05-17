@@ -7,7 +7,9 @@ pass.
 
 This document defines the frontend `dev` -> staging environment contract. It
 does not create Firebase Hosting, Cloud Build, Playwright, Secret Manager, or
-GCP resources by itself.
+GCP resources by itself. Operator handbook steps belong in the backend repo
+[GitHub Wiki](https://github.com/ifan0927/STDS_backend_go/wiki/Staging-v1-Operator-Handbook-2026-05-15-v1);
+this frontend document should stay a contract reference.
 
 It is aligned with the backend staging architecture baseline in
 `/Users/cheni-fan/stds_backend/docs/cloud-architecture.md`: Firebase Hosting is
@@ -120,6 +122,7 @@ the first frontend staging deployment:
 | `STAGING_REGION` | GCP region for Cloud Build/deploy coordination when needed by later issues. | GitHub repository variable |
 | `STAGING_BACKEND_CLOUD_RUN_SERVICE` | Core backend Cloud Run service id used by Firebase Hosting `/api/**` rewrites. | GitHub repository variable |
 | `STAGING_BACKEND_CLOUD_RUN_REGION` | Region of the core backend Cloud Run service used by Firebase Hosting rewrites. | GitHub repository variable |
+| `STAGING_BUG_REPORT_URL` | Staging bug-report form URL opened by the sidebar BUG report link. | GitHub `staging` Environment variable |
 
 The stable staging frontend URL is the browser-facing contract for UAT and
 deployed frontend E2E. Do not make test scripts depend on temporary Firebase
@@ -155,6 +158,7 @@ VITE_FIREBASE_API_KEY
 VITE_FIREBASE_AUTH_DOMAIN
 VITE_FIREBASE_PROJECT_ID
 VITE_FIREBASE_APP_ID
+VITE_BUG_REPORT_URL
 VITE_FIREBASE_USE_EMULATOR=false
 ```
 
@@ -168,6 +172,12 @@ VITE_FIREBASE_AUTH_EMULATOR_URL
 Firebase web app config values are client-side build configuration, not server
 secrets. They still should be handled as environment configuration rather than
 hard-coded in source files.
+
+`VITE_BUG_REPORT_URL` is also client-visible build configuration. Keep the
+staging value in `STAGING_BUG_REPORT_URL`; when a production deploy workflow is
+added, use a separate production environment variable such as
+`PROD_BUG_REPORT_URL` and map it to `VITE_BUG_REPORT_URL` during the production
+build.
 
 ## Configuration Ownership
 
@@ -266,6 +276,7 @@ _VITE_FIREBASE_API_KEY
 _VITE_FIREBASE_AUTH_DOMAIN
 _VITE_FIREBASE_PROJECT_ID
 _VITE_FIREBASE_APP_ID
+_VITE_BUG_REPORT_URL
 _VITE_FIREBASE_USE_EMULATOR
 _FIREBASE_HOSTING_SITE
 _BACKEND_CLOUD_RUN_SERVICE
@@ -444,6 +455,7 @@ After operator-side setup, attach only non-secret evidence to the issue or PR:
 - Firebase/GCP project id and Firebase Hosting site/target names.
 - Stable staging frontend URL.
 - Selected `VITE_API_BASE_URL` value.
+- Selected `VITE_BUG_REPORT_URL` value or redacted target description.
 - Cloud Build run URL or build id.
 - Source commit SHA and GitHub run id.
 - Backend OpenAPI ref used for the contract check.
@@ -464,5 +476,8 @@ database connection strings.
 
 - `docs/staging-observability-baseline.md`: minimum staging logging, dashboard,
   alert, and cost-control baseline.
+- Backend repo
+  [GitHub Wiki operator handbook](https://github.com/ifan0927/STDS_backend_go/wiki/Staging-v1-Operator-Handbook-2026-05-15-v1):
+  operator-side staging setup steps and evidence checklist.
 - `/Users/cheni-fan/stds_backend/docs/cloud-architecture.md`: backend staging
   architecture baseline.

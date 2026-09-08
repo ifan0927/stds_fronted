@@ -1,23 +1,15 @@
-Closes #
+## Task reference
+<!-- Link the actual issue, or describe the direct user request. Add a closing keyword only when a real issue is completed. -->
 
 ## Summary
-- TBD
+<!-- Explain the problem and resulting behavior. -->
 
-## Out of scope
-- TBD
-
-## Backend OpenAPI paths/docs referenced
-- TBD
-
-## UI/design reference
-- TBD
+## Scope and references
+<!-- Relevant backend contract or accepted UI design; meaningful exclusions only. -->
 
 ## Verification
 - Run:
-- Not run:
+- Not run and why:
 
-## Test gaps / deferred follow-up
-- TBD
-
-## ai-review
-- TBD
+## Remaining gaps
+<!-- Include only meaningful limitations or follow-up work. -->

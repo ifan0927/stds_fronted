@@ -8,16 +8,16 @@ This document is the short handoff reference for feature-page implementation aft
 - Ant Design 5 for UI components, theme, messages, layout, forms, tables, modals, drawers, and route states.
 - React Router for the SPA route tree.
 - Firebase client auth for login; backend API requests use Firebase ID tokens as Bearer tokens.
-- OpenAPI types are generated from `/Users/cheni-fan/stds_backend/docs/spec/openapi.yaml` into `src/api/generated/schema.ts`.
+- OpenAPI types are generated from `/Users/cheni-fan/Developer/active/stds_backend/docs/spec/openapi.yaml` into `src/api/generated/schema.ts`.
 - Vitest is the current unit/API-boundary test runner.
-- Playwright is deferred until high-value frontend E2E flows are ready.
+- Use the repository's existing E2E scripts and staging contract when the task requires E2E verification; do not assume another harness must be installed.
 
-Do not add another UI framework, router, global state library, API client generator, test runner, or E2E framework unless a GitHub issue explicitly expands the foundation.
+Do not add another UI framework, router, global state library, API client generator, test runner, or E2E framework unless the authorized task explicitly expands the foundation.
 
 ## Files To Read Before Feature Pages
 
-1. `AGENTS.md` for repo rules and issue workflow.
-2. The GitHub issue goal, out of scope, implementation scope, DoD, and comments.
+1. `AGENTS.md` for repo rules and task workflow.
+2. The user-authorized task or supplied issue: goal, out of scope, implementation scope, acceptance criteria, and relevant comments.
 3. `DESIGN.md` for Ant Design admin UI rules.
 4. `docs/codex/frontend-principles.md` for architecture and simplicity constraints.
 5. `docs/codex/workflow.md` for testing and PR expectations.

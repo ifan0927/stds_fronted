@@ -5,7 +5,7 @@ Frontend workspace for the STDS property-management system.
 This repository does not maintain its own OpenAPI contract. Frontend API work should use the backend contract directly from:
 
 ```text
-/Users/cheni-fan/stds_backend/docs/spec/openapi.yaml
+/Users/cheni-fan/Developer/active/stds_backend/docs/spec/openapi.yaml
 ```
 
 ## Current Status
@@ -61,7 +61,7 @@ CI checks out `ifan0927/STDS_backend_go` at `dev` inside the workflow workspace 
 default sibling-repo path:
 
 ```text
-/Users/cheni-fan/stds_backend/docs/spec/openapi.yaml
+/Users/cheni-fan/Developer/active/stds_backend/docs/spec/openapi.yaml
 ```
 
 Set `OPENAPI_SPEC_PATH` only when the backend OpenAPI file lives somewhere else. This repository
@@ -82,7 +82,7 @@ firebase emulators:start --only auth
 In the backend repo, make sure `DATABASE_URL` points to an existing local database with backend migrations applied, then create or update the local emulator users and matching backend DB users:
 
 ```text
-cd /Users/cheni-fan/stds_backend
+cd /Users/cheni-fan/Developer/active/stds_backend
 scripts/dev_auth_users.sh
 ```
 
@@ -160,7 +160,7 @@ Use `docs/codex/frontend-implementation-reference.md` before implementing featur
 Use the backend repo as the source of truth for API behavior and domain rules:
 
 ```text
-/Users/cheni-fan/stds_backend
+/Users/cheni-fan/Developer/active/stds_backend
 ```
 
 Important backend files:
@@ -201,8 +201,8 @@ Before frontend API work:
 1. Read `AGENTS.md` in this repo.
 2. Read `docs/codex/frontend-implementation-reference.md` for established tools and primitives.
 3. Read `docs/codex/frontend-principles.md` for frontend scope and architecture constraints.
-4. Read `docs/codex/workflow.md` for the issue-driven workflow and frontend testing strategy.
-5. Read `docs/codex/github-workflow.md` before issue, branch, commit, PR, label, or review-label work.
+4. Read `docs/codex/workflow.md` for the task workflow and frontend testing strategy.
+5. Read `docs/codex/github-workflow.md` before branch, commit, PR, follow-up, or review-label work.
 6. Read `docs/codex/ui-design-workflow.md` when replacing or redesigning legacy UI.
 7. Read `DESIGN.md` for baseline UI layout, spacing, and Ant Design rules.
 8. Inspect the relevant backend OpenAPI paths and schemas.
@@ -212,7 +212,7 @@ Before frontend API work:
 
 ## Workflow Summary
 
-Frontend work should start from GitHub issues. Issues are expected to define goal, out of scope, implementation scope, DoD, and reference docs.
+Frontend work starts from the user-authorized task or a supplied issue. Define the goal, out of scope, implementation scope, acceptance criteria, and relevant docs; a clear direct request does not require an issue or cycle assignment.
 
 During active feature development, do not add CI just to slow down iteration. Use implementation verification, PR code review, and same-issue test follow-up for quality hardening. E2E should be added later for high-value flows once the core screens and harness shape are stable.
 
@@ -222,4 +222,4 @@ For legacy refresh areas, first survey the old page, map it to backend OpenAPI b
 
 `DESIGN.md` is the baseline admin design contract. It should be refined from accepted UI templates rather than replaced by external brand-style design systems.
 
-GitHub work uses a small label pool, `[tag] content` commit messages, `tag/issue-xx-content` branch names, and `.github/pull_request_template.md` for PR bodies. Add `ai-review` to PRs only when the user asks for AI/CodeRabbit review, or suggest it for risky PRs and wait for confirmation.
+Follow `docs/codex/github-workflow.md` for task-owned branches, `[tag] content` commit messages, and PR descriptions with actual task references. Add `ai-review` to PRs only when the user asks for AI/CodeRabbit review, or suggest it for risky PRs and wait for confirmation.

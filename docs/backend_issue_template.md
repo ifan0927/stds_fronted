@@ -1,4 +1,4 @@
- # Backend Gap Report: <短標題>
+ # Backend Gap Report / Issue Draft: <短標題>
 
   ## 1. 卡住的畫面 / 流程
 

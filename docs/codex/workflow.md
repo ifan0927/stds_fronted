@@ -1,10 +1,10 @@
-# Issue And Testing Workflow For Codex
+# Task And Testing Workflow For Codex
 
-This repository should follow an issue-driven workflow, matching the backend project's working style while keeping frontend delivery lightweight during early development.
+Use the current user-authorized task and the repository contracts to define scope. Keep frontend delivery focused and verification proportional to the change.
 
 ## Unit Of Work
 
-The normal unit of work is a GitHub issue.
+The unit of work is a scoped request or a supplied issue. A clear direct request does not need an issue, workflow label, or cycle assignment before work can start.
 
 Expected issue contents:
 
@@ -32,19 +32,19 @@ Before implementation, read the issue and summarize:
 
 Do not widen scope just because adjacent UI or infrastructure looks incomplete.
 
-For label, branch, commit, PR body, follow-up issue, and `ai-review` rules, follow `docs/codex/github-workflow.md`.
+For branch, commit, PR body, follow-up record, and `ai-review` rules, follow `docs/codex/github-workflow.md`.
 
 ## Development Flow
 
 Default flow:
 
-1. Start from a GitHub issue.
+1. Read the user-authorized task or supplied issue.
 2. Read `docs/codex/frontend-implementation-reference.md` for the established tools and primitives.
 3. Inspect backend OpenAPI and reference docs for the affected flow.
 4. Implement the narrowest frontend change that satisfies the issue.
 5. Do not add CI wiring during active feature development unless the issue asks for it.
 6. Run local verification after implementation.
-7. Open a PR for review.
+7. Complete the requested delivery flow; a PR includes the actual issue link when one exists.
 8. Use PR code review plus same-issue test follow-up to close quality gaps.
 
 This intentionally separates fast development from final quality hardening. The quality bar still exists, but it is enforced at PR review and post-implementation verification instead of slowing every early iteration with CI expansion.
@@ -106,7 +106,7 @@ E2E should remain a small acceptance layer. Most UI edge cases belong in compone
 
 Every PR should state:
 
-- issue link
+- task or issue reference when one exists
 - what changed
 - what was intentionally left out
 - which backend OpenAPI paths/docs were referenced
@@ -132,7 +132,7 @@ npm run build
 
 CI provides the backend OpenAPI source by checking out `ifan0927/STDS_backend_go` at `dev`
 and setting `OPENAPI_SPEC_PATH` to that checkout's `docs/spec/openapi.yaml`.
-Local development uses `/Users/cheni-fan/stds_backend/docs/spec/openapi.yaml` by default.
+Local development uses `/Users/cheni-fan/Developer/active/stds_backend/docs/spec/openapi.yaml` by default.
 
 This gate intentionally does not include Playwright E2E, deployment, backend E2E orchestration,
 coverage thresholds, visual regression, or performance budgets.
@@ -144,7 +144,7 @@ credential boundary before wiring deployment or deployed E2E workflows. Use
 `docs/staging-observability-baseline.md` for the first staging log, alert, and
 cost-control baseline.
 
-If tests are deferred after implementation, keep that follow-up inside the same issue unless the user explicitly splits it.
+If tests are deferred after implementation, keep that follow-up inside the same task or issue unless the user explicitly splits it.
 
 ## Local Verification Before CI Exists
 
